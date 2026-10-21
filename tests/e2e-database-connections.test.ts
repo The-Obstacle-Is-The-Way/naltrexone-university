@@ -23,7 +23,7 @@ function unguardedConnections(files: Record<string, string>): string[] {
     // A call, not regex text such as /postgres(?:ql)?:/ in a redaction.
     [
       ...source.matchAll(
-        /(?<![\w/])postgres\((?!\?)\s*(?!guardE2EDatabaseUrl\()/g,
+        /(?<![\w/])postgres\((?!\?)(?!\s*guardE2EDatabaseUrl\()/g,
       ),
     ].map(
       (match) =>
@@ -38,8 +38,15 @@ describe('E2E database connections', () => {
       unguardedConnections({
         'a.ts': 'const sql = postgres(process.env.DATABASE_URL);',
         'b.ts': 'const sql = postgres(guardE2EDatabaseUrl(url), { max: 1 });',
+        // Biome wraps the arguments once the first one overflows the line.
+        'c.ts':
+          'const sql = postgres(\n  guardE2EDatabaseUrl(url),\n  { max: 1 },\n);',
+        'd.ts': '\nconst sql = postgres(\n  url,\n);',
       }),
-    ).toEqual(['a.ts:1 opens a database without guardE2EDatabaseUrl.']);
+    ).toEqual([
+      'a.ts:1 opens a database without guardE2EDatabaseUrl.',
+      'd.ts:2 opens a database without guardE2EDatabaseUrl.',
+    ]);
   });
 
   it('passes every connection the E2E code opens through the guard', () => {

@@ -9,7 +9,7 @@
 ## Summary
 
 Nothing in the E2E setup identifies a production database.
-- Every E2E database connection now refuses a non-local host, on any entry path, unless `ALLOW_NON_LOCAL_DATABASE_URL=true` is set (fixed in part; see below).
+- Every connection the E2E code opens now refuses a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true` is set (fixed in part; see below). The app server Playwright starts is not covered.
 - With that opt-in, any host is accepted, production included.
 - The preflight requires Stripe and Clerk test-mode credentials, but those do not identify the database.
 
@@ -21,14 +21,14 @@ Pointed at production with the opt-in, global setup writes before any fixture ch
 
 This is separate from BUG-353's ambient seed flag, and remains after that fix.
 
-Corrected 2026-10-19: every E2E database connection now refuses a non-local host without the opt-in; the opt-in path remains.
+Corrected 2026-10-19: every connection the E2E code opens now refuses a non-local host without the opt-in; the opt-in path and the app server remain.
 
 ## Evidence
 
 - **The host check.**
   - `scripts/e2e-local-orchestrator.ts:137-143` checks the URL's host on the `pnpm test:e2e` path.
   - `playwright.config.ts:8` loads `.env.local` without overriding exported variables, so before the partial fix a direct `pnpm exec playwright test` reached setup with whatever `DATABASE_URL` was there, unchecked.
-  - Both paths now refuse a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true`, which admits any host.
+  - On both paths, the E2E code's connections now refuse a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true`, which admits any host. The app server's do not; see "Fixed in part".
 - **The preflight.** It refuses a non-test Stripe key (`tests/e2e/helpers/credential-health-check.ts:550-557`). Test-mode keys work against any database, so passing it does not prove a non-production target.
 - **Setup's first writes.** `tests/e2e/global.setup.ts:16-17` runs `seedTestSubscription` before `runE2EUserStateReset`. That step:
   - upserts `users` by email (`tests/e2e/helpers/seed-test-user.ts:214-216`, `ON CONFLICT (email) DO UPDATE SET clerk_user_id`);
@@ -54,7 +54,7 @@ Before this fix, only `pnpm test:e2e` checked the host. A direct `pnpm exec play
 
 What remains:
 - **The opt-in path.** A deploy-target check still accepts production, and that needs the owner's fence below.
-- **The app server.** The server Playwright starts reads the same `DATABASE_URL`. Global setup now stops a normal run first, but a deliberate `--no-deps` run of a spec that writes only through the app is not refused. A check inside the server's start command would close it; guarding the URL when the config loads would not, because `playwright.config.test.ts` imports the config with whatever `.env.local` holds.
+- **The app server.** The server Playwright starts reads the same `DATABASE_URL`, and nothing checks it. Even a run that global setup stops has already written there: Playwright waits for the server by polling `/api/health` (`playwright.config.ts:104`), which upserts a `rate_limits` row (`app/api/health/handler.ts:26`, `src/adapters/gateways/drizzle-rate-limiter.ts:64-74`). A deliberate `--no-deps` run of a spec that writes only through the app is not refused at all. A check inside the server's start command would close both; guarding the URL when the config loads would not, because `playwright.config.test.ts` imports the config with whatever `.env.local` holds.
 
 ## Impact
 
@@ -62,6 +62,8 @@ With the opt-in set, an operator's target mistake can write to production:
 - the test user's subscription rows, and the Clerk binding of any production row that holds the E2E email;
 - that user's practice data;
 - and, when both fixture rows exist, the visibility of two synthetic questions, withdrawn ones included.
+
+Without the opt-in, the E2E code's own connections refuse, but the app server still writes to whatever `DATABASE_URL` names: the health probe's rate-limit counter on every run, and whatever a `--no-deps` spec does through the app.
 
 A published row alone does not prove this reset published it, or that a learner saw it. Reads select published questions, and an active release does not fence this direct status change.
 
