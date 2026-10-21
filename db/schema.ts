@@ -471,6 +471,7 @@ export const renewalNoticeDeliveries = pgTable(
           requeuedBy: string;
           confirmedNoSend: boolean;
           priorStatus: 'terminal_failure' | 'outcome_unknown';
+          priorAttemptCount?: number;
         }>
       >()
       .notNull()
@@ -952,6 +953,8 @@ export const contentReleasePointer = pgTable(
   {
     id: boolean('id').primaryKey().default(true),
     activeReleaseId: uuid('active_release_id'),
+    // Highest source commit admitted by staging or first activation; rollback never lowers it.
+    sourceCommit: text('source_commit'),
     activatedAt: timestamp('activated_at', { withTimezone: true }),
   },
   (t) => ({
@@ -960,6 +963,10 @@ export const contentReleasePointer = pgTable(
       foreignColumns: [contentReleases.id],
     }),
     singleRowChk: check('content_release_pointer_single_row_chk', sql`${t.id}`),
+    sourceCommitChk: check(
+      'content_release_pointer_source_commit_chk',
+      sql`${t.sourceCommit} IS NULL OR ${t.sourceCommit} ~ '^[0-9a-f]{40}$'`,
+    ),
   }),
 );
 

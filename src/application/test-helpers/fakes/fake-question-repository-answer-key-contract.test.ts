@@ -7,12 +7,16 @@ runAnswerKeyChangeContract('FakeQuestionRepository', async () => ({
     const questionId = crypto.randomUUID();
     const currentRevisionId = crypto.randomUUID();
     const earlierRevisionId = crypto.randomUUID();
-    const choices = (correct: 'B' | 'C') => [
+    const choices = (correct: 'B' | 'C', legacy = false) => [
       createChoice({ questionId, label: 'A', textMd: 'Choice A' }),
       createChoice({
         questionId,
         label: correct,
-        textMd: correct === 'B' ? 'Choice B' : 'Revised C',
+        textMd: legacy
+          ? ' \r\nChoice B\t\r\n'
+          : correct === 'B'
+            ? 'Choice B'
+            : 'Revised C',
         isCorrect: true,
         sortOrder: 2,
       }),
@@ -29,7 +33,7 @@ runAnswerKeyChangeContract('FakeQuestionRepository', async () => ({
         id: questionId,
         revisionId: earlierRevisionId,
         stemMd: '# Stem',
-        choices: choices('B'),
+        choices: choices('B', change === 'key normalization'),
       }),
     ]);
     return { repository, questionId, currentRevisionId, earlierRevisionId };

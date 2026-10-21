@@ -63,6 +63,7 @@ async function createHarness(input?: {
     ...(input?.onSend ? { onSend: input.onSend } : {}),
   });
   const logger = new FakeLogger();
+  const alerts = new FakeOperationalAlerts();
   let deliverySequence = 0;
   let attemptSequence = 0;
   const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
@@ -80,17 +81,19 @@ async function createHarness(input?: {
     hasher,
     dispatch,
     logger,
+    alerts,
     'https://addictionboards.com',
     () => now,
     () =>
       `11111111-1111-4111-8111-${String(++deliverySequence).padStart(12, '0')}`,
   );
-  return { gateway, hasher, logger, repository, useCase };
+  return { gateway, hasher, logger, repository, useCase, alerts };
 }
 
 describe('SendDueRenewalNoticesUseCase', () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('queues and dispatches the annual renewal notice with statutory content', async () => {
@@ -209,6 +212,56 @@ describe('SendDueRenewalNoticesUseCase', () => {
     expect(gateway.sendInputs).toEqual([]);
   });
 
+  it('alerts on a stale quarantine even if the subsequent due read fails', async () => {
+    const { repository, useCase, alerts } = await createHarness({
+      configured: false,
+    });
+    await useCase.execute({ notices: [scheduledNotice()], limit: 100 });
+    const row = repository.records[0];
+    if (!row) throw new Error('expected queued notice');
+    await repository.claim({
+      id: row.id,
+      attemptId: 'lost-worker',
+      startedAt: new Date('2026-08-07T11:40:00Z'),
+    });
+    vi.spyOn(repository, 'findDue').mockRejectedValueOnce(
+      new Error('due read failed'),
+    );
+
+    await expect(useCase.execute({ notices: [], limit: 100 })).rejects.toThrow(
+      'due read failed',
+    );
+
+    expect(row.status).toBe('outcome_unknown');
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_outcome_unknown', count: 1 },
+    ]);
+  });
+
+  it('alerts on a stale quarantine even if diagnostic logging fails', async () => {
+    const { repository, useCase, alerts, logger } = await createHarness({
+      configured: false,
+    });
+    await useCase.execute({ notices: [scheduledNotice()], limit: 100 });
+    const row = repository.records[0];
+    if (!row) throw new Error('expected queued notice');
+    await repository.claim({
+      id: row.id,
+      attemptId: 'lost-worker',
+      startedAt: new Date('2026-08-07T11:40:00Z'),
+    });
+    vi.spyOn(logger, 'error').mockImplementation(() => {
+      throw new Error('log unavailable');
+    });
+
+    await useCase.execute({ notices: [], limit: 100 });
+    await useCase.execute({ notices: [], limit: 100 });
+
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_outcome_unknown', count: 1 },
+    ]);
+  });
+
   it('allows only one provider call across two concurrent workers', async () => {
     const sendStarted = createDeferred<void>();
     const allowSend = createDeferred<void>();
@@ -295,6 +348,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
         },
       },
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       'https://addictionboards.com',
       () => now,
       () =>
@@ -407,6 +461,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       hasher,
       dispatch,
       logger,
+      new FakeOperationalAlerts(),
       'https://addictionboards.com',
       () => now,
       () =>
@@ -526,6 +581,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       hasher,
       dispatch,
       logger,
+      new FakeOperationalAlerts(),
       'https://addictionboards.com',
       () => now,
       () => '11111111-1111-4111-8111-000000000001',
@@ -572,6 +628,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       hasher,
       dispatch,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       'https://addictionboards.com',
     );
     await useCase.execute({ notices: [scheduledNotice()], limit: 100 });

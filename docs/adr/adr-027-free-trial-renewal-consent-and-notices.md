@@ -1,8 +1,8 @@
 # ADR-027: Free Trial, Renewal Consent and Renewal Notices
 
-**Status:** Proposed — until the licensed legal review in GitHub issue #902 (DEBT-414) ends. The decisions below have shipped as engineering. They are not legal sign-off, and this record claims no legal compliance.
-**Date:** 2026-10-12, recording decisions of 2026-06-06 to 2026-10-10
-**Decision Makers:** The owner, who confirmed the no-card trial on 2026-06-06 (DEBT-410), chose Resend on 2026-08-04, deferred price-change machinery on 2026-08-06, authorized the DEBT-414 remediation (F01–F07, F15) on 2026-09-27, and delegated the consent-copy and card-only decisions on 2026-09-28 and 2026-10-03. ADR-023 moved decisions out of records, so they are recorded here.
+**Status:** Proposed — until the licensed legal review in GitHub issue #902 (DEBT-414) ends. The decisions below are engineering, not legal sign-off, and this record claims no legal compliance.
+**Date:** 2026-10-12, recording decisions of 2026-06-06 to 2026-10-19
+**Decision Makers:** The owner, who confirmed the no-card trial on 2026-06-06 (DEBT-410), chose Resend on 2026-08-04, deferred price-change machinery on 2026-08-06, authorized the DEBT-414 remediation (F01–F07, F15) on 2026-09-27, delegated the consent-copy and card-only decisions on 2026-09-28 and 2026-10-03, chose an operator script for requeueing a quarantined notice on 2026-10-17 (DEBT-414 F23), and approved the 39-day reminder start on 2026-10-19. ADR-023 moved decisions out of records, so they are recorded here.
 **Depends On:** ADR-005 (Payment Boundary), ADR-014 (Stripe Eager Sync on Checkout Success), ADR-017 (Webhook Processing Lifecycle), ADR-026 (Error Monitoring with Sentry)
 
 ---
@@ -44,23 +44,51 @@
    - The webhook queues the acknowledgment in the transaction that records consent, then dispatches it. The daily job retries a row that is still queued.
    - It states the accepted terms, the price, the trial end, the cancellation deadline and method, and the policy. It links Billing, support, Terms and Privacy (`send-renewal-acknowledgment.ts`).
    - Reason (DEBT-414 §7): a failure after consent must not leave consent without an acknowledgment, and a retry must not send it twice.
-7. **Renewal notices go out 35 to 30 days before renewal, for both plans (2026-09-27; monthly from 2026-09-28).**
+7. **Renewal notices start at 39 days before renewal and stop at 30, for both plans (39-day start approved 2026-10-19, replacing the 35-day start approved 2026-09-27; monthly from 2026-09-28).**
    - An annual plan gets an `annual_reminder` and a `renewal_notice`. A monthly plan gets an `anniversary_reminder` before the renewal that carries service past each twelve-month mark (`nextAnniversaryRenewalAt`).
-   - The cron runs at 09:00 UTC (`vercel.json`). It selects active, renewing subscriptions 35 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`; the constant is in `src/application/shared/renewal-notice-schedule.ts`).
+   - The cron is scheduled for 09:00 UTC (`vercel.json`); its current daily start window is 09:00–10:00 UTC. It selects active, renewing subscriptions 39 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`; the constant is in `src/application/shared/renewal-notice-schedule.ts`).
    - Each notice says the plan renews unless cancelled. It gives the cutoff in UTC, Eastern and Pacific time, and links cancellation (F06).
-   - Reasons: F01 found the earlier 15–45-day window too early or too late for some states. The code records 30–40 days as the window every covered state shares. F02 cites Colorado and Connecticut for yearly reminders on monthly plans.
+   - Reasons: F01 found the earlier 15–45-day window too early or too late for some states. The reviewed first-reminder provisions overlap at 30–40 days; Massachusetts needs separate F19 work, as detailed below. F02 cites Colorado and Connecticut for yearly reminders on monthly plans.
    - Each notice kind has its own disclosure version (`ANNUAL_RENEWAL_NOTICE_VERSION` and `MONTHLY_ANNIVERSARY_NOTICE_VERSION` in `lib/pricing-data.ts`), separate from checkout's `disclosureVersion`. A scheduled notice is deduplicated on its version, so a shared bump would schedule a second notice for a renewal that already has one (DEBT-478).
 8. **Delivery is durable, is never repeated while the outcome is unknown, and is revalidated before sending (2026-08-07, #744; revalidation 2026-09-27; delivery evidence 2026-09-30, #1262).**
    - Resend sends the email (`src/adapters/gateways/resend-transactional-email-gateway.ts`). Without `RESEND_API_KEY`, rows stay queued.
    - Each row has an immutable payload, its hash, and a provider idempotency key derived from the row's ID. Dispatch claims the row before it sends.
    - A rate-limit or quota error retries with backoff, from 15 minutes up to 24 hours. A terminal error stops. An ambiguous result, or a claim stale for 15 minutes, becomes `outcome_unknown` and is never resent automatically, because Resend keeps an idempotency key for only 24 hours (DEBT-414 §7).
-   - `RequeueRenewalNoticeDeliveryUseCase` needs an operator and a reason. For an unknown outcome, it also needs confirmation that nothing was sent.
+   - `RequeueRenewalNoticeDeliveryUseCase` needs an operator, a reason and the attempt count inspected before checking the provider. It rejects evidence for an older attempt, and records the prior count in new audit entries. For an unknown outcome, it also needs confirmation that nothing was sent. An operator runs it with `pnpm notice:requeue` (`scripts/requeue-renewal-notice.ts`, 2026-10-18, DEBT-414 F23).
    - Before sending, dispatch supersedes a scheduled notice whose subscription is gone, inactive or cancelling, or is now on another plan or renewal date, or whose account email has changed. It refuses a reminder past its 30-day cutoff (F07).
-   - Provider acceptance is stored as `accepted`, not `delivered`. Signed Resend webhooks record delivery or failure (`RecordRenewalNoticeProviderOutcomeUseCase`). A missed deadline, a refused late notice or an unknown outcome raises an [operational alert](../architecture/observability.md#operational-alerts).
+   - Provider acceptance is stored as `accepted`, not `delivered`. Signed Resend webhooks record delivery or failure (`RecordRenewalNoticeProviderOutcomeUseCase`). A missed deadline, a refused late notice, an unknown outcome or an actionable terminal failure raises an [operational alert](../architecture/observability.md#operational-alerts).
 9. **A scheduled cancellation keeps access to period end and stops notices ([R11](../product/business-rules.md); 2026-09-28).**
    - Both portal profiles cancel `at_period_end` with no proration. Plan changes stay off while existing-subscriber price changes are frozen (owner, 2026-08-06).
    - `stripeSubscriptionEndsByPeriodEnd` treats a `cancel_at` at or before period end as a scheduled cancellation. All three subscription writers use it (F04). Selection and revalidation then skip that subscription.
    - Email to support is a second cancellation channel (Terms §4).
+
+## Timing refinement: 39 days (approved 2026-10-19)
+
+Move the first selection for annual and monthly anniversary reminders from 35 to 39 elapsed days before renewal; retain the 30-day dispatch cutoff. The owner approved 35 on 2026-09-27 and this 39-day start on 2026-10-19. It adds four days to the maximum recovery interval (nine instead of five), while keeping a one-day margin inside the strictest reviewed 40-day upper limit. Colorado's text does not say how days are counted; 39 elapsed days stays within 40 local calendar days in every US time zone, even across a daylight-saving change, while 40 elapsed days could exceed it. Actual recovery time is shorter when selection, provider acceptance or failure detection is delayed.
+
+The 30–40-day overlap is for the reviewed first annual reminder, not nationwide compliance. The source provisions have different term thresholds and cancellation-deadline anchors:
+
+| Jurisdiction and primary text | Notice interval and relevant scope |
+| --- | --- |
+| [Colorado § 6-1-732(4)(b), 2026 code](https://olls.info/crs/crs2026-title-06.htm) | 25–40 days before the first automatic renewal and later annual renewals; shorter terms use the renewal extending continuous service beyond twelve months and each subsequent twelve-month period. |
+| [Vermont § 2454a(a)(3)(A)](https://legislature.vermont.gov/statutes/section/09/063/02454a) | 30–60 days before the earliest renewal, termination or cancellation deadline; initial term at least one year and renewal longer than one month. |
+| [Illinois 815 ILCS 601/10(b)](https://ilga.gov/legislation/ilcs/fulltext?DocName=081506010K10) | 30–60 days before the cancellation deadline; term at least twelve months and renewal longer than one month. |
+| [Delaware § 2734(b)](https://delcode.delaware.gov/title6/c027/sc04/index.html) | 30–60 days before the cancellation deadline; renewal longer than one month extends the contract beyond twelve months. |
+| [Georgia § 13-12-3(a), official code PDF, pp. 163–164](https://www.legis.ga.gov/api/document/docs/default-source/joint-features-document-library/t13-(v11)-pdf.pdf) | 30–60 days before the cancellation deadline; term at least twelve months and renewal longer than one month. |
+| [Hawaii § 481-9.5(b)](https://data.capitol.hawaii.gov/hrscurrent/Vol11_Ch0476-0490/HRS0481/HRS_0481-0009_0005.htm) | 30–60 days before the cancellation-response deadline; term at least twelve months and renewal longer than one month. |
+| [California § 17602(b)(2), chaptered AB 2863 text](https://legiscan.com/CA/text/AB2863/id/3022400) | 15–45 days before renewal for an initial term of at least one year. The amended section applies to contracts entered, amended or extended on or after July 1, 2025. The linked page reproduces the enacted text; the official LegInfo endpoint blocked this audit. |
+| [New York GBL § 527-a(1)(f)](https://www.nysenate.gov/legislation/laws/GBS/527-A) | 15–45 days before the cancellation deadline; initial paid term at least one year, renewing for at least six paid months. |
+| [D.C. § 28A-203(b)](https://code.dccouncil.gov/us/dc/council/code/sections/28A-203) | 30–60 days before the cancellation deadline for qualifying annual contracts; emailed notices also need active cancellation links. |
+| [North Carolina § 75-41(a)(3)](https://www3.ncleg.gov/EnactedLegislation/Statutes/HTML/BySection/Chapter_75/GS_75-41.html) | 15–45 days before renewal when the renewal exceeds sixty days. |
+| [Connecticut § 42-158ff(d), effective July 1, 2026](https://www.cga.ct.gov/2026/sup/chap_742d.htm) | An annual reminder for automatic renewal and continuous service, including monthly agreements; it does not supply the 30–40-day numerical window. |
+
+The application uses the renewal instant as its cancellation deadline. Different contractual deadlines would require changing that anchor. This timing proposal does not resolve applicability, notice content/medium or the separate Massachusetts obligation: [940 CMR 38.05(4)](https://www.mass.gov/doc/940-cmr-38-unfair-and-deceptive-fees/download) requires a notice 5–30 calendar days before the cancellation deadline for negative options longer than 31 days. DEBT-414 F19 retains that separate second-notice work.
+
+[Resend retains idempotency keys for 24 hours and replays the prior response](https://resend.com/docs/dashboard/emails/idempotency-keys). Extra recovery time helps an accepted-but-failed send wait for expiry and still be retried before cutoff. It does not authorize retrying an unknown outcome without no-send evidence. A 25-hour wait is a conservative operational buffer, not a provider requirement.
+
+[Vercel's Hobby cron timing is an hour-wide start window](https://vercel.com/docs/cron-jobs/usage-and-pricing); [cron is best effort and failed invocations are not automatically retried](https://vercel.com/docs/cron-jobs/manage-cron-jobs). The current daily 09:00 schedule therefore cannot promise an exact send time or nine recovery days. With ordinary daily starts, selection can lag eligibility by almost 25 hours; missed invocations, backlog and runtime add delay. Earlier eligibility reduces that exposure without changing the refusal cutoff.
+
+Rejected alternatives: retain 35 (valid within the reviewed overlap, but sacrifices four available recovery days); start at 40 (maximizes the interval but puts the first send on the upper boundary with no calendar-day margin); start at 30 (no recovery margin). Keep notice identities, disclosure versions, immutable payloads and deduplication unchanged, so a reminder already queued for the same renewal is not scheduled a second time.
 
 ## Consequences
 
@@ -68,7 +96,7 @@
 
 1. Every path to a paid subscription, a trial's first card included, takes an explicit opt-in to versioned text and keeps it as evidence.
 2. A notice states the facts as they stand when it is sent, or it is not sent.
-3. A notice that is missed, refused as late, or in doubt reaches the owner as an alert. An uncertain send is held, not repeated.
+3. A notice that is missed, refused as late, in doubt or in actionable terminal failure raises an operator alert. An uncertain send is held, not repeated.
 
 ### Negative
 
@@ -77,7 +105,7 @@
 3. Notices state the configured plan amount and select subscriptions by the configured price ID. A price change would therefore misstate or skip notices (DEBT-501).
 4. Known gaps, decided but not yet built: an early bounce report can be lost (F21); a trial cancelled in the portal is still offered "Add a card", which records consent and acknowledges a renewal that will not happen (F22); a card added at or after trial end is never applied (DEBT-501 item 4).
 5. Delivery evidence needs the owner to configure the Resend webhook. Until then, notices stay `accepted` (DEBT-414).
-6. The requeue use case is wired in `lib/container/use-cases.ts`, but no route or script calls it, so a quarantined notice cannot be requeued without a hand-written database change (DEBT-414 F23, due before the first live renewal notice).
+6. Requeueing a quarantined notice is a manual operator step: `pnpm notice:requeue`, run against production behind the explicit database-target check, after checking Resend ([the requeue guide](../guides/operations/requeue-renewal-notice.md); DEBT-414 F23, 2026-10-18). There is no in-app surface for it.
 
 ### Mitigations
 
@@ -112,7 +140,7 @@ DEBT-414 also leaves to counsel or the owner: the remedy for a missed statutory 
 
 - R10 and R11 in [the business rules](../product/business-rules.md) name the tests that prove them, and `tests/rule-to-test-register.test.ts` fails when a named test is missing.
 - The webhook records consent only when the Session's disclosure hash matches the text registered for its version.
-- A missed notice deadline, a refused late notice or an unknown outcome raises an operational alert, and the daily job re-checks deadlines after every dispatch.
+- A missed notice deadline, a refused late notice, an unknown outcome or an actionable terminal failure raises an operational alert, and the daily job re-checks deadlines after every dispatch.
 
 ## References
 

@@ -1,7 +1,15 @@
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 import * as schema from '@/db/schema';
 import { runActivateRelease } from '@/scripts/content-release/activate-release';
 import { runBootstrapRelease } from '@/scripts/content-release/bootstrap-release';
@@ -10,6 +18,7 @@ import {
   bootstrapRelease,
   stageRelease,
 } from '@/scripts/content-release/release-activation';
+import { createContentRepository } from '@/tests/shared/content-repository-test-helpers';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import {
   addCurrentRevision,
@@ -17,11 +26,16 @@ import {
   createQuestion,
 } from './helpers';
 import { RELEASE_DECISION } from './release-decision-test-helpers';
+import { source } from './seed-test-helpers';
 
 // These commands commit activations, and an activation archives every
 // published question a release leaves out. So they run against a database of
 // their own, created with every migration and dropped afterwards.
 let disposable: Awaited<ReturnType<typeof createDisposableDatabase>>;
+let repo: Awaited<ReturnType<typeof createContentRepository>>;
+afterEach(async () => {
+  await repo.dispose();
+});
 
 beforeAll(async () => {
   disposable = await createDisposableDatabase();
@@ -32,10 +46,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  repo = await createContentRepository();
   const { db } = disposable;
   await db
     .update(schema.contentReleasePointer)
-    .set({ activeReleaseId: null, activatedAt: null });
+    .set({ activeReleaseId: null, activatedAt: null, sourceCommit: null });
   await db.delete(schema.contentReleaseActivations);
   await db.delete(schema.contentReleases);
   await db.delete(schema.questions);
@@ -144,12 +159,27 @@ describe('activate-release', () => {
         record: RELEASE_DECISION,
       })
     ).releaseId;
+    const commit = await repo.commit([source(kept.slug)]);
     const next = await stageRelease(disposable.db, {
+      corpusCommit: commit,
       items: [{ questionId: kept.id, questionRevisionId: kept.revisionId }],
       removals: [{ questionId: dropped.id, kind: 'draft' }],
       parentReleaseId: first,
     });
-    const args = ['--release', next, '--expect-active', first, ...DECISION];
+    // The stage command records its admitted source; this test stages below
+    // it, so it records the same watermark (BUG-351).
+    await disposable.db
+      .update(schema.contentReleasePointer)
+      .set({ sourceCommit: commit });
+    const args = [
+      '--repo',
+      repo.directory,
+      '--release',
+      next,
+      '--expect-active',
+      first,
+      ...DECISION,
+    ];
 
     const preview = commandIo();
     await runActivateRelease(args, preview.io);
@@ -161,7 +191,7 @@ describe('activate-release', () => {
       "Decision: Clinician's request (authority: Content lead)",
     );
     expect(preview.output()).toContain(
-      `Apply exactly this plan: pnpm exec tsx scripts/content-release/activate-release.ts --release ${next} --expect-active ${first} ${DECISION_ARGS} --plan ${planIdIn(preview.output())} --apply`,
+      `Apply exactly this plan: pnpm exec tsx scripts/content-release/activate-release.ts --repo '${repo.directory}' --release ${next} --expect-active ${first} ${DECISION_ARGS} --plan ${planIdIn(preview.output())} --apply`,
     );
     expect(await statusOf(dropped.id)).toBe('published');
     expect(await activeRelease()).toBe(first);
@@ -312,7 +342,15 @@ describe('hold-questions', () => {
     );
 
     await runHoldQuestions(
-      ['--qid', question.slug, ...RECORD, '--lift', '--apply'],
+      [
+        '--qid',
+        question.slug,
+        ...RECORD,
+        '--lift',
+        '--revert',
+        question.slug,
+        '--apply',
+      ],
       commandIo().io,
     );
 

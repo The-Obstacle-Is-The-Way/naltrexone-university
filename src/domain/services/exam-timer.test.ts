@@ -3,12 +3,69 @@ import { createPracticeSession } from '@/src/domain/test-helpers';
 import {
   computeExamAllotmentSeconds,
   computeExamDeadline,
+  getPracticeSessionTiming,
   isExamExpired,
   remainingExamSeconds,
 } from './exam-timer';
 import { EXAM_SECONDS_PER_QUESTION } from './time-constants';
 
 describe('exam timer domain service', () => {
+  it.each([
+    { offsetMs: -1, state: 'active', remainingMs: 1 },
+    { offsetMs: 0, state: 'expired', remainingMs: 0 },
+    { offsetMs: 1, state: 'expired', remainingMs: 0 },
+  ])(
+    'classifies an unfinished exam at $offsetMs ms from its deadline',
+    ({ offsetMs, state, remainingMs }) => {
+      const session = createPracticeSession({
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-05-22T12:00:00.000Z'),
+      });
+      const deadline = new Date('2026-05-22T12:01:12.000Z');
+
+      expect(
+        getPracticeSessionTiming(
+          session,
+          new Date(deadline.getTime() + offsetMs),
+        ),
+      ).toEqual({ state, deadline, remainingMs });
+    },
+  );
+
+  it.each(['2026-05-22T12:00:30.000Z', '2026-05-22T12:02:00.000Z'])(
+    'keeps a committed exam end distinct from expiry at %s',
+    (now) => {
+      const session = createPracticeSession({
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-05-22T12:00:00.000Z'),
+        endedAt: new Date('2026-05-22T12:00:30.000Z'),
+      });
+
+      expect(getPracticeSessionTiming(session, new Date(now))).toEqual({
+        state: 'ended',
+        deadline: new Date('2026-05-22T12:01:12.000Z'),
+        remainingMs: 0,
+      });
+    },
+  );
+
+  it.each([null, new Date('2026-05-22T12:00:30.000Z')])(
+    'keeps a tutor session untimed with endedAt=%s',
+    (endedAt) => {
+      const session = createPracticeSession({ mode: 'tutor', endedAt });
+
+      expect(
+        getPracticeSessionTiming(session, new Date('2026-05-22T12:02:00.000Z')),
+      ).toEqual({
+        state: endedAt ? 'ended' : 'active',
+        deadline: null,
+        remainingMs: null,
+      });
+    },
+  );
+
   it('locks the exam per-question allotment to the board-derived constant', () => {
     expect(EXAM_SECONDS_PER_QUESTION).toBe(72);
   });

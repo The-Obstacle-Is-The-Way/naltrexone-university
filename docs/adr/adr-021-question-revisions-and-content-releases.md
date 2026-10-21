@@ -1,6 +1,6 @@
 # ADR-021: Immutable Question Revisions and Atomic Content Releases
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-03 (the contract step is not pursued; see [Amendment](#amendment--2026-10-03-the-contract-step-is-not-pursued)) and 2026-10-18 (release identity includes selected revisions, pre-bootstrap candidates are frozen, and answer-key returns are named; see the amendments on [release identity](#amendment--2026-10-18-release-identity-includes-selected-revisions), [candidates](#amendment--2026-10-18-freeze-pre-bootstrap-candidates) and [key returns](#amendment--2026-10-18-name-answer-key-returns)) and 2026-10-19 (hold scope and direct named lifts; commit-bound source admission; see the [hold-scope](#amendment--2026-10-19-hold-scope-and-direct-named-lifts) and [source](#amendment--2026-10-19-admit-content-main-commits) amendments)
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
 **Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 (DEBT-484, resolved). Phase 4 is in production as of 2026-10-02 (DEBT-483, resolved), built in steps from its design (DEBT-483). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds staging (`stage-release.ts`) as the release builder (decision 6); the seed itself refuses a database with an active release. 4d demonstrates DEBT-483's Verification on a disposable database. DEBT-489's fix makes every removal explicit and binds each apply to its reviewed plan, and migration `0049` (DEBT-490) records each activation's reason and authority. The contract step is not pursued (see the 2026-10-03 amendment). The first production bootstrap, the managed seed's switch to staging and release zero are Deferred. DEBT-492 closed the release-safety gaps, and DEBT-490 records each decision; both are released, so the bootstrap, the owner's call, waits on nothing in engineering.
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
@@ -155,8 +155,54 @@ No driver for it has been identified. The one benefit cited, telling held, remov
 
 **Reopen if** a reader needs release membership that the projection cannot express.
 
+## Amendment — 2026-10-18: release identity includes selected revisions
+
+BUG-351 part 1 proves that equal content can occupy several immutable revisions. Matching the current revision is insufficient if release reuse substitutes an older revision with the same content hash. The v2 manifest omits revision IDs, while migration 0048 makes its hash and parent unique.
+
+New releases use `app-release-manifest-v3`. Each item names its selected revision ID alongside its slug and unchanged content hash. Reuse and activation verification therefore preserve the selected revision. Existing v2 releases retain their original bytes and hashes and remain readable for activation and rollback. V1 stays unsupported. No schema migration is needed. Content hashes still exclude row identities, as defined above.
+
+## Amendment — 2026-10-18: freeze pre-bootstrap candidates
+
+The owner chose to preserve pre-bootstrap revision IDs for BUG-351's return guard. Before releases, a stored revision is a candidate for earlier publication, not proof of it.
+
+New releases use `app-release-manifest-v4` in place of v3, with the same items. Bootstrap captures every stored revision ID in its own transaction after acquiring the release-pointer lock, and its manifest carries the sorted, unique list in `preBootstrapCandidates`, separately from `items`. Other new releases carry an empty list. The existing immutable-manifest trigger freezes it. Activation and rollback still use only release items; candidates cannot become selectable content.
+
+The list contributes to the manifest hash and therefore to the DEBT-489 plan id. Adding even a draft-only revision between preview and apply invalidates that preview. Reverification uses the stored list, never a fresh census. The preview reports its count. V2 and v3 manifests keep their original canonical bytes and hashes and remain readable for activation and rollback. No database migration or new table is needed.
+
+The return guard uses revisions in activated releases plus this frozen list. A later draft-only or never-activated staged revision does not enter the list. V2/v3 releases contribute activated membership only; missing pre-bootstrap candidates are not reconstructed from later stored revisions.
+
+## Amendment — 2026-10-18: name answer-key returns
+
+BUG-351 part 2b compares each changed key with the same question's activated release items and frozen bootstrap candidates. Both previews name a return separately from other key changes. Staging requires `--revert` for either an older revision or a key return. Activation recomputes key returns under the release-pointer lock, requires exactly those names, and binds the return list to the reviewed plan. The existing activation receipt records the reason and authority; no new receipt table or migration is needed.
+
+This narrows DEBT-492's rollback exemption: a rollback that returns an earlier key now needs explicit names. Its revision-number staging rule is unchanged. A hold lift can also return a key after rollback; it takes explicit names through the same activation guard. An unnamed lift rolls back the hold change too. Same-key changes need no key-return approval.
+
+Clinical review remains in the content repository.
+
 ## Related
 
 - DEBT-483, DEBT-484
 - [Migration Authoring](../guides/database/migrations.md)
 - Content repository: SPEC-005, SPEC-007, ADR-001 (repository boundary)
+
+## Amendment — 2026-10-19: hold scope and direct named lifts
+
+A hold excludes exactly its revision from activation and rollback. Publishing a different revision does not lift the hold. An unpublished question with any unlifted hold remains under clinical review under ADR-022; replacing or retiring content does not declare that review complete.
+
+An operator may lift a hold by its stable hold ID even when the active release names another revision or omits the question. A lift by question still targets only the revision named by the active release. A named lift never targets a later hold on the same revision. The decision requires a reason and authority.
+
+The lift and re-application of the active release are one transaction under the release-pointer lock. A lift cannot publish an omitted question or defeat a withdrawal or another hold. The answer-key-return rule still applies; refusing an unnamed return also refuses the lift. No active release means no hold or lift. Bootstrap timing remains the owner's decision.
+
+## Amendment — 2026-10-19: admit content main commits
+
+Ordinary staging takes an immutable commit from the content repository's local `main` first-parent history. Its question content comes from an archive of that commit, using the app's authoring parser and converter. The checkout and the app's draft and imported folders are not release inputs. The operator is responsible for supplying the intended content repository with its current `main` reference. No content-repository code runs during conversion.
+
+The source questions default to published. Explicit draft and permanent-archive dispositions preserve the existing removal choices. Each name must occur in the source, with at most one disposition. These are release decisions, separate from source content, and enter the manifest and reviewed activation plan. Explicit removal of an absent question and named answer-key returns retain their existing rules.
+
+A sourced release uses `app-release-manifest-v5`, with `corpusCommit` alongside its revision-bound items and removals. The source commit contributes to release identity and the reviewed activation plan through the manifest hash. V2, v3 and v4 canonical bytes and hashes remain unchanged. Their previously activated releases remain available for rollback; an ordinary first activation requires source provenance.
+
+The existing release pointer also holds the highest admitted source commit. Staging and first activation hold its row lock while comparing source order and committing the watermark. The candidate and watermark must both belong to the supplied `main` first-parent chain, and the candidate must equal or follow the watermark. A side-branch ancestor is insufficient. Failed operations and previews leave the watermark unchanged. A rewrite that removes the watermark requires an explicit owner decision; it is not silently accepted.
+
+Rollback and hold reapplication retain the existing manifest, overlay, key-return, attribution and plan rules. They do not change the source watermark. Source order does not determine clinical correctness; clinical review remains in the content repository.
+
+Bootstrap remains unchanged and uses v4, and it does not establish the source of the adopted live bank. So the first sourced stage after it, with a null watermark, names the commit the owner verified against live content; its source must be that commit or a later one on the `main` first-parent chain, and it initializes the watermark. Once a watermark exists, naming a baseline is refused. This admission rule applies after bootstrap. The owner chose to bootstrap before any further direct production seed, so no direct-seed source guard is needed. Git commands on the content repository run without the repository-local variables a hook exports. The first-parent chain is read before the transaction; only the watermark comparison and write run under the pointer lock.

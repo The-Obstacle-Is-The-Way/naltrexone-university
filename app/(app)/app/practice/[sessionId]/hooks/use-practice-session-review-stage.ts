@@ -36,6 +36,7 @@ type EndPracticeSessionActionInput = SessionIdInput & {
 type FinalizeExamAnswersActionInput = SessionIdInput & {
   idempotencyKey?: string;
   finalDraftAnswer?: ExamDraftAnswer;
+  onlyIfExpired?: boolean;
 };
 
 export type { ExamResultsSubstage };
@@ -114,11 +115,15 @@ export function usePracticeSessionReviewStage(
     ],
   );
   const finalizeExamSession = useCallback(
-    (finalDraftAnswer?: ExamDraftAnswer) => {
+    (
+      finalDraftAnswer?: ExamDraftAnswer,
+      options?: { onlyIfExpired: boolean },
+    ) => {
       return endSession({
         sessionId: input.sessionId,
         endSessionIdempotencyKey: finalizeExamIdempotencyKeyRef.current,
         ...(finalDraftAnswer ? { finalDraftAnswer } : {}),
+        ...(options?.onlyIfExpired ? { onlyIfExpired: true } : {}),
         finalizeSessionFn: input.finalizeExamAnswersFn,
         getPracticeSessionSummaryFn: input.getPracticeSessionSummaryFn,
         setLoadState: input.setLoadState,

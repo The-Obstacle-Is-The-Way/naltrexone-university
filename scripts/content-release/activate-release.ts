@@ -4,6 +4,7 @@ import { runHumanDatabaseCommand } from '../database-command';
 import {
   type DecisionRecord,
   readDecisionFlag,
+  readQidValue,
   requireDecision,
 } from '../seed/qid-command-args';
 import {
@@ -12,11 +13,12 @@ import {
   formatDecision,
   formatDecisionArgs,
   formatPlan,
+  formatRevertArgs,
   previewOrApply,
   readPlanId,
   withCommandDatabase,
 } from './command-support';
-import { activateRelease } from './release-activation';
+import { activateReleaseFromSource } from './release-source';
 
 type CommandIo = {
   env?: Readonly<Record<string, string | undefined>>;
@@ -32,21 +34,30 @@ function releaseIdArg(value: string | undefined, message: string): string {
 }
 
 export function parseActivateArgs(argv: readonly string[]): {
+  repository?: string;
   releaseId: string;
   expectedActiveReleaseId: string | null;
   expectedPlanId: string | undefined;
+  revert: string[];
   record: DecisionRecord;
   apply: boolean;
 } {
+  let repository: string | undefined;
   let releaseId: string | undefined;
   let expectedActiveReleaseId: string | null | undefined;
   let expectedPlanId: string | undefined;
+  const revert: string[] = [];
   const record: Partial<DecisionRecord> = {};
   let apply = false;
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     const value = argv[index + 1];
-    if (arg === '--apply' && !apply) {
+    if (arg === '--repo' && repository === undefined) {
+      repository = value;
+      if (!repository || repository.startsWith('--'))
+        throw new Error('--repo needs a repository path');
+      index += 1;
+    } else if (arg === '--apply' && !apply) {
       apply = true;
     } else if (arg === '--release' && releaseId === undefined) {
       releaseId = releaseIdArg(value, '--release needs a release id');
@@ -62,6 +73,9 @@ export function parseActivateArgs(argv: readonly string[]): {
       index += 1;
     } else if (arg === '--plan' && expectedPlanId === undefined) {
       expectedPlanId = readPlanId(value);
+      index += 1;
+    } else if (arg === '--revert') {
+      revert.push(readQidValue(value, '--revert', revert));
       index += 1;
     } else if (arg === '--reason' || arg === '--authority') {
       readDecisionFlag(record, arg, value);
@@ -80,9 +94,11 @@ export function parseActivateArgs(argv: readonly string[]): {
   }
   assertPlanForApply(apply, expectedPlanId);
   return {
+    ...(repository === undefined ? {} : { repository }),
     releaseId,
     expectedActiveReleaseId,
     expectedPlanId,
+    revert,
     record: requireDecision(record, 'activation'),
     apply,
   };
@@ -102,7 +118,7 @@ export async function runActivateRelease(
     execute: (databaseUrl) =>
       withCommandDatabase(databaseUrl, async (db) => {
         const summary = await previewOrApply(db, apply, (target) =>
-          activateRelease(target, input),
+          activateReleaseFromSource(target, input),
         );
         log(
           `Release activation${apply ? '' : ' (dry-run)'}: ${formatActivation(summary)}`,
@@ -111,7 +127,7 @@ export async function runActivateRelease(
         for (const line of formatPlan(summary.plan)) log(line);
         if (!apply) {
           log(
-            `Apply exactly this plan: pnpm exec tsx scripts/content-release/activate-release.ts --release ${input.releaseId} --expect-active ${input.expectedActiveReleaseId ?? 'none'} ${formatDecisionArgs(input.record)} --plan ${summary.plan.id} --apply`,
+            `Apply exactly this plan: pnpm exec tsx scripts/content-release/activate-release.ts${input.repository ? ` --repo '${input.repository.replaceAll("'", "'\\''")}'` : ''} --release ${input.releaseId} --expect-active ${input.expectedActiveReleaseId ?? 'none'}${formatRevertArgs(input.revert)} ${formatDecisionArgs(input.record)} --plan ${summary.plan.id} --apply`,
           );
         }
       }),

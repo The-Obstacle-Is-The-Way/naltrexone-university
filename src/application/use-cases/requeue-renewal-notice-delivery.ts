@@ -4,6 +4,7 @@ import type { RenewalNoticeDelivery } from '@/src/domain/entities';
 
 export type RequeueRenewalNoticeDeliveryInput = {
   deliveryId: string;
+  expectedAttemptCount: number;
   reason: string;
   operator: string;
   confirmedNoSend: boolean;
@@ -28,8 +29,19 @@ export class RequeueRenewalNoticeDeliveryUseCase {
       );
     }
 
+    if (
+      !Number.isSafeInteger(input.expectedAttemptCount) ||
+      input.expectedAttemptCount < 0
+    ) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Renewal notice requeue requires the inspected non-negative attempt count',
+      );
+    }
+
     return this.repository.requeue({
       id: input.deliveryId,
+      expectedAttemptCount: input.expectedAttemptCount,
       reason: input.reason.trim(),
       requeuedBy: input.operator.trim(),
       requeuedAt: this.now(),

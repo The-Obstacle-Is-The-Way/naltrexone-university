@@ -28,6 +28,7 @@ describe('toPracticeQuestionResult', () => {
           index: 0,
           total: 1,
           deadlineAt: null,
+          remainingMs: null,
           isMarkedForReview: false,
         },
       }),

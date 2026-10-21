@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
 } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRenewalNoticeDeliveryRepository,
 } from '@/src/application/test-helpers/fakes';
 import { FakeSha256Hasher } from '@/src/application/test-helpers/fakes/fake-sha256-hasher';
@@ -52,18 +53,21 @@ async function acceptedNotice() {
 
 // DEBT-414 F07: the provider's report on an accepted renewal notice.
 describe('RecordRenewalNoticeProviderOutcomeUseCase', () => {
+  afterEach(() => vi.restoreAllMocks());
   it('records a delivery and logs it', async () => {
     const repository = await acceptedNotice();
     const logger = new FakeLogger();
 
     await expect(
-      new RecordRenewalNoticeProviderOutcomeUseCase(repository, logger).execute(
-        {
-          providerEventId: 'email_123',
-          outcome: { kind: 'delivered' },
-          observedAt,
-        },
-      ),
+      new RecordRenewalNoticeProviderOutcomeUseCase(
+        repository,
+        logger,
+        new FakeOperationalAlerts(),
+      ).execute({
+        providerEventId: 'email_123',
+        outcome: { kind: 'delivered' },
+        observedAt,
+      }),
     ).resolves.toBe('recorded');
     await expect(repository.findById(deliveryId)).resolves.toMatchObject({
       status: 'delivered',
@@ -81,6 +85,7 @@ describe('RecordRenewalNoticeProviderOutcomeUseCase', () => {
     await new RecordRenewalNoticeProviderOutcomeUseCase(
       repository,
       logger,
+      new FakeOperationalAlerts(),
     ).execute({
       providerEventId: 'email_123',
       outcome: {
@@ -107,6 +112,7 @@ describe('RecordRenewalNoticeProviderOutcomeUseCase', () => {
     const useCase = new RecordRenewalNoticeProviderOutcomeUseCase(
       repository,
       logger,
+      new FakeOperationalAlerts(),
     );
     const bounce = {
       providerEventId: 'email_123',
@@ -124,18 +130,76 @@ describe('RecordRenewalNoticeProviderOutcomeUseCase', () => {
     expect(logger.errorCalls).toHaveLength(1);
   });
 
+  it('alerts once when a provider failure quarantines an accepted notice', async () => {
+    const repository = await acceptedNotice();
+    const alerts = new FakeOperationalAlerts();
+    const useCase = new RecordRenewalNoticeProviderOutcomeUseCase(
+      repository,
+      new FakeLogger(),
+      alerts,
+    );
+    const report = {
+      providerEventId: 'email_123',
+      outcome: {
+        kind: 'failed',
+        failureClass: 'provider_bounced',
+        failureCode: 'Permanent',
+      },
+      observedAt,
+    } as const;
+
+    await useCase.execute(report);
+    await useCase.execute(report);
+
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_terminal_failure', count: 1 },
+    ]);
+  });
+
+  it('still alerts on a failed report when logging throws', async () => {
+    const repository = await acceptedNotice();
+    const logger = new FakeLogger();
+    vi.spyOn(logger, 'error').mockImplementation(() => {
+      throw new Error('log unavailable');
+    });
+    const alerts = new FakeOperationalAlerts();
+    const useCase = new RecordRenewalNoticeProviderOutcomeUseCase(
+      repository,
+      logger,
+      alerts,
+    );
+
+    await expect(
+      useCase.execute({
+        providerEventId: 'email_123',
+        outcome: {
+          kind: 'failed',
+          failureClass: 'provider_suppressed',
+          failureCode: 'suppressed',
+        },
+        observedAt,
+      }),
+    ).resolves.toBe('recorded');
+
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_terminal_failure', count: 1 },
+    ]);
+  });
+
   it('ignores a report on an email that is not a notice, without logging an error', async () => {
     const repository = await acceptedNotice();
     const logger = new FakeLogger();
 
     await expect(
-      new RecordRenewalNoticeProviderOutcomeUseCase(repository, logger).execute(
-        {
-          providerEventId: 'email_other',
-          outcome: { kind: 'delivered' },
-          observedAt,
-        },
-      ),
+      new RecordRenewalNoticeProviderOutcomeUseCase(
+        repository,
+        logger,
+        new FakeOperationalAlerts(),
+      ).execute({
+        providerEventId: 'email_other',
+        outcome: { kind: 'delivered' },
+        observedAt,
+      }),
     ).resolves.toBe('unknown');
     expect(logger.errorCalls).toEqual([]);
   });

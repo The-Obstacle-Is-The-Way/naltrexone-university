@@ -200,12 +200,10 @@ describe('FinalizeExamAnswersUseCase', () => {
             cumulativeMs: 10_000,
           },
         }),
-      ).rejects.toEqual(
-        new ApplicationError(
-          'CONFLICT',
-          'Final exam answer flush is only allowed at exam expiry',
-        ),
-      );
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        details: { reason: 'exam_not_expired' },
+      });
 
       await expect(
         attempts.findBySessionId('session-1', 'user-1'),

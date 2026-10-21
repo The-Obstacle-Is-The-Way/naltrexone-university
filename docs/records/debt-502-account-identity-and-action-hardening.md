@@ -14,7 +14,7 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 
 ## Items
 
-**Decided 2026-10-08 (AUDIT-015): one identity resolver.** Clerk, `users.email` and the Stripe customer each hold the user's email, and nothing keeps them in step; items 1–3 and DEBT-511 are symptoms. One resolver takes Clerk's verified primary email, provisions under the tombstone lock (item 2), moves a conflicting row (item 1), and syncs Stripe's copy. Provisioning, the billing refresh, the webhook and notice dispatch all use it. It ships before 35 days ahead of the earliest live renewal, in the order items 3, 1, 2.
+**Decided 2026-10-08 (AUDIT-015): one identity resolver.** Clerk, `users.email` and the Stripe customer each hold the user's email, and nothing keeps them in step; items 1–3 and DEBT-511 are symptoms. One resolver takes Clerk's verified primary email, provisions under the tombstone lock (item 2), moves a conflicting row (item 1), and syncs Stripe's copy. Provisioning, the billing refresh, the webhook and notice dispatch all use it. It ships before 39 days ahead of the earliest live renewal, in the order items 3, 1, 2.
 
 **Adopted 2026-10-17 (DEBT-524 step 5):** keep this deadline and order. The resolver must preserve ADR-004: the verified Clerk session establishes identity; an email address does not. Retain BUG-320/BUG-332's retries as defense after consolidation. If implementation adds `user.created`, specify and test missing/delayed-webhook request fallback, concurrent requests and tombstone/deletion behavior before enabling it. A new webhook path does not remove those races.
 

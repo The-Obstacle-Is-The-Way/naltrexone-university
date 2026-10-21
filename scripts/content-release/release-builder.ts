@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, inArray, lt } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
-import { sha256Hex } from '../../lib/content/parse-mdx-question';
-import { questionRevisionContentHash } from '../../lib/content/question-revision-hash';
+import { canonicalQuestionRevisionJson } from '../../lib/content/question-revision-hash';
 import type { SeedSourceFile } from '../seed/file-reader';
 import { onlyRow } from '../seed/only-row';
 import {
   isSyntheticPlaceholderSource,
+  revisionFieldsFromDb,
   revisionFieldsFromSeed,
   type SeedQuestionRep,
 } from '../seed/question-parser';
@@ -18,6 +18,7 @@ import {
   replaceQuestionTags,
   sortedTags,
 } from '../seed/question-syncer';
+import { findUnrecordedWithdrawals } from '../seed/question-withdrawal-writer';
 import {
   lockReleasePointer,
   ReleaseActivationError,
@@ -25,15 +26,18 @@ import {
   type ReleaseRemoval,
   stageRelease,
 } from './release-activation';
+import { type ReleaseChanges, readReleaseChanges } from './release-changes';
 import {
   buildReleaseManifest,
   type ReleaseManifestRemoval,
   releaseManifestHash,
+  SOURCE_MANIFEST_FORMAT,
 } from './release-manifest';
 
 type Db = PostgresJsDatabase<typeof schema>;
 
 export type StageSummary = {
+  changes: ReleaseChanges;
   releaseId: string;
   parentReleaseId: string;
   /** An existing release with the same manifest on the same parent. */
@@ -52,29 +56,45 @@ export type StageSummary = {
   withdrawals: number;
 };
 
-// A revision's content_hash is the stored-fields-json-v1 hash of exactly what
-// it holds (ADR-021), so a file matches a revision when the hashes agree.
+// Prefer the current revision when content has returned to an earlier value;
+// otherwise reuse the newest match. Compare canonical fields as the seed
+// does, without changing the stored bytes or their immutable hashes.
 async function revisionForContent(
   tx: Db,
   questionId: string,
   seed: SeedQuestionRep,
 ): Promise<string | null> {
-  const [match] = await tx
-    .select({ id: schema.questionRevisions.id })
+  const revisions = await tx
+    .select({ revision: schema.questionRevisions })
     .from(schema.questionRevisions)
-    .where(
-      and(
-        eq(schema.questionRevisions.questionId, questionId),
-        eq(
-          schema.questionRevisions.contentHash,
-          questionRevisionContentHash(revisionFieldsFromSeed(seed), {
-            hash: sha256Hex,
-          }),
-        ),
-      ),
+    .innerJoin(
+      schema.questions,
+      eq(schema.questions.id, schema.questionRevisions.questionId),
     )
-    .limit(1);
-  return match?.id ?? null;
+    .where(eq(schema.questionRevisions.questionId, questionId))
+    .orderBy(
+      desc(eq(schema.questionRevisions.id, schema.questions.currentRevisionId)),
+      desc(schema.questionRevisions.revisionNumber),
+    );
+  const choices = await tx
+    .select()
+    .from(schema.choices)
+    .where(eq(schema.choices.questionId, questionId));
+  const choicesByRevision = new Map<string, schema.Choice[]>();
+  for (const choice of choices) {
+    const group = choicesByRevision.get(choice.questionRevisionId) ?? [];
+    group.push(choice);
+    choicesByRevision.set(choice.questionRevisionId, group);
+  }
+  const incoming = canonicalQuestionRevisionJson(revisionFieldsFromSeed(seed));
+  for (const { revision } of revisions) {
+    const stored = revisionFieldsFromDb(
+      revision,
+      choicesByRevision.get(revision.id) ?? [],
+    );
+    if (canonicalQuestionRevisionJson(stored) === incoming) return revision.id;
+  }
+  return null;
 }
 
 // DEBT-483 / ADR-021 decision 6: in production, content arrives as a staged
@@ -91,13 +111,20 @@ async function revisionForContent(
 // A member already withdrawn may be absent. Staging records no withdrawal; an
 // archived file is a removal that activation turns into one.
 //
-// DEBT-492: a file whose content matches an earlier revision moves its
-// question back to that revision, which can undo an answer-key correction.
+// DEBT-492: a file whose content matches only an earlier revision, not the
+// current one, moves its question back to that revision, which can undo an
+// answer-key correction.
 // Staging allows that only for a question named in `revert`.
+// BUG-351 also requires a name when a changed key matches earlier publication
+// history, even if unrelated edits make the selected revision new.
 export async function stageReleaseFromFiles(
   db: Db,
   files: readonly SeedSourceFile[],
-  options: { remove?: readonly string[]; revert?: readonly string[] } = {},
+  options: {
+    remove?: readonly string[];
+    revert?: readonly string[];
+    corpusCommit?: string | undefined;
+  } = {},
 ): Promise<StageSummary> {
   const prepared = prepareSeedQuestions(files);
   return db.transaction(async (tx) => {
@@ -251,27 +278,13 @@ export async function stageReleaseFromFiles(
         'Refusing to stage a release with no published question: activating it would take every question out of the bank.',
       );
     }
-    const reverting = await revertedSlugs(tx, items);
-    const namedReverts = new Set(options.revert ?? []);
-    for (const qid of namedReverts) {
-      if (!reverting.includes(qid)) {
-        throw new Error(
-          `Cannot revert ${qid}: the bundle does not move it to an earlier revision.`,
-        );
-      }
-    }
-    const unnamed = reverting.filter((slug) => !namedReverts.has(slug));
-    if (unnamed.length > 0) {
-      throw new Error(
-        `The bundle moves ${unnamed.join(', ')} back to an earlier revision, which can undo a correction. Restore the newer content, or name each with --revert.`,
-      );
-    }
 
     const reused = await existingRelease(
       tx,
       items,
       removals.map(({ slug, kind }) => ({ slug, kind })),
       active,
+      options.corpusCommit,
     );
     const releaseId =
       reused ??
@@ -282,8 +295,49 @@ export async function stageReleaseFromFiles(
           kind,
         })),
         parentReleaseId: active,
+        corpusCommit: options.corpusCommit,
       }));
+    const unrecorded = await findUnrecordedWithdrawals(
+      tx,
+      removals
+        .filter((row) => row.kind === 'archived')
+        .map((row) => row.questionId),
+    );
+    const pendingWithdrawnIds = new Set(
+      unrecorded.map((row) => row.questionId),
+    );
+    const { changes } = await readReleaseChanges(
+      tx,
+      releaseId,
+      removals.filter((row) => pendingWithdrawnIds.has(row.questionId)),
+    );
+    const reverting = await revertedSlugs(tx, items);
+    const namedReverts = new Set(options.revert ?? []);
+    for (const qid of namedReverts) {
+      if (!reverting.includes(qid) && !changes.answerKeyReturn.includes(qid)) {
+        throw new Error(
+          `Cannot revert ${qid}: the bundle does not move it to an earlier revision or return to an earlier answer key.`,
+        );
+      }
+    }
+    const unnamed = reverting.filter((slug) => !namedReverts.has(slug));
+    if (unnamed.length > 0) {
+      throw new Error(
+        `The bundle moves ${unnamed.join(', ')} back to an earlier revision, which can undo a correction. Restore the newer content, or name each with --revert.`,
+      );
+    }
+
+    const unnamedKeys = changes.answerKeyReturn.filter(
+      (slug) => !namedReverts.has(slug),
+    );
+    if (unnamedKeys.length > 0) {
+      throw new Error(
+        `The bundle returns ${unnamedKeys.join(', ')} to an earlier answer key. Name each with --revert.`,
+      );
+    }
+
     return {
+      changes,
       releaseId,
       parentReleaseId: active,
       reusedRelease: reused !== null,
@@ -348,11 +402,13 @@ async function existingRelease(
   items: readonly ReleaseItem[],
   removals: readonly ReleaseManifestRemoval[],
   parentReleaseId: string,
+  corpusCommit?: string,
 ): Promise<string | null> {
   const entries = await tx
     .select({
       slug: schema.questions.slug,
       contentHash: schema.questionRevisions.contentHash,
+      revisionId: schema.questionRevisions.id,
     })
     .from(schema.questionRevisions)
     .innerJoin(
@@ -365,7 +421,13 @@ async function existingRelease(
         items.map((item) => item.questionRevisionId),
       ),
     );
-  const manifest = buildReleaseManifest(entries, removals);
+  const manifest = buildReleaseManifest(
+    entries,
+    removals,
+    corpusCommit === undefined ? undefined : SOURCE_MANIFEST_FORMAT,
+    [],
+    corpusCommit,
+  );
   const [release] = await tx
     .select({ id: schema.contentReleases.id })
     .from(schema.contentReleases)

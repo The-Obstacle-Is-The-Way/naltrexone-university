@@ -23,7 +23,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
   - end-to-end only for what nothing lower reaches.
 - **Renaming a test that proves a rule** means updating its line here.
 - **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
-- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343.
+- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343, and R31 with BUG-351.
 
 ## Practice sessions
 
@@ -54,18 +54,32 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `applies the flush within the deadline grace window`
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `drops a flush arriving after the grace window and still finalizes`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `sends a final draft after a backgrounded exam resumes beyond grace so the server decides its cutoff`
+
+The server owns expiry. The browser counts down from server remaining time, using monotonic elapsed time, and refreshes on return. A timer request before server expiry preserves the draft and retries; manual early submission remains allowed. An expired, unfinalized exam still appears as unfinished, and draft review hides correctness. Summary and completed feedback require committed finalization.
+
+- `src/application/use-cases/finalize-exam-answers-deadline.test.ts`: `refuses timer finalization before expiry even without a final draft`
+- `src/application/use-cases/finalize-exam-answers-deadline.test.ts`: `keeps early exam finalization endedAt at now`
+- `src/adapters/controllers/practice-controller-finalize-idempotency-conflicts.test.ts`: `retries an early expiry with the same key and grades its final draft at the server deadline`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `resynchronizes a premature expiry without losing the selection after a failed save`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `requires committed finalization before summary or completed feedback`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `lists the unfinished exam and its draft review without grading it`
 
 ### R8. Only an unfinished exam can be discarded. A tutor session, whose answers are graded attempts, can only be ended, so its attempts are never deleted. Discarding a session that is already gone is a silent success.
 
 - `src/application/use-cases/discard-practice-session.test.ts`: `rejects discarding a tutor session and leaves it intact`
 - `src/application/use-cases/discard-practice-session.test.ts`: `is idempotent when the session is missing or already discarded`
 - `src/application/use-cases/end-practice-session.test.ts`: `rejects generic end for an active exam session`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `discards an expired unfinalized exam without grading its saved draft`
 
-### R9. Marking a question for review exists only inside an active exam.
+### R9. Marking a question for review exists only inside an unfinished exam before its server deadline. Expiry refuses the mark, and the mark never finalizes the exam; the page answers the refusal with the expiry flush, carrying the on-screen answer.
 
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `persists marked-for-review state for exam sessions`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT for tutor sessions`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT when session is already ended`
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `allows a mark one millisecond before expiry`
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `refuses a mark %i ms after expiry without finalizing the exam`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `flushes the on-screen answer when the server refuses a mark after its deadline`
 
 ### R16. A learner always sees a question's choices in the same order, seeded by both the learner and the question.
 
@@ -93,6 +107,13 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `tests/shared/question-availability-contract.ts`: `$name, read through either revision`
 - `tests/shared/question-availability-contract.ts`: `$name, read by id`
 
+A hold blocks its exact revision from activation. A published replacement remains available without lifting the old hold. Once unpublished, any unresolved hold keeps the question Under review and unscored. A direct lift of the last hold leaves an omitted question Retired; it does not republish it.
+
+- `tests/integration/content-hold-scope.integration.test.ts`: `lifts a named old hold after retirement without republishing or rewriting history`
+- `tests/integration/content-hold-scope.integration.test.ts`: `keeps an old revision held on rollback until its named hold is lifted`
+- `tests/integration/content-hold-scope.integration.test.ts`: `lifts an old hold while its replacement stays live and never retargets a later hold`
+- `tests/integration/content-hold-scope.integration.test.ts`: `requires a named key return for a hold-ID lift and rolls back an unnamed lift`
+
 ### R19. A question no longer available shows its content only to a learner who answered it, never on an omitted or unanswered item, whether it was withdrawn, is under review or was retired.
 
 - `tests/integration/withdrawn-question-review.integration.test.ts`: `finalizes an exam with an unanswered item, then hides it from every review once withdrawn`
@@ -105,18 +126,56 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `tests/integration/scores-when-content-changes.integration.test.ts`: `agrees across the summary, History and the Dashboard as content changes during and after an exam`
 - `src/application/use-cases/get-user-stats.test.ts`: `leaves a withdrawn question out of accuracy, not out of activity`
 
-### R21. An answer graded on an answer key corrected since is left out of every score, says so on review, and returns to the Incorrect practice filter. A stored grade is never changed.
+### R21. An answer graded on an answer key corrected since is left out of every score, says so on review, and returns to the Incorrect practice filter. A stored grade is never changed. The seed's whitespace normalization alone does not correct an answer key.
 
 - `tests/shared/attempt-score-contract.ts`: `$name`
+- `tests/integration/answer-key-normalization.integration.test.ts`: `$name agrees between question reads and aggregate scores`
 - `tests/integration/question-repository-key-corrections.integration.test.ts`: `includes a latest answer whose key was corrected since, but not one whose stem was reworded`
 - `tests/integration/seed-revision-append.integration.test.ts`: `keeps a graded attempt on its revision and grade after a key correction`
 - `components/question/question-update-notice.test.tsx`: `says the attempt is not scored and links to the corrected question`
+
+### R26. A release built from unchanged content keeps the question's current revision, even when the same content was stored in an earlier revision.
+
+- `tests/integration/content-release-revision-matching.integration.test.ts`: `keeps the live revision after a key regression and repair`
+- `tests/integration/content-release-revision-matching.integration.test.ts`: `does not reuse a staged %s release that names an older identical revision`
 
 ### R22. An exam's submit warning counts only the unanswered questions that would be scored.
 
 - `src/application/use-cases/get-practice-session-review-content-changes.test.ts`: `counts the scored items left unanswered in an active exam`
 - `src/domain/services/scoring.test.ts`: `in %s mode, answered: %s, question %s: counts %s`
 - `app/(app)/app/practice/[sessionId]/components/exam-review-view.browser.spec.tsx`: `omits the unanswered warning when no unanswered item will be scored`
+
+### R27. Stage and activation previews name answer-key changes separately from other content changes. Activation refuses a reviewed plan if its key-change list has changed.
+
+Bootstrap's reviewed plan also binds its frozen list of earlier revision candidates. That list is history metadata, never selectable content.
+
+A changed key that matches earlier history needs an explicit return name, reason and authority. Earlier history means activated release items plus the frozen bootstrap list; later unpublished revisions do not count. The rule also applies to key-changing rollbacks and hold lifts. Activation binds the return list to its reviewed plan.
+
+- `tests/integration/content-release-key-returns.integration.test.ts`: `names a stale-key return in both previews and records the named return and later repair decisions`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `does not treat a later %s-only stage as earlier publication`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `invalidates a preview when intervening activations turn its new key into a return`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `refuses an unnamed key-returning hold lift atomically and accepts its explicitly named decision`
+
+- `tests/integration/content-release-bootstrap-candidates.integration.test.ts`: `refuses a bootstrap preview after only its historical candidate set changes`
+- `tests/integration/content-release-bootstrap-candidates.integration.test.ts`: `never publishes historical candidates when activating or rolling back the bootstrap`
+
+- `tests/integration/content-release-key-preview.integration.test.ts`: `compares %s in both previews`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `prints each staging change by kind without publishing the preview`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `canonicalizes stored correct text as the seed does before comparing keys`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `refuses an old preview when lifting a hold changes the compared key`
+
+### R31. After bootstrap, ordinary release commands admit only source commits at or after the highest admitted commit on the content repository's main first-parent history. Rollback preserves that watermark. The first release after the bootstrap starts from the commit the owner verified against live content, or a later one.
+
+The first sourced stage names that verified baseline and initializes the watermark. Bootstrap still adopts the live bank and does not prove its source. Draft and permanent-archive dispositions remain explicit decisions bound to the activation plan. A source-free release can be activated by the ordinary command only if it was activated before.
+
+- `scripts/content-release/content-source.test.ts`: `archives the selected main commit and ignores dirty working files`
+- `scripts/content-release/content-source.test.ts`: `refuses a merged side-branch commit and a rewritten main watermark`
+- `tests/integration/content-release-source.integration.test.ts`: `starts the first release after the bootstrap only from the verified baseline or later`
+- `scripts/content-release/content-source.test.ts`: `refuses a snapshot older than the verified baseline`
+- `tests/integration/content-release-source.integration.test.ts`: `previews without a watermark write, then binds source identity and the activation plan`
+- `tests/integration/content-release-source.integration.test.ts`: `re-reads the watermark after waiting for the release-pointer lock`
+- `tests/integration/content-release-source.integration.test.ts`: `refuses a legacy unactivated release but rolls back a previously activated legacy release without lowering the watermark`
+- `tests/integration/content-release-source.integration.test.ts`: `binds different dispositions of one commit to distinct manifests and activation plans`
 
 ## Subscription and billing
 
@@ -189,3 +248,21 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `src/application/use-cases/set-bookmark.test.ts`: `throws NOT_FOUND when adding an unpublished question`
 - `src/application/use-cases/set-bookmark.test.ts`: `returns bookmarked=false when removing an already absent bookmark`
 - `src/application/use-cases/get-bookmarks.test.ts`: `labels a bookmarked question that is %s`
+
+## Renewal recovery
+
+### R28. Retrying a quarantined renewal notice requires an operator, a reason and evidence for the current attempt; an unknown outcome also requires confirmation that nothing was sent.
+
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `requeues an unknown outcome only with no-send confirmation and preserves an audit entry`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `rejects missing operator evidence and accepted rows`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `rejects an unknown outcome without no-send confirmation`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `refuses confirmation for an older attempt before the command starts`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `refuses evidence inspected before a newer %s attempt existed (%s)`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `preserves an audit entry written before inspected attempt counts existed`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `rejects a stale requeue after another operator leaves the notice %s`
+
+## Renewal scheduling
+
+### R29. Annual and monthly anniversary reminders are first eligible 39 days before renewal and are not scheduled inside the 30-day minimum or outside the 39-day maximum; a repeat run preserves an already accepted reminder instead of creating and sending another.
+
+- `tests/integration/cron-routes.integration.test.ts`: `selects %s reminders from 30 through 39 days and does not resend them`
