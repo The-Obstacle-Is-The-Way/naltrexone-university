@@ -38,9 +38,9 @@ const readSeedEnvironmentFile: SeedEnvironmentFileReader = (filePath) =>
 
 export function createSeedEnvironmentRuntime(
   tempDirectory: string,
-  corpus: { contentRoot?: string; spawnProcess?: SeedProcessSpawner } = {},
+  options: { contentRoot?: string; spawnProcess?: SeedProcessSpawner } = {},
 ): SeedEnvironmentRuntime {
-  const { contentRoot = 'content', spawnProcess = spawnSeedProcess } = corpus;
+  const { contentRoot = 'content', spawnProcess = spawnSeedProcess } = options;
   return {
     dependencies: {
       readLocalDatabaseUrl: () => readDatabaseUrlFromFile('.env.local'),
@@ -58,7 +58,7 @@ export function createSeedEnvironmentRuntime(
               spawnProcess,
             ),
         }),
-      seedDatabase,
+      seedDatabase: (databaseUrl) => seedDatabase(databaseUrl, spawnProcess),
       log: console.info,
     },
     cleanup: () => rm(tempDirectory, { recursive: true, force: true }),
@@ -119,7 +119,12 @@ export async function readDatabaseUrlFromFile(
   return databaseUrl;
 }
 
-async function seedDatabase(databaseUrl: string): Promise<void> {
+// The child gets no --include-placeholders: an environment seed never
+// publishes the placeholder fixtures (BUG-353).
+async function seedDatabase(
+  databaseUrl: string,
+  spawnProcess: SeedProcessSpawner,
+): Promise<void> {
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
     DATABASE_URL: databaseUrl,
@@ -129,6 +134,8 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
     'pnpm',
     ['exec', 'tsx', 'scripts/internal/run-managed-db-seed.ts'],
     childEnv,
+    false,
+    spawnProcess,
   );
 }
 

@@ -16,7 +16,7 @@ This document serves two purposes:
 │ 1. AUTHORING                                                          │
 │    content/drafts/questions/**/*.md (draft format, optional)          │
 │         ↓ pnpm content:import:drafts                                  │
-│    content/questions/**/*.mdx (canonical format, 958 files verified)  │
+│    content/questions/**/*.mdx (canonical question format)             │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 2. SEEDING                                                            │
 │    pnpm db:seed                                                       │
@@ -28,7 +28,7 @@ This document serves two purposes:
 │    question_revisions (stemMd, explanationMd, referenceMd, difficulty)│
 │    choices (revision, label, textMd, isCorrect, explanationMd, order) │
 │    tags, question_tags                                                │
-│    Raw markdown stored as-is — no HTML compilation at rest            │
+│    Normalized markdown — no HTML compilation at rest                  │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 4. QUERY LAYER                                                        │
 │    DrizzleQuestionRepository → domain Question entity                 │
@@ -43,7 +43,7 @@ This document serves two purposes:
 ├───────────────────────────────────────────────────────────────────────┤
 │ 7. FRONTEND RENDERING                                                 │
 │    react-markdown + remark-gfm + rehype-sanitize                      │
-│    Client-side markdown → HTML at view time                           │
+│    React renders markdown → HTML                                      │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,16 +53,16 @@ This document serves two purposes:
 
 ### Which directory feeds production?
 
-**Only `content/questions/**/*.mdx`** — the seed script (`pnpm db:seed`) reads exclusively from this directory. It never touches `content/drafts/`.
+**The bare seed (`pnpm db:seed`) reads non-hidden `content/questions/**/*.mdx`.** It does not import drafts. The managed production seed first imports `content/drafts/questions` as published content, then invokes the bare seed. Once a release is active, both seeds refuse that database; staging reads an archived commit of the content repository's `main` instead.
 
 ### How the three directories relate
 
 ```text
 content/drafts/questions/**/*.md       YOUR WORKSPACE (raw authoring, gitignored)
-        │                              Safe to modify, delete, restructure anytime.
-        │                              Nothing reads from here automatically.
+        │                              Managed seeding imports this directory.
+        │                              The bare seed does not read it directly.
         │
-        │  pnpm content:import:drafts  (manual — you choose when to run)
+        │  pnpm content:import:drafts  (explicit command or environment-seed preparation)
         │  Validates tags against canonical taxonomy, expands slugs to
         │  {slug, name, kind} objects, splits multi-Q files into 1 MDX each.
         ▼
@@ -70,21 +70,21 @@ content/questions/imported/**/*.mdx    GENERATED OUTPUT (gitignored)
         │                              One MDX file per question.
         │                              Derived from drafts — do not hand-edit.
         │
-        │  pnpm db:seed                (manual — you choose when to run)
-        │  Reads ALL .mdx under content/questions/, validates, upserts to DB.
+        │  pnpm db:seed                (explicit command or environment-seed preparation)
+        │  Reads non-hidden MDX, validates, and syncs to the DB.
         ▼
 PostgreSQL (questions, choices, tags, question_tags)
 ```
 
 ### What about `content/questions/placeholder/`?
 
-10 hand-written example MDXs committed to the repo so the app works out of the box. By default, `pnpm db:seed` **excludes them** and archives any existing placeholder rows. They're templates, not production content.
+10 hand-written example MDXs committed to the repo so the app works out of the box. By default, `pnpm db:seed` **excludes them** and, while no content release is active, archives the ten fixtures' rows by exact QID. They're templates, not production content.
 
-To include them: `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`
+To include them in a local test database: `pnpm db:seed --include-placeholders`. The environment seeds (`db:seed:prod`, `db:seed:all`) never include them (BUG-353).
 
 ### Can I modify drafts freely?
 
-**Yes.** `content/drafts/` is completely decoupled from the seed. Changes there have zero effect on the database until you explicitly run `pnpm content:import:drafts` to regenerate the MDX output, then `pnpm db:seed` to push it to the database.
+Editing drafts does not write the database. A manual import followed by the bare seed can publish those edits; the managed production seed performs the import automatically. After bootstrap, neither path can seed that database. Commit-bound release staging ignores the app's draft and imported folders.
 
 ### Where do tag display names come from?
 
@@ -96,14 +96,14 @@ You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The impo
 
 ### Sources of Truth
 
-- **Draft question format:** `content/drafts/questions/SCHEMA.md`, mirrored from the content repository, where it is edited; the importer's schema (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts` decide what is accepted
+- **Draft question format:** `content/drafts/questions/SCHEMA.md`, mirrored from the content repository, where it is edited (this copy carries corrections from 2026-10-18 still to be applied there); the importer's schema (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts` decide what is accepted
 - **Canonical tag taxonomy:** `lib/content/draft-taxonomy.ts` (code), `docs/product/content-taxonomy.md` (reference)
 - **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parse-mdx-question.ts`
 - **Database tables:** `db/schema.ts` (`questions`, `choices`, `tags`, `question_tags`)
 
-### Rules the Importer Enforces Beyond SCHEMA.md
+### Importer Checks
 
-The mirrored SCHEMA.md leaves these out, so they are recorded here until the content repository's copy says them:
+These boundaries are enforced by the importer and its output parser:
 
 - `source` must be a kebab-case identifier, not just non-empty (`scripts/draft-question-import.ts`).
 - A QID may appear only once across the imported files; a duplicate stops the import (`scripts/import-draft-questions.ts`).
@@ -117,7 +117,7 @@ The mirrored SCHEMA.md leaves these out, so they are recorded here until the con
 |--------|---------|-------------|
 | `scripts/import-draft-questions.ts` | `pnpm content:import:drafts` | Discovers `**/recall.md` + `**/vignettes.md` under `content/drafts/questions/`, splits multi-question blocks, converts each to one MDX file |
 | `scripts/draft-question-import.ts` | (library, called by above) | Parses draft YAML (`DraftFrontmatterSchema`), expands tag slugs to `{slug, name, kind}` objects via `convertDraftQuestionToMdx()` |
-| `scripts/seed.ts` | `pnpm db:seed` | Reads all `content/questions/**/*.mdx`, validates, and syncs each question in its own transaction: a new question is inserted with its first revision; changed content appends a revision with its own choices; status and tags update in place (ADR-021) |
+| `scripts/seed.ts` | `pnpm db:seed` | Reads non-hidden `content/questions/**/*.mdx`, validates, and syncs each question in its own transaction: a new question is inserted with its first revision; changed content appends a revision with its own choices; status and tags update in place (ADR-021) |
 | `scripts/seed-helpers.ts` | (library, called by seed) | Splits a terminal `### Reference` section from the explanation, and detects the legacy "Why other answers are wrong" section, which the seed refuses (per-choice explanations come from each frontmatter choice's `explanation`) |
 | `lib/content/draft-taxonomy.ts` | (library, called by import) | Canonical slug lists + display name maps for topics, substances, treatments |
 | `lib/content/schemas.ts` | (library, called by import + seed) | Zod schemas for MDX frontmatter validation |
@@ -133,7 +133,7 @@ Because real question content is proprietary, it is **gitignored** and must be p
 
 ### MDX File Format
 
-Each `.mdx` file = YAML frontmatter + Markdown body:
+Each `.mdx` file = YAML frontmatter + Markdown body. This schematic uses `|` to show alternatives; a real file chooses one value and includes both topic and substance tags:
 
 ```yaml
 ---
@@ -180,7 +180,7 @@ Required citation for the explanation.
 **Key points:**
 - Labels are authored as A/B/C/D in canonical order in the YAML frontmatter
 - Exactly 1 `correct: true` choice per question (enforced by Zod validation)
-- Standard: 4 choices (schema allows 2-5, but all 958 files use 4)
+- Authoring convention: 4 choices; the schema accepts 2–5. No current private-corpus count is asserted here
 - The `## Stem` and `## Explanation` sections are mandatory
 - Each wrong choice carries its own `explanation` in the frontmatter, and the correct choice carries none (enforced by `QuestionFrontmatterSchema`)
 - A nonempty terminal `### Reference` section in the explanation is required and becomes the question's reference. Only the synthetic placeholder fixtures (a `placeholder-` QID in `content/questions/placeholder/`) may omit it
@@ -196,7 +196,7 @@ Draft question sets live under `content/drafts/questions/**` and are imported fr
   - `choices[]`: two to five, each with a unique `label` A–E, `text` and `correct`; exactly one is correct, and each wrong choice, and only a wrong one, carries an `explanation`
   - Optional: `treatments[]`, `diagnoses[]` for more specific tagging (mapped to MDX `kind: treatment|diagnosis`)
 - Uses headings in this order: `## Question` (or `## Stem`), then `## Explanation`; a `## Choices` heading is rejected, since the choices live in the frontmatter
-- Must begin with `---` then `qid:` on the next line (`splitDraftQuestionsFile()` looks for `^---\\nqid:`)
+- Must begin with `---` then `qid:` on the next line (the line-based `splitDraftQuestionsFile()` checks that next line explicitly)
 
 Notes:
 - Draft `substances[]` and `topics[]` are validated against the canonical taxonomy in `lib/content/draft-taxonomy.ts`.
@@ -259,7 +259,7 @@ Notes:
 
 | Step | Code | What Happens |
 |------|------|-------------|
-| Discover | `glob('content/questions/**/*.mdx')` (`tinyglobby`) | Finds all MDX files |
+| Discover | `glob('content/questions/**/*.mdx')` (`tinyglobby`) | Finds non-hidden MDX files; placeholder filtering follows the explicit flag |
 | Split | `matter(raw)` (`@11ty/gray-matter`) → `{ data, content }` | Separates YAML frontmatter from body |
 | Validate | `QuestionFrontmatterSchema.parse(data)` | Zod validates frontmatter structure |
 | Extract | `parseMdxQuestionBody(content)` | `lib/content/parse-mdx-question.ts` — extracts text between `## Stem` and `## Explanation` headings |
@@ -282,20 +282,20 @@ choices: sortedChoices.map((c, index) => ({
 }));
 ```
 
-Because labels are validated as `A`–`E` and then sorted, `sortOrder` is effectively canonical: `1=A`, `2=B`, `3=C`, `4=D`, `5=E` in the database (independent of the original YAML array order).
+`sortOrder` is the one-based position among the labels present, sorted alphabetically, independent of YAML array order. Contiguous A–D becomes 1–4; sparse B/E becomes 1/2, not 2/5.
 
 ### Publishing Rule
 
-The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status. A question no longer published is labeled by its state, derived from its status, its withdrawals and its unlifted holds: withdrawn, under review or retired ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), implemented by DEBT-493). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
+The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status. A question no longer published is labeled by its state, derived from its status, its withdrawals and its unlifted holds: withdrawn, under review or retired ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), implemented by DEBT-493). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until an approved published-status bundle is imported and seeded, or activated after release bootstrap. Regenerate into a fresh destination; do not hand-edit generated MDX.
 
 ### Placeholder Questions
 
 `content/questions/placeholder/` contains 10 committed templates for pipeline smoke-testing.
 
-To exclude placeholders from your runtime database:
+To exclude placeholders from your runtime database, seed without `--include-placeholders`:
 
 ```bash
-SEED_INCLUDE_PLACEHOLDERS=false pnpm db:seed
+pnpm db:seed
 ```
 
 This excludes `content/questions/placeholder/**/*.mdx` from the seed input and archives only the ten committed fixture slugs listed in `scripts/seed/placeholder-archiver.ts`. An authored question is not synthetic merely because its slug starts with `placeholder-` (BUG-315).
@@ -312,7 +312,7 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-question
 
 In one transaction, after locking the release pointer and then the question rows in ID order, it archives each question and records a withdrawal for every revision in `question_withdrawals` (migration `0045`), with the reason and authority. A revision already recorded keeps its first record.
 
-A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too. Before a release is active, the seed records it with authority `content seed`. Once one is active, the seed refuses the database, and an `archived` file becomes a withdrawal only when the release that stages it is activated, with that activation's authority and a reason naming the release (see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold)). Only the synthetic placeholders are archived and restored without a record. A learner who answered a withdrawn question can still review it, with a notice (ADR-021 §3, as ADR-022 Decision 2 sharpens it: an exam item left unanswered and finalized as omitted is not an answer, so it reveals nothing).
+A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too. Before a release is active, the seed records it with authority `content seed`. Once one is active, the seed refuses the database, and a question staged with `--archive` becomes a withdrawal only when the release that stages it is activated, with that activation's authority and a reason naming the release (see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold)). Only the synthetic placeholders are archived and restored without a record. A learner who answered a withdrawn question can still review it, with a notice (ADR-021 §3, as ADR-022 Decision 2 sharpens it: an exam item left unanswered and finalized as omitted is not an answer, so it reveals nothing).
 
 ### Releases: Bootstrap, Stage, Activate, Roll Back and Hold
 
@@ -325,23 +325,27 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootst
   --reason "Why" --authority "Who"
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts \
   --reason "Why" --authority "Who" --plan "<plan-id>" --apply
-# Stage the MDX bundle as a release on the active release. Every question the
+# Stage the selected commit of the content repository main as a release. Every question the
 # active release names must appear in the bundle unless it is withdrawn; name
 # one whose file is absent on purpose with --remove, and one whose file moves
-# it back to an earlier revision on purpose with --revert.
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts --apply
+# it back to an earlier revision on purpose with --revert. The first release
+# after the bootstrap also names, with --baseline, the full commit ID the
+# owner's live-key check compared, as recorded in BUG-351. The command trusts
+# that ID, so copy it from the record, never from memory.
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts \
+  --repo "$CONTENT_REPOSITORY" --commit "<full-commit-id>" --apply
 # Preview its activation: it prints the plan id, every question it archives,
 # publishes, updates, reverts or withdraws, any that replace a held revision,
 # and the items a hold or withdrawal leaves out.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
-  --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who"
+  --repo "$CONTENT_REPOSITORY" --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who"
 # A plan that returns a question to an earlier answer key needs --revert <qid>
 # for each such question, at staging and at activation (BUG-351).
 # Apply exactly the plan you reviewed. If the plan has changed since, nothing is applied.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
-  --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who" \
+  --repo "$CONTENT_REPOSITORY" --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who" \
   --plan "<plan-id>" --apply
-# Roll back: preview and apply the earlier release the same way.
+# Roll back: preview and apply a previously activated release the same way; --repo is optional.
 # Hold a question's live revision, or lift that hold with --lift. A lift that
 # returns a question to an earlier answer key needs --revert too.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-questions.ts \
@@ -350,18 +354,24 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-q
 
 Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published (DEBT-483).
 
+**Read-only live-key comparison (BUG-351).** Before the bootstrap, the owner compares production's published current answer keys with one commit of the content repository's `main`: with an explicit authorized `DATABASE_URL`, `pnpm exec tsx scripts/content-release/compare-live-keys.ts --repo "$CONTENT_REPOSITORY" --commit "<full-commit-id>"`. It reads the commit through the same archive reader and parser as staging, compares each correct choice's label and normalized text as the release planner does, and prints only counts and the commit. Record that full commit ID in BUG-351: the first release after the bootstrap names it as `--baseline`.
+
+**Source admission (BUG-351).** Supply the intended content repository with its current local `main` reference and a full commit ID. Staging archives that commit and converts its tracked `recall.md` and `vignettes.md` files under `questions/`, the content repository's authoring root, with the app's parser; a copy elsewhere, such as a backup or an artifact, is ignored, and a question ID that appears in two files is refused. It does not read mutable checkout files, app drafts or imported MDX, and it does not execute content-repository code. Unlisted source questions default to published; use `--draft <qid>` or `--archive <qid>` for explicit dispositions. Each name must occur in the commit and may have only one disposition. A `--draft` holds only for the release that names it: the next stage publishes the question again unless it repeats `--draft`.
+
+The v5 manifest binds the commit to the release and its activation plan. Git's first-parent history is read before the transaction; under the release-pointer lock, staging and first activation require the commit to equal or follow the watermark on `main`'s first-parent chain. An older commit or a merged side-branch commit is refused. Bootstrap does not establish the watermark or prove the adopted bank's source, so the first sourced stage after it names `--baseline <commit>`, the commit the owner verified against live content. Its source must be that commit or a later one, and it initializes the watermark. Once a watermark exists, `--baseline` is refused. Git runs without the repository-local variables a hook exports, such as `GIT_DIR`. Previews and failed operations leave it unchanged. A later stage can make an earlier staged release inadmissible. Rollback and hold reapplication never lower it. A release with no source commit may be used by the ordinary activation command only if it was activated before; bootstrap retains its separate, unchanged path. A rewritten main that drops the watermark requires an owner decision.
+
 **What a release removes (DEBT-489).** A new release, one never active before, accounts for every live question, meaning every member of the active release, held ones included:
-- **A member stays in the release** if its file is `published`.
-- **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove` (like `draft`, reversible: a later release that includes its file publishes it again). Use `archived`, or the withdrawal command, for content that must never return.
+- **A member stays in the release** if its source question has no draft or archive disposition.
+- **A member leaves** only by a named removal: `--draft <qid>` (until a release names it again), `--archive <qid>` (a permanent withdrawal), or its QID given to `--remove` (like `draft`, reversible: a later release that includes its file publishes it again). Use `--archive`, or the withdrawal command, for content that must never return.
 - **A withdrawn member** may be absent.
 - **Staging refuses a bundle that leaves out any other member**, and names them, so a stale or partial content folder cannot remove questions silently. Activation repeats the check for any release never active before.
 - **A revert is named (DEBT-492).** A file whose content matches only an earlier revision, not the current one, moves its question *back* to that revision, which can undo an answer-key correction. Staging refuses that unless the question is named with `--revert <qid>`. The plan lists it under "Revert to an earlier revision", apart from "Publish" (not live now) and "Update to a newer revision". A rollback restores earlier revisions by definition, so a content revert alone does not refuse it; its plan names each revert, and it also archives questions added since.
 - **A return to an earlier answer key is named (BUG-351).** The stage and activation previews list answer-key changes apart from other changes. A change whose key equals one this database once had live needs `--revert <qid>` at staging and at activation, with the activation's reason and authority. "Once live" means a revision in an activated release, or one of the pre-bootstrap revisions the bootstrap froze in its manifest. A rollback and a hold lift publish through activation, so they need the name too.
 
-**Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. It locks only the release pointer, not question rows, so learners can start sessions while a stage runs (DEBT-492). An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its file may only stay `archived`) and refuses a bundle with no published file, and is one transaction.
+**Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. It locks only the release pointer, not question rows, so learners can start sessions while a stage runs (DEBT-492). An archive disposition becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its source question may only keep an archive disposition) and refuses a bundle with no published file, and is one transaction.
 
 **Applying is bound to the reviewed plan.** The plan id covers:
-- the release and the release it replaces;
+- the release, including its source commit, and the release it replaces;
 - every (question, revision) it publishes, unchanged ones included;
 - every question it archives;
 - every question it withdraws;
@@ -395,7 +405,7 @@ An unpublished question with any unlifted hold remains **Under review** and out 
 
 **Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row, except a revision staged after the withdrawal, which gets its row when its release is activated; selection is unaffected, because the check is question-wide. Activation excludes a question with any recorded withdrawal, regardless of which revision its release names.
 
-**Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable (UPDATE is rejected; DELETE is not, so this is not an authorization boundary), hash-addressed manifest, which names the release's items and every question it removes (DEBT-489): each live question left out, and every `archived` file in the bundle, which activation withdraws, and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. `content_release_activations` keeps one immutable receipt per activation, with its reason and authority (migration `0049`). `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. Operators bootstrap, stage, activate, roll back and hold with the commands under [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold).
+**Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable (UPDATE is rejected; DELETE is not, so this is not an authorization boundary), hash-addressed manifest, which names the release's items and every question it removes (DEBT-489): each live question left out, and every question staged with `--archive`, which activation withdraws, and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. Since migration `0053` it also holds the source watermark, `source_commit` (BUG-351). `content_release_activations` keeps one immutable receipt per activation, with its reason and authority (migration `0049`). `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. Operators bootstrap, stage, activate, roll back and hold with the commands under [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold).
 
 **Choices table:**
 
@@ -408,7 +418,7 @@ An unpublished question with any unlifted hold remains **Under review** and out 
 | `textMd` | text | Choice text (raw markdown) |
 | `isCorrect` | boolean | Correctness flag |
 | `explanationMd` | text (nullable) | Per-choice explanation, from the choice's frontmatter `explanation`; null for the correct choice |
-| `sortOrder` | integer | Canonical ordering: 1=A, 2=B, 3=C, 4=D, 5=E |
+| `sortOrder` | integer | One-based position among sorted authored labels; sparse labels are allowed |
 
 **Unique constraints:** `(questionRevisionId, label)` and `(questionRevisionId, sortOrder)`: no duplicate labels or ordering within a revision. A newer revision may reuse its question's labels. A choice is never updated.
 
@@ -423,7 +433,7 @@ An unpublished question with any unlifted hold remains **Under review** and out 
 The `toDomain()` method converts DB rows to domain entities:
 - Validates each choice label with `isValidChoiceLabel()`
 - **Sorts choices by `sortOrder` ascending** before returning them to the domain layer
-- Returns choices in canonical/authored order: A(1), B(2), C(3), D(4), E(5) (when present)
+- Returns choices in stored canonical order; the seed assigns one-based positions among the labels present
 
 The domain `Question` entity has `choices: Choice[]` always in this canonical order.
 
@@ -435,7 +445,7 @@ The domain `Question` entity has `choices: Choice[]` always in this canonical or
 
 - `createQuestionSeed(userId, questionId)` → deterministic numeric seed via `hashString("userId:questionId")`
 - `shuffleWithSeed(items, seed)` → Fisher-Yates shuffle with Mulberry32 PRNG
-- Same user + same question = same shuffle every time. Different users see different orders.
+- Same user + same question = same shuffle every time. Different users can see different orders; seeds and permutations can collide.
 
 **Shuffle application:** `src/application/shared/shuffled-choice-views.ts`
 
@@ -454,8 +464,9 @@ The domain `Question` entity has `choices: Choice[]` always in this canonical or
 | `GetNextQuestionUseCase.mapChoicesForOutput()` | `src/application/use-cases/get-next-question.ts` | **Yes** — returns `choice.displayLabel` as `label` |
 | `SubmitAnswerUseCase.mapChoiceExplanations()` | `src/application/use-cases/submit-answer.ts` | **Yes** — returns `choice.displayLabel` |
 | `GetPreviousAttemptUseCase.execute()` | `src/application/use-cases/get-previous-attempt.ts` | **Yes** — returns `choice.displayLabel` |
+| `GetCompletedSessionQuestionsWithFeedbackUseCase` | `src/application/use-cases/get-completed-session-questions-with-feedback.ts` | **Yes** — returns shuffled choice explanations |
 
-All four callers produce **shuffled** labels for their outputs. This was unified by SPEC-025 (previously, `getQuestionBySlug` returned canonical labels).
+All listed callers produce **shuffled** labels for their outputs. This was unified by SPEC-025 (previously, `getQuestionBySlug` returned canonical labels).
 
 ---
 
@@ -463,7 +474,7 @@ All four callers produce **shuffled** labels for their outputs. This was unified
 
 **Markdown rendering:** `components/markdown/markdown.tsx`
 - Uses `react-markdown` with `remark-gfm` (GitHub Flavored Markdown) and `rehype-sanitize` (XSS protection)
-- Renders at view time on the client, not at build time
+- React renders the stored markdown to HTML; the import/seed pipeline does not precompile it
 - `skipHtml` flag prevents raw HTML from rendering
 
 **QuestionCard:** `components/question/question-card.tsx`
@@ -510,7 +521,7 @@ ALL CONTEXTS (consistent — all shuffled):
   Labels always match.
 ```
 
-All four callers of `buildShuffledChoiceViews` produce consistent shuffled labels. The shuffle remains deterministic per `(userId, questionId)` pair.
+All listed callers of `buildShuffledChoiceViews` produce consistent shuffled labels. The shuffle remains deterministic per `(userId, questionId)` pair.
 
 ---
 
@@ -523,7 +534,7 @@ All four callers of `buildShuffledChoiceViews` produce consistent shuffled label
 | **Extract** | `lib/content/parse-mdx-question.ts` | MDX body | `stemMd`, `explanationMd` | N/A (body text) |
 | **Split reference** | `scripts/seed-helpers.ts` | Explanation markdown | General explanation + reference | N/A (per-choice explanations come from frontmatter) |
 | **Canonicalize** | `lib/content/parse-mdx-question.ts` | Raw markdown | Normalized markdown | Preserved |
-| **Seed to DB** | `scripts/seed.ts` | Canonical repr | DB rows | A=sortOrder 1, B=2, etc. |
+| **Seed to DB** | `scripts/seed.ts` | Canonical repr | DB rows | One-based position among sorted labels |
 | **Query** | `drizzle-question-repository.ts` | DB rows | Domain entity | Sorted by sortOrder (A–E) |
 | **Shuffle** | `shuffled-choice-views.ts` | Domain entity + userId | Shuffled views | **New displayLabels** by position |
 | **Question Card** | `question-card.tsx` | Props from controller | Rendered choices | Whatever labels received |
@@ -554,11 +565,11 @@ DEBT-483.
 |---------|---------|---------|
 | `@11ty/gray-matter` | ^3.0.0 | YAML frontmatter parsing at seed time (js-yaml 5's safe `load`; JavaScript front matter is refused) |
 | `tinyglobby` | ^0.2.17 | File discovery at seed time. It silently skips a directory it cannot read, where `fast-glob` threw `EACCES`; release staging still refuses a bundle that leaves out live questions |
-| `react-markdown` | ^10.1.0 | Client-side markdown → HTML at view time |
+| `react-markdown` | ^10.1.0 | React renders markdown → HTML |
 | `remark-gfm` | ^4.0.1 | GitHub Flavored Markdown tables, strikethrough, etc. |
 | `rehype-sanitize` | ^6.0.0 | HTML sanitization (XSS prevention) |
 
-**There is no contentlayer, next-mdx-remote, velite, or similar framework.** The pipeline is fully custom: YAML+Markdown files → seed script → database → client-side react-markdown.
+**There is no contentlayer, next-mdx-remote, velite, or similar framework.** The pipeline is fully custom: YAML+Markdown files → seed script → database → React rendering.
 
 ---
 
@@ -572,8 +583,8 @@ TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 # Prerequisite: approved MDX is already placed under content/questions/.
 # Generate/review replacements separately using the clean-staging procedure above.
-SEED_INCLUDE_PLACEHOLDERS=false DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
-pnpm dev
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
+DATABASE_URL="$TEST_DATABASE_URL" pnpm dev
 ```
 
 The test DB host port is per-clone (resolved by `scripts/resolve-local-test-target.ts`); never hardcode `localhost:5434`. See `docs/guides/testing/integration-tests.md`.
@@ -589,13 +600,13 @@ Seeding requires two things:
 
 Because real content is gitignored, you must ensure the environment running `pnpm db:seed` has the MDX files available (for example, by syncing from a private content repo, or running the seed from your local machine against the remote database).
 
-Before seeding, ensure the target database schema is up to date:
+Before seeding, ensure the target database schema is up to date. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass:
 
 ```bash
-DATABASE_URL="<target-db-url>" pnpm db:migrate
+DATABASE_URL="<target-db-url>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 ```
 
-The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). Neither Preview nor production has one yet (migration 0049's production notice counted no activation receipts), and bootstrapping production is the owner's decision (DEBT-483).
+The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). This document does not record whether a release is active in any remote database. The migration 0049 notice is historical evidence, not a current census; bootstrapping production remains the owner's decision (DEBT-483).
 
 ---
 
@@ -606,7 +617,7 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 | Trigger | Why Reseed Is Needed |
 |---------|---------------------|
 | **After `pnpm db:migrate`** (schema changes) | Migrations may alter enums or constraints that require fresh data insertion. |
-| **After MDX content changes** (new questions, updated tags, edited frontmatter) | While no release is active, the seed is the path from MDX files to database rows; once one is, `stage-release.ts` is. |
+| **After MDX content changes** (new questions, updated tags, edited frontmatter) | While no release is active, the seed is the path from MDX files to database rows; once one is, `stage-release.ts` reads the chosen content-repository commit. |
 | **After tag taxonomy changes** (SPEC-033, renamed slugs, new kinds) | Taxonomy migrations include tag data cleanup (see SPEC-033 §14). Run `pnpm db:migrate` first, then `pnpm db:seed`. |
 | **After switching Neon branches** | Different branches may have different data states. |
 | **After `pnpm db:test:reset`** | Test DB is wiped; seed restores content. |
@@ -617,9 +628,9 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 
 ## 16. Seed Idempotency and Multi-Clone Safety
 
-The seed script is idempotent: running it again with the same MDX content skips every unchanged question and writes nothing.
+Matching question content, status and tags do not create a new revision. A repeated seed can still write: default placeholder archival updates matching rows, and replaying an archived file fills missing withdrawal rows.
 
-**Important:** By default, every `pnpm db:seed` run against a database with no active content release also archives the ten committed placeholder fixtures, by exact QID, unless `SEED_INCLUDE_PLACEHOLDERS=true`. An authored question whose QID merely starts with `placeholder-` is left alone (BUG-315). That placeholder archival is a deliberate side effect of every such run. Once a release is active, the seed refuses the database before it archives anything.
+**Important:** By default, every successful `pnpm db:seed` run with authored input and no active content release also archives the ten committed placeholder fixtures, by exact QID, unless it is given `--include-placeholders`. An authored question whose QID merely starts with `placeholder-` is left alone (BUG-315). That placeholder archival is a deliberate side effect of every such run. Once a release is active, the seed refuses the database before it archives anything.
 
 ### How it works
 
@@ -630,26 +641,28 @@ The seed script is idempotent: running it again with the same MDX content skips 
 
 ### What this means for multiple clones
 
-You may have multiple local clones of the repo (e.g., `naltrexone-university`, `naltrexone-university-2`, `naltrexone-university-3`), each with their own copy of the draft questions. This is safe:
+You may have multiple local clones of the repo (e.g., `naltrexone-university`, `naltrexone-university-2`, `naltrexone-university-3`), each with their own copy of the draft questions. For sequential runs against a database without an active release, with no withdrawals preventing the intended changes:
 
 | Scenario | Result |
 |----------|--------|
-| Seed same questions from two different clones against the same DB | All questions **skipped** on the second run (content matches). Zero DB writes. |
-| Seed from clone A, edit a question's content in clone B, seed from clone B | Only that question gains a **new revision**. Everything else skipped. |
+| Seed same questions from two different clones against the same DB | Matching questions are skipped; placeholder archival and missing withdrawal receipts can still write. |
+| Seed from clone A, edit a question's content in clone B, seed from clone B | That changed question gains a **new revision**; matching questions are skipped, apart from archival/withdrawal side effects. |
 | Seed from clone B after changing only a question's status or tags | That question's status or tags change **in place**, with no new revision. |
 | Seed from different clones against different DBs (dev vs prod) | Each DB gets its own independent copy. No cross-contamination. |
 
-**The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, the older files win:
+**A content rollback risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, the older files win:
 - **Content** (stem, explanation, reference, difficulty, choices or answer key) is appended as a **new current revision**. Learners who saw the newer version get an update notice. The seed counts it under both `updated` and `new revisions`.
 - **Status and tags** change **in place**, with no revision. A stale status can change what learners see: a question that is `published` in B but `draft` in A disappears from new practice. (The seed refuses to reactivate an archived question.) **A stale `archived` status is a permanent withdrawal and cannot be undone by reseeding.** The seed counts these under `updated` only.
 
-So `updated` greater than `new revisions` means metadata changed. Check `status` before seeding from any clone but the newest.
+Concurrent inserts of a new slug can also make one run fail on the unique constraint. Coordinate writers; per-question transactions do not make a multi-file seed atomic.
+
+`updated` greater than `new revisions` indicates updates without new content revisions. Check `status` before seeding from any clone but the newest.
 
 **Import procedure:** generate a fresh staged bundle from the intended draft version using [Import Drafts → MDX](#import-drafts--mdx-generated), review it, and separately place the approved artifact before seeding. A fresh directory prevents stale generated files from joining the new bundle; it does not prove release freshness or authorize a rollback.
 
 ### What about placeholders?
 
-By default, `pnpm db:seed` **excludes** placeholder questions and, while no content release is active, archives the ten committed fixtures' rows in the DB, by exact QID (BUG-315). This is intentional — placeholders are templates, not production content. To include them (e.g., for CI): `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`.
+By default, `pnpm db:seed` **excludes** placeholder questions and, while no content release is active, archives the ten committed fixtures' rows in the DB, by exact QID (BUG-315). This is intentional — placeholders are templates, not production content. To include them in a local test database: `pnpm db:seed --include-placeholders`. CI runs the managed seed, `run-managed-db-seed.ts --include-placeholders`.
 
 ---
 
@@ -666,7 +679,7 @@ By default, `pnpm db:seed` **excludes** placeholder questions and, while no cont
 ### What it does NOT do
 
 - **Does not prune or merge existing output.** A populated destination is refused for actual writes. Generate into a fresh temporary directory outside `content/questions/` and preserve the current imported tree during review. Removing a draft does not withdraw its database row; withdraw it explicitly, as [Withdrawing a Question](#withdrawing-a-question) describes.
-- **Does not touch the database.** Import is a local file operation only. You must run `pnpm db:seed` separately.
+- **Does not touch the database.** Import itself is a local file operation. A plain import needs a separate seed; the environment-seed wrappers run both steps.
 - **Does not read from `content/questions/`.** It reads drafts and writes MDX. The seed reads MDX.
 
 ### Dry-run mode

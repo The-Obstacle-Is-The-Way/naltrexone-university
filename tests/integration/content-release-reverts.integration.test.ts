@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 import * as schema from '@/db/schema';
 import {
   formatPlan,
@@ -11,8 +19,11 @@ import {
 } from '@/scripts/content-release/release-activation';
 import { stageReleaseFromFiles } from '@/scripts/content-release/release-builder';
 import { changeHolds } from '@/scripts/content-release/release-holds';
-import { runStageRelease } from '@/scripts/content-release/stage-release';
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
+import {
+  createContentRepository,
+  runFixtureStage,
+} from '@/tests/shared/content-repository-test-helpers';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { source } from './seed-test-helpers';
@@ -23,6 +34,10 @@ import { source } from './seed-test-helpers';
 // and the plan names reverts, updates, first publications and replaced held
 // revisions apart.
 let disposable: Awaited<ReturnType<typeof createDisposableDatabase>>;
+let repo: Awaited<ReturnType<typeof createContentRepository>>;
+afterEach(async () => {
+  await repo.dispose();
+});
 
 beforeAll(async () => {
   disposable = await createDisposableDatabase();
@@ -33,10 +48,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  repo = await createContentRepository();
   const { db } = disposable;
   await db
     .update(schema.contentReleasePointer)
-    .set({ activeReleaseId: null, activatedAt: null });
+    .set({ activeReleaseId: null, activatedAt: null, sourceCommit: null });
   await db.delete(schema.contentReleaseActivations);
   await db.delete(schema.contentReleases);
   await db.delete(schema.questions);
@@ -185,11 +201,11 @@ describe('DEBT-492: reverts and replaced held revisions are named', () => {
       readFiles: async () => [source(corrected), source(other)],
     };
 
-    await expect(runStageRelease(['--apply'], io)).rejects.toThrow(
+    await expect(runFixtureStage(repo, ['--apply'], io)).rejects.toThrow(
       'name each with --revert',
     );
     await expect(
-      runStageRelease(['--apply', '--revert', corrected], io),
+      runFixtureStage(repo, ['--apply', '--revert', corrected], io),
     ).resolves.toBeUndefined();
   });
 

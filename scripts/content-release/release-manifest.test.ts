@@ -221,3 +221,29 @@ describe('release manifest', () => {
     expect(() => parseReleaseManifest(stored)).toThrow();
   });
 });
+
+// Source metadata changes release identity without changing legacy canonical bytes.
+it('binds the source commit in a v5 manifest and round-trips it', () => {
+  const first = buildReleaseManifest(
+    ITEMS,
+    [],
+    'app-release-manifest-v5',
+    [],
+    'a'.repeat(40),
+  );
+  const second = buildReleaseManifest(
+    ITEMS,
+    [],
+    'app-release-manifest-v5',
+    [],
+    'b'.repeat(40),
+  );
+  expect(first).toMatchObject({
+    format: 'app-release-manifest-v5',
+    corpusCommit: 'a'.repeat(40),
+  });
+  expect(releaseManifestHash(first)).not.toBe(releaseManifestHash(second));
+  expect(
+    parseReleaseManifest(JSON.parse(canonicalReleaseManifestJson(first))),
+  ).toEqual(first);
+});
