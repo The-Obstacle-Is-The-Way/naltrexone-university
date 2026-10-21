@@ -54,6 +54,7 @@ function generateOffline(
 
 it('generates migrations offline', () => {
   generateOffline(['--name=offline_proof'], (result, directory) => {
+    expect(result.error).toBeUndefined();
     expect(result.status, `${result.stderr}${result.stdout}`).toBe(0);
     expect(
       readdirSync(join(directory, 'db/migrations')).some((file) =>
@@ -71,6 +72,7 @@ it('generates migrations offline', () => {
 // reaches drizzle-kit as given, and nothing is generated.
 it('generates nothing when pnpm forwards a separator', () => {
   generateOffline(['--', '--name=offline_proof'], (result, directory) => {
+    expect(result.error).toBeUndefined();
     expect(result.status).not.toBe(0);
     expect(existsSync(join(directory, 'db/migrations'))).toBe(false);
   });
