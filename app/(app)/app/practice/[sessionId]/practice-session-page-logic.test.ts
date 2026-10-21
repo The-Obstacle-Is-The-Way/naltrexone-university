@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 
 const fixtureAttempt1Id = crypto.randomUUID();
 const fixtureChoice1Id = crypto.randomUUID();

@@ -3,12 +3,12 @@ import {
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import {
   PracticeSessionConflictMessages,
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
-import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const fixtureChoice1Id = crypto.randomUUID();
 const fixtureQuestion1Id = crypto.randomUUID();

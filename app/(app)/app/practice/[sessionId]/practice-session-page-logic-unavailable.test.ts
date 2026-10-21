@@ -3,9 +3,9 @@ import {
   loadNextQuestion,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
-import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const fixtureChoice1Id = crypto.randomUUID();
 const fixtureQuestion1Id = crypto.randomUUID();

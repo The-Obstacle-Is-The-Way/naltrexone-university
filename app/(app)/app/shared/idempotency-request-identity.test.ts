@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { submitAnswerForQuestion as submitPracticeSessionAnswer } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { submitAnswerForQuestion as submitQuickPracticeAnswer } from '@/app/(app)/app/practice/practice-page-logic';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 import type { RetryProvenance } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { submitSelectedAnswer } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { setBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
@@ -20,7 +21,6 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { ok } from '@/tests/test-helpers/ok';
-import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const questionId = crypto.randomUUID();
 const choiceAId = crypto.randomUUID();

@@ -77,9 +77,9 @@ The contract references had drifted. The reference guard now checks their target
 
 Option 1. The reference check failed on the original contract and now passes with declaration and test-name links.
 
-`executeIdempotent` and `withIdempotency` require an explicit `shouldCacheError`. Their four type assertions failed before the policy and sequencing inputs became required. The twelve controller callers retain their policies, including Zod-error caching and the action-aware rules. A throwing policy still preserves the original error and caches it.
+`executeIdempotent` and `withIdempotency` require an explicit `shouldCacheError`, and ADR-015's 2026-10-21 amendment records it. The twelve controller callers retain their policies, including Zod-error caching and the action-aware rules. A throwing policy still preserves the original error and caches it.
 
-Both shared question flows require the complete sequencing pair, and their page helpers carry that requirement to callers. They reject an absent or partial pair before starting a request. The two absent-pair tests failed before the runtime guard changed. Existing stale-response, key-binding, replay, rotation and recovery cases remain.
+Both shared question flows require the complete sequencing pair, and their page helpers carry that requirement to callers. They reject an absent or partial pair before starting a request. Four type assertions, two for the cache policy and two for the sequencing pair, failed before those inputs became required, and the two absent-pair tests failed before the runtime guard changed. Existing stale-response, key-binding, replay, rotation and recovery cases remain.
 
 Another defect alone neither satisfies option 2 nor authorizes it. Option 1 leaves the NO-GO intact. Reference-existence tests do not prove behavior; retain the production-shaped protocol tests and documented per-surface exceptions.
 

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { runSubmitAnswerFlow } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
-import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const fixtureAttempt1Id = crypto.randomUUID();
 const fixtureChoice1Id = crypto.randomUUID();
