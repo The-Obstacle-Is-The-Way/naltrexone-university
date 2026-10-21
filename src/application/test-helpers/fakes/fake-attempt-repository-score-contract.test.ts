@@ -94,6 +94,9 @@ const createHarness = async (): Promise<AttemptScoreHarness> => ({
               if (revisedAfter === 'key') {
                 return { ...choice, isCorrect: !choice.isCorrect };
               }
+              if (revisedAfter === 'key normalization' && choice.isCorrect) {
+                return { ...choice, textMd: ` \t${choice.textMd} \t\r\n` };
+              }
               const reworded =
                 (revisedAfter === 'key text' && choice.isCorrect) ||
                 (revisedAfter === 'distractor' && !choice.isCorrect);

@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
 import packageJson from '@/package.json';
 import {
@@ -27,6 +28,20 @@ function createDependencies(): SeedEnvironmentDependencies & {
 }
 
 describe('db:seed:prod', () => {
+  it('shows a plan command without a forwarded separator when arguments are invalid', () => {
+    const result = spawnSync('pnpm', ['db:seed:prod', '--invalid-option'], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1' },
+      timeout: 10_000,
+    });
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      'Usage: pnpm db:seed:prod [--plan]',
+    );
+  });
+
   it.each([undefined, '["wrong-host/proddb"]'])(
     'requires the exact Production target token %s before writes',
     async (acknowledgement) => {

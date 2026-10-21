@@ -87,11 +87,13 @@ export function createE2ECommandPlan({
     {
       label: 'Seed isolated local Docker test database',
       command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/internal/run-managed-db-seed.ts'],
-      env: {
-        ...targetEnv,
-        SEED_INCLUDE_PLACEHOLDERS: 'true',
-      },
+      args: [
+        'exec',
+        'tsx',
+        'scripts/internal/run-managed-db-seed.ts',
+        '--include-placeholders',
+      ],
+      env: targetEnv,
     },
     {
       label: 'Run Playwright E2E against isolated local test target',

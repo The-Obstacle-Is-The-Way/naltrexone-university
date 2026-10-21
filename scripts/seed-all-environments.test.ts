@@ -140,7 +140,7 @@ describe('db:seed:all', () => {
   it('forwards unsupported arguments and the entry-point exit status', () => {
     const result = spawnSync(
       'pnpm',
-      ['db:seed:all', '--', '--unsupported-seed-option'],
+      ['db:seed:all', '--unsupported-seed-option'],
       {
         cwd: process.cwd(),
         encoding: 'utf8',
@@ -151,6 +151,6 @@ describe('db:seed:all', () => {
     const output = `${result.stdout}\n${result.stderr}`;
 
     expect(result.status).toBe(1);
-    expect(output).toContain('Usage: pnpm db:seed:all [-- --plan]');
+    expect(output).toContain('Usage: pnpm db:seed:all [--plan]');
   });
 });
