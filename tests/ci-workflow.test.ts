@@ -269,6 +269,23 @@ describe('CI workflow', () => {
     });
   });
 
+  // BUG-353: the placeholder fixtures are a seed flag, and the seed refuses
+  // the SEED_INCLUDE_PLACEHOLDERS variable it once read.
+  it('seeds the placeholder fixtures by flag, and no workflow sets the retired variable', () => {
+    for (const filePath of [CI_WORKFLOW_PATH, STRIPE_HOSTED_WORKFLOW_PATH]) {
+      expect(
+        findParsedStep(filePath, 'Seed DB (placeholder content)').run,
+      ).toBe(
+        'pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders',
+      );
+    }
+    for (const filePath of WORKFLOW_PATHS) {
+      expect(readFileSync(filePath, 'utf8')).not.toContain(
+        'SEED_INCLUDE_PLACEHOLDERS',
+      );
+    }
+  });
+
   it('delegates skip policy to the parser-backed unit-lane scan', () => {
     const workflow = readCiWorkflow();
 
