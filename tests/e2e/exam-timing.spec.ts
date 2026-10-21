@@ -62,6 +62,7 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   const actionsInFlight = new Set<Request>();
   let lastActionSettledAt = Date.now();
   let timingReadsSettled = 0;
+  let timingReadsSucceeded = 0;
   const settle = (request: Request) => {
     if (!actionsInFlight.delete(request)) return false;
     if (onSessionPage(request)) lastActionSettledAt = Date.now();
@@ -80,17 +81,21 @@ test('a fast browser clock preserves the answer until server exam expiry', async
     const status = (await request.response())?.status() ?? 0;
     return status >= 300 && status < 400;
   };
+  /** True when the request settled a timing read. */
   const settleAction = (request: Request) => {
     const root = rootOf(request);
-    if (settle(root) && actionOf(root) === TIMING_ACTION)
-      timingReadsSettled += 1;
+    if (!settle(root) || actionOf(root) !== TIMING_ACTION) return false;
+    timingReadsSettled += 1;
+    return true;
   };
   page.on('request', (request) => {
     const root = rootOf(request);
     if (isServerAction(root)) actionsInFlight.add(root);
   });
   page.on('requestfinished', async (request) => {
-    if (!(await isRedirect(request))) settleAction(request);
+    if (await isRedirect(request)) return;
+    if (settleAction(request) && (await request.response())?.ok())
+      timingReadsSucceeded += 1;
   });
   page.on('requestfailed', (request) => {
     settleAction(request);
@@ -136,10 +141,13 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // next one, followed through any redirect to its last request's
   // requestfinished or requestfailed: a response can arrive before its
   // request is aborted. A read that finishes must succeed.
-  // A failed read doesn't fail the test, at activation or on the return. The
-  // timer keeps its last server sample, and the checks below hold either way;
-  // timing reads are aborted for a reason not yet known (BUG-337), in about
-  // one local run in six, and each is logged above as evidence. The manifest
+  // A single failed read, at activation or on the return, doesn't fail the
+  // test: the timer keeps its last server sample, and timing reads are aborted
+  // for a reason not yet known (BUG-337), about one read in six in local runs
+  // on 2026-10-20, never both in one run; each is logged above as evidence.
+  // A timing action that never works does fail it: the return must start a
+  // timing read, and at least one timing read in the session must succeed.
+  // The manifest
   // name identifies the request, so the test does not read its body: Chrome
   // can discard a server action's body before Playwright asks for it ("No
   // data found for resource"), and the controller's timing tests cover the
@@ -159,8 +167,8 @@ test('a fast browser clock preserves the answer until server exam expiry', async
         'An activation timing read settles, and no server action is in flight for QUIET_MS',
     })
     .toBe('quiet');
+  let returnRoot = [...actionsInFlight].find(isTimingRequest);
   const returnRead = new Promise<Request>((resolve) => {
-    let returnRoot = [...actionsInFlight].find(isTimingRequest);
     page.on('request', (request) => {
       const root = rootOf(request);
       if (!returnRoot && isTimingRequest(root)) returnRoot = root;
@@ -176,8 +184,18 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   await page.evaluate(() =>
     document.dispatchEvent(new Event('visibilitychange')),
   );
+  await expect
+    .poll(() => returnRoot !== undefined, {
+      message: 'The return starts a timing read',
+    })
+    .toBe(true);
   const read = await returnRead;
   if (read.failure() === null) expect((await read.response())?.ok()).toBe(true);
+  await expect
+    .poll(() => timingReadsSucceeded, {
+      message: 'At least one timing read in the session succeeds',
+    })
+    .toBeGreaterThan(0);
   await expect(timer).toBeVisible();
   expect(before - seconds(await remaining.textContent())).toBeLessThan(10);
   await expect(page.getByRole('radio').first()).toBeChecked();
