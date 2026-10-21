@@ -5,9 +5,8 @@ import {
   stripeSubscriptionEndsByPeriodEnd,
   stripeSubscriptionStatusToSubscriptionStatus,
 } from '@/src/adapters/gateways/stripe';
+import { callStripeWithRetry } from '@/src/adapters/gateways/stripe/stripe-retry';
 import { CHECKOUT_SUCCESS_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
-import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
-import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { isSubscriptionObservationAttemptsExhaustedError } from '@/src/application/errors';
 import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
@@ -40,39 +39,10 @@ export { getCheckoutSuccessDeps };
 
 const CHECKOUT_ERROR_ROUTE = `${ROUTES.PRICING}?checkout=error`;
 
-type RetryLogInput = {
-  attempt: number;
-  maxAttempts: number;
-  delayMs: number;
-  error: unknown;
-};
-
 type EffectiveSubscription = {
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
 };
-
-function createStripeOnRetry(
-  logger: CheckoutSuccessDeps['logger'],
-  context: Record<string, unknown>,
-): (input: RetryLogInput) => void {
-  return ({ attempt, maxAttempts, delayMs, error }) => {
-    const logContext = {
-      ...context,
-      attempt,
-      maxAttempts,
-      delayMs,
-      error: projectSafeErrorDiagnostics(error),
-    };
-
-    if (logger.warn) {
-      logger.warn(logContext, 'Retrying Stripe API call');
-      return;
-    }
-
-    logger.error(logContext, 'Retrying Stripe API call');
-  };
-}
 
 function getStripeId(value: unknown): string | null {
   if (typeof value === 'string') return value;
@@ -202,17 +172,21 @@ export async function syncCheckoutSuccess(
 
   const user = await d.authGateway.requireUser();
 
-  const session = await retry(
-    () =>
+  const retryLogger = {
+    warn: (context: Record<string, unknown>, message: string) => {
+      if (d.logger.warn) d.logger.warn(context, message);
+      else d.logger.error(context, message);
+    },
+  };
+  const session = await callStripeWithRetry({
+    operation: 'checkout.sessions.retrieve_success',
+    budget: d.stripeBudget,
+    logger: retryLogger,
+    fn: () =>
       d.stripe.checkout.sessions.retrieve(sessionId, {
         expand: ['subscription'],
       }),
-    {
-      ...DEFAULT_RETRY_OPTIONS,
-      shouldRetry: isTransientExternalError,
-      onRetry: createStripeOnRetry(d.logger, { sessionId }),
-    },
-  ).catch((error: unknown) => {
+  }).catch((error: unknown) => {
     if (isStripeResourceMissing(error)) {
       // The same answer covers a session that exists under the other mode's
       // key: a setup error that fails every buyer, so it stays an error.
@@ -248,14 +222,12 @@ export async function syncCheckoutSuccess(
   });
 
   const retrieveObservation = async () => {
-    const subscription = await retry(
-      () => d.stripe.subscriptions.retrieve(subscriptionId),
-      {
-        ...DEFAULT_RETRY_OPTIONS,
-        shouldRetry: isTransientExternalError,
-        onRetry: createStripeOnRetry(d.logger, { subscriptionId }),
-      },
-    );
+    const subscription = await callStripeWithRetry({
+      operation: 'subscriptions.retrieve_success',
+      budget: d.stripeBudget,
+      logger: retryLogger,
+      fn: () => d.stripe.subscriptions.retrieve(subscriptionId),
+    });
 
     const metadataUserId = subscription.metadata?.user_id;
     assertions.assertNonEmptyString(metadataUserId, 'missing_user_id', {

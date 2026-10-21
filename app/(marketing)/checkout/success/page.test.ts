@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
+
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
+import { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
 import {
   FakeAuthGateway,
   FakeLogger,
@@ -583,7 +585,18 @@ describe('getCheckoutSuccessDeps', () => {
     };
 
     const rateLimiter = new FakeRateLimiter();
+    const scopedStripe = {
+      checkout: {
+        sessions: {
+          retrieve: async () => ({ customer: 'cus_1', subscription: 'sub_1' }),
+        },
+      },
+      subscriptions: { retrieve: async () => ({ id: 'sub_1' }) },
+    };
+    const stripeBudget = new StripeCallBudget();
     const fakeContainer = {
+      stripe: scopedStripe,
+      stripeBudget,
       createAuthGateway: () => new FakeAuthGateway(user),
       createRateLimiter: () => rateLimiter,
       logger: new FakeLogger(),
@@ -602,24 +615,7 @@ describe('getCheckoutSuccessDeps', () => {
 
     const deps = await getCheckoutSuccessDeps(undefined, {
       loadContainer: async () => ({
-        createContainer: () => fakeContainer,
-      }),
-      loadStripe: async () => ({
-        getStripe: () => ({
-          checkout: {
-            sessions: {
-              retrieve: async () => ({
-                customer: 'cus_1',
-                subscription: 'sub_1',
-              }),
-            },
-          },
-          subscriptions: {
-            retrieve: async () => ({
-              id: 'sub_1',
-            }),
-          },
-        }),
+        createRequestContainer: () => fakeContainer,
       }),
       loadClerkServer: async () => ({
         auth: async () => ({
@@ -631,6 +627,8 @@ describe('getCheckoutSuccessDeps', () => {
       }),
     });
 
+    expect(deps.stripe).toBe(scopedStripe);
+    expect(deps.stripeBudget).toBe(stripeBudget);
     expect(deps.priceIds).toEqual({
       monthly: 'price_monthly',
       annual: 'price_annual',

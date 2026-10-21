@@ -3,7 +3,8 @@ import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { Logger } from '@/src/application/ports/logger';
-import { isStripeOutage } from './stripe-errors';
+import type { StripeCallBudget } from './stripe-call-budget';
+import { isStripeConnectionError, isStripeOutage } from './stripe-errors';
 
 const STRIPE_CIRCUIT_FAILURE_THRESHOLD = 5;
 const STRIPE_CIRCUIT_RESET_TIMEOUT_MS = 60_000;
@@ -24,11 +25,27 @@ export function callStripeWithRetry<T>({
   operation,
   fn,
   logger,
+  budget,
 }: {
   operation: string;
   fn: () => Promise<T>;
-  logger: Logger;
+  logger: Pick<Logger, 'warn'>;
+  budget?: StripeCallBudget | undefined;
 }): Promise<T> {
+  if (budget) {
+    // Refusing an already-exhausted caller is not a new provider failure.
+    try {
+      budget.requireRemainingMs();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    const wasCutShort = budget.startCall();
+    return stripeCircuitBreaker.execute(fn, {
+      // A connection failure the caller's own deadline caused says nothing
+      // about Stripe's health: it neither counts nor closes the circuit.
+      isIgnored: (error) => isStripeConnectionError(error) && wasCutShort(),
+    });
+  }
   return stripeCircuitBreaker.execute(() =>
     retry(fn, {
       ...DEFAULT_RETRY_OPTIONS,

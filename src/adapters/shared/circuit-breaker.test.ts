@@ -333,4 +333,65 @@ describe('CircuitBreaker', () => {
       await expect(breaker.execute(async () => 'ok')).resolves.toBe('ok');
     });
   });
+
+  // A call can say an error tells nothing about the service, such as a
+  // timeout its own caller's deadline caused: it counts neither way.
+  describe('with errors a call ignores', () => {
+    const ignored = new Error('caller deadline');
+    const isIgnored = (error: unknown) => error === ignored;
+
+    function breaker(now: () => number = () => 0) {
+      return new CircuitBreaker(
+        {
+          failureThreshold: 2,
+          resetTimeoutMs: 60_000,
+          openErrorCode: 'STRIPE_ERROR',
+        },
+        now,
+      );
+    }
+
+    const fail = (target: CircuitBreaker, error: Error) =>
+      target.execute(
+        async () => {
+          throw error;
+        },
+        { isIgnored },
+      );
+
+    it('neither counts an ignored error nor restarts the count', async () => {
+      const target = breaker();
+      await expect(fail(target, new Error('down'))).rejects.toThrow('down');
+      await expect(fail(target, ignored)).rejects.toBe(ignored);
+      await expect(fail(target, new Error('down'))).rejects.toThrow('down');
+
+      await expect(target.execute(async () => 'ok')).rejects.toMatchObject({
+        code: 'STRIPE_ERROR',
+      });
+    });
+
+    it('never opens on ignored errors alone', async () => {
+      const target = breaker();
+      for (let call = 0; call < 5; call += 1) {
+        await expect(fail(target, ignored)).rejects.toBe(ignored);
+      }
+
+      await expect(target.execute(async () => 'ok')).resolves.toBe('ok');
+    });
+
+    it('keeps the circuit half-open after an ignored probe, for the next probe to decide', async () => {
+      let nowMs = 0;
+      const target = breaker(() => nowMs);
+      await expect(fail(target, new Error('down'))).rejects.toThrow('down');
+      await expect(fail(target, new Error('down'))).rejects.toThrow('down');
+      nowMs = 60_000;
+
+      await expect(fail(target, ignored)).rejects.toBe(ignored);
+      await expect(fail(target, new Error('down'))).rejects.toThrow('down');
+
+      await expect(target.execute(async () => 'ok')).rejects.toMatchObject({
+        code: 'STRIPE_ERROR',
+      });
+    });
+  });
 });

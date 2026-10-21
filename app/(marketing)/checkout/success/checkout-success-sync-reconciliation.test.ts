@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
+
 import { describe, expect, it, vi } from 'vitest';
+import { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
 import {
   FakeAuthGateway,
   FakeLogger,
@@ -213,7 +215,7 @@ describe('syncCheckoutSuccess retry logging', () => {
       await expect(promise).resolves.toEqual({ status: 'active' });
       expect(error).toHaveBeenCalledWith(
         expect.objectContaining({
-          sessionId: 'cs_test',
+          operation: 'checkout.sessions.retrieve_success',
           attempt: 1,
           maxAttempts: expect.any(Number),
           delayMs: expect.any(Number),
@@ -733,5 +735,50 @@ describe('syncCheckoutSuccess', () => {
     expect(await stripeCustomers.findByUserId(user.id)).toEqual({
       stripeCustomerId: 'cus_checkout',
     });
+  });
+});
+
+describe('checkout success caller budget', () => {
+  it('refuses an exhausted request before retrieving a checkout session', async () => {
+    const user = {
+      id: fixtureUser1Id,
+      email: 'user@example.com',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const subscriptions = new FakeSubscriptionRepository();
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    let requests = 0;
+    const deps: CheckoutSuccessDeps = {
+      authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
+      logger: new FakeLogger(),
+      stripeBudget: new StripeCallBudget(0),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('Unexpected redirect');
+        },
+      }),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => {
+              requests += 1;
+              return {};
+            },
+          },
+        },
+        subscriptions: { retrieve: async () => ({}) },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async (fn) => fn({ subscriptions, stripeCustomers }),
+    };
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_test' }, deps),
+    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+    expect(requests).toBe(0);
   });
 });

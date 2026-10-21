@@ -19,6 +19,7 @@ import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
+import type { StripeCallBudget } from './stripe-call-budget';
 import { isValidStripeConsentStateSignature } from './stripe-consent-state';
 import {
   constructStripeWebhookEvent,
@@ -419,6 +420,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
   event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   priceIds: StripePriceIds;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   webhookE2EOwner?: string | undefined;
 }): Promise<WebhookEventResult['subscriptionUpdate'] | undefined> {
   const parsedPayload = stripeEventWithSubscriptionRefSchema.safeParse(
@@ -450,6 +452,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
     event: input.event,
     priceIds: input.priceIds,
     logger: input.logger,
+    budget: input.budget,
     webhookE2EOwner: input.webhookE2EOwner,
   });
 }
@@ -463,6 +466,7 @@ export async function processStripeWebhookEvent({
   signature,
   priceIds,
   logger,
+  budget,
   webhookE2EOwner,
   resolveCheckoutDisclosure,
   sha256Hasher,
@@ -475,6 +479,7 @@ export async function processStripeWebhookEvent({
   signature: string;
   priceIds: StripePriceIds;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   webhookE2EOwner?: string | undefined;
   resolveCheckoutDisclosure: CheckoutDisclosureResolver;
   sha256Hasher: Sha256Hasher;
@@ -580,6 +585,7 @@ export async function processStripeWebhookEvent({
         event,
         priceIds,
         logger,
+        budget,
         webhookE2EOwner,
       });
 
@@ -664,6 +670,7 @@ export async function processStripeWebhookEvent({
     event,
     priceIds,
     logger,
+    budget,
     webhookE2EOwner,
   });
 
