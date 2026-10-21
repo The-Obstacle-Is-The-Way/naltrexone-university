@@ -393,10 +393,9 @@ its fresh-output staging commands and the content pipeline's reviewed placement
 procedure. A dry run validates input without writing; a real import requires an
 empty output directory. Seeding needs an explicit `DATABASE_URL`, remote-target
 acknowledgment where applicable, and no active release. The placeholder option,
-`pnpm db:seed --include-placeholders`, is meant for a local test database. The
-managed seed refuses it for any non-local target; the direct `pnpm db:seed`
-accepts it for an acknowledged remote target, so never pass it with a remote
-`DATABASE_URL`.
+`pnpm db:seed --include-placeholders`, works only on a local test database: the
+managed seed and the direct `pnpm db:seed` both refuse it for any non-local
+target, whatever `DB_TARGET_ACK` says.
 
 ---
 

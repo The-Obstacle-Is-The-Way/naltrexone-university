@@ -50,6 +50,7 @@ Before this fix, only `pnpm test:e2e` checked the host. A direct `pnpm exec play
 - **The preflight.** It refuses one with `E2E_PREFLIGHT:DATABASE_URL_NOT_LOCAL` before any validator connects.
 - **The scan.** `tests/e2e-database-connections.test.ts` fails on any unguarded connection.
 - **The remedy text.** The preflight and reset no longer tell anyone to put `DATABASE_URL` in `.env.local`.
+- **The fixtures.** No seed command adds the placeholder fixtures to a remote database: `pnpm db:seed --include-placeholders` now refuses one, acknowledged or not, as the managed seed already did (BUG-353). If the owner keeps a deploy-target mode, its fence must cover that seed before the refusal is relaxed.
 
 What remains:
 - **The opt-in path.** A deploy-target check still accepts production, and that needs the owner's fence below.
