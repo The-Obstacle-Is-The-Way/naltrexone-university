@@ -1,4 +1,4 @@
-import postgres from 'postgres';
+import type postgres from 'postgres';
 import Stripe from 'stripe';
 import {
   createPostgresMigrationLedgerQuery,
@@ -8,6 +8,10 @@ import {
 import { delay } from '@/src/adapters/shared/delay';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
+import {
+  connectE2EDatabase,
+  e2eDatabaseTargetRefusal,
+} from './e2e-database-target';
 import { createStripeTestClient } from './stripe-test-client';
 
 export const CLERK_API_BASE = 'https://api.clerk.com/v1';
@@ -87,7 +91,7 @@ const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
     key: 'DATABASE_URL',
     code: 'E2E_PREFLIGHT:DATABASE_URL_MISSING',
     message: 'DATABASE_URL is missing.',
-    fix: 'Set DATABASE_URL in .env.local (dev) or repository secrets (CI).',
+    fix: "Run E2E through pnpm test:e2e, which supplies this clone's local database; CI sets DATABASE_URL in its workflow.",
   },
   {
     key: 'CLERK_SECRET_KEY',
@@ -540,7 +544,22 @@ function resolveRequiredEnv(
     }
 
     const trimmed = value.trim();
-    if (required.key === 'DATABASE_URL') resolved.databaseUrl = trimmed;
+    if (required.key === 'DATABASE_URL') {
+      // Fail closed before the database validator connects: setup writes to
+      // the shared test user's rows (BUG-360).
+      const refusal = e2eDatabaseTargetRefusal(trimmed, env);
+      if (refusal) {
+        failures.push(
+          new CredentialValidationError(
+            'E2E_PREFLIGHT:DATABASE_URL_NOT_LOCAL',
+            refusal.message,
+            refusal.fix,
+          ),
+        );
+        continue;
+      }
+      resolved.databaseUrl = trimmed;
+    }
     if (required.key === 'CLERK_SECRET_KEY') resolved.clerkSecretKey = trimmed;
     if (required.key === 'E2E_CLERK_USER_USERNAME')
       resolved.clerkEmail = trimmed;
@@ -578,6 +597,8 @@ function buildValidators(
   env: ResolvedEnv,
   services: CredentialHealthCheckServices,
   verified: VerifiedIdentity,
+  // The environment the preflight was given, for the database target's opt-in.
+  targetEnv: NodeJS.ProcessEnv,
 ): CredentialValidator[] {
   const validators: CredentialValidator[] = [];
 
@@ -586,7 +607,7 @@ function buildValidators(
     validators.push({
       id: 'database',
       run: async () => {
-        const sql = postgres(databaseUrl, { max: 1 });
+        const sql = connectE2EDatabase(databaseUrl, targetEnv);
         try {
           await services.checkDatabaseConnectivity(sql);
           await services.verifyMigrationLedger(sql);
@@ -701,7 +722,7 @@ export async function runE2ECredentialHealthCheck(
   const failures: CredentialValidationError[] = [];
   const resolvedEnv = resolveRequiredEnv(env, failures);
   const verified: VerifiedIdentity = {};
-  const validators = buildValidators(resolvedEnv, services, verified);
+  const validators = buildValidators(resolvedEnv, services, verified, env);
 
   for (const validator of validators) {
     try {

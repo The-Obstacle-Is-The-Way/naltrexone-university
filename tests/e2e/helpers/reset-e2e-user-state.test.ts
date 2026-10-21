@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   E2EUserStateResetError,
   type E2EUserStateResetServices,
@@ -298,5 +298,46 @@ describe('runE2EUserStateReset', () => {
         services,
       }),
     ).rejects.toThrow('[E2E_RESET:REQUIRED_QUESTION_FIXTURE_MISSING]');
+  });
+
+  // BUG-360: the guard reads the opt-in from the environment the reset was
+  // given, the same one its DATABASE_URL came from.
+  describe('the database target guard', () => {
+    const REMOTE_DATABASE_URL = 'postgresql://user:secret@db.example:5432/app';
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('refuses a remote database the given environment does not opt into, even when process.env does', async () => {
+      vi.stubEnv('ALLOW_NON_LOCAL_DATABASE_URL', 'true');
+      const services = createServices();
+
+      await expect(
+        runE2EUserStateReset({
+          env: createEnv({ DATABASE_URL: REMOTE_DATABASE_URL }),
+          services,
+        }),
+      ).rejects.toThrow(/non-local host "db\.example"/);
+      expect(
+        services.ensurePlaceholderQuestionsPublished,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('accepts a remote database the given environment opts into', async () => {
+      vi.stubEnv('ALLOW_NON_LOCAL_DATABASE_URL', undefined);
+      const services = createServices();
+
+      await expect(
+        runE2EUserStateReset({
+          env: {
+            ...createEnv({ DATABASE_URL: REMOTE_DATABASE_URL }),
+            ALLOW_NON_LOCAL_DATABASE_URL: 'true',
+          },
+          services,
+        }),
+      ).resolves.toBeUndefined();
+      expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalled();
+    });
   });
 });

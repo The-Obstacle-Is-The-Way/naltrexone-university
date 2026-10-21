@@ -130,13 +130,13 @@ describe('createSharedE2EResetSupport', () => {
 
     const resolved = support.resolveRequiredEnv(
       {
-        DATABASE_URL: '  postgres://db  ',
+        DATABASE_URL: '  postgres://127.0.0.1/db  ',
         E2E_CLERK_USER_USERNAME: '',
       } as unknown as NodeJS.ProcessEnv,
       failures,
     );
 
-    expect(resolved).toEqual({ databaseUrl: 'postgres://db' });
+    expect(resolved).toEqual({ databaseUrl: 'postgres://127.0.0.1/db' });
     expect(failures).toHaveLength(1);
     expect(failures[0]).toMatchObject({
       code: 'TEST:E2E_CLERK_USER_USERNAME_MISSING',
@@ -152,7 +152,7 @@ describe('createSharedE2EResetSupport', () => {
 
     expect(() =>
       support.requireResolvedEnvOrThrow({
-        databaseUrl: 'postgres://db',
+        databaseUrl: 'postgres://127.0.0.1/db',
       }),
     ).toThrow('[TEST:ENV_MAPPING_INCOMPLETE]');
   });
@@ -175,7 +175,7 @@ describe('createSharedE2EResetSupport', () => {
     const support = createSupport(createSharedE2EResetSupport);
 
     await support.resolveAppUserIdByEmail({
-      databaseUrl: 'postgres://db',
+      databaseUrl: 'postgres://127.0.0.1/db',
       email: 'e2e@example.com',
     });
 
@@ -195,13 +195,28 @@ describe('createSharedE2EResetSupport', () => {
 
     await expect(
       support.resolveAppUserIdByEmail({
-        databaseUrl: 'postgres://db',
+        databaseUrl: 'postgres://127.0.0.1/db',
         email: 'e2e@example.com',
       }),
     ).resolves.toBe(fixtureAppUser123Id);
 
-    expect(postgresMock).toHaveBeenCalledWith('postgres://db', { max: 1 });
+    expect(postgresMock).toHaveBeenCalledWith('postgres://127.0.0.1/db', {
+      max: 1,
+    });
     expect(sqlClient.end).toHaveBeenCalledWith({ timeout: 5 });
+  });
+
+  // BUG-360: Playwright can start without pnpm test:e2e's host check.
+  it('refuses a remote database before connecting', async () => {
+    const support = createSupport(createSharedE2EResetSupport);
+
+    await expect(
+      support.resolveAppUserIdByEmail({
+        databaseUrl: 'postgres://user:secret@db.example/app',
+        email: 'e2e@example.com',
+      }),
+    ).rejects.toThrow(/non-local host "db\.example"/);
+    expect(postgresMock).not.toHaveBeenCalled();
   });
 
   it('maps app user query failures to deterministic errors', async () => {
@@ -212,7 +227,7 @@ describe('createSharedE2EResetSupport', () => {
 
     await expect(
       support.resolveAppUserIdByEmail({
-        databaseUrl: 'postgres://db',
+        databaseUrl: 'postgres://127.0.0.1/db',
         email: 'e2e@example.com',
       }),
     ).rejects.toMatchObject({
@@ -255,7 +270,7 @@ describe('createSharedE2EResetSupport', () => {
 
     const error = await captureRejectedError(() =>
       support.resolveAppUserIdByEmail({
-        databaseUrl: 'postgres://db',
+        databaseUrl: 'postgres://127.0.0.1/db',
         email: 'e2e@example.com',
       }),
     );

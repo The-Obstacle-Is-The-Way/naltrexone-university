@@ -492,9 +492,9 @@ not certify that prerequisite. Review and place the approved artifact using the
 before seeding. `DATABASE_URL="$TARGET_DATABASE_URL" pnpm db:seed` requires an
 explicit target and, for a remote target, its exact `DB_TARGET_ACK`. Direct
 seeding refuses an active content release. `--include-placeholders` adds the
-placeholder fixtures and is meant for a local test database. The managed seed
-refuses it for any non-local target; the direct `pnpm db:seed` accepts it for an
-acknowledged remote target, so never pass it with a remote `DATABASE_URL`.
+placeholder fixtures only to a local test database. Both the managed seed and
+the direct `pnpm db:seed` refuse it for any non-local target. The direct seed
+refuses it before the acknowledgment check, with or without `DB_TARGET_ACK`.
 
 The separate content repository may have authoring helpers; no
 `validate_questions.py` exists in this app repository. The app importer's dry run

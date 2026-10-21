@@ -57,12 +57,12 @@ The non-content families are grouped below. Remaining content-boundary work stay
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `database/database-target.ts` | Classifies a database URL as local or remote, and enforces the explicit-URL and `DB_TARGET_ACK` rules. | Imported by `database/database-command.ts`, the managed path, `database/verify-migration-ledger.ts` and the environment seeds |
+| `database/database-target.ts` | Classifies a database URL as local or remote, and enforces the explicit-URL and `DB_TARGET_ACK` rules. | Imported by `database/database-command.ts`, `database/db-seed.ts`, the managed path, `database/verify-migration-ledger.ts` and the environment seeds |
 | `database/database-command.ts` | Runs a person's database command: explicit URL, acknowledgment for a remote target, then logs the target without credentials. | Imported by `database/db-migrate.ts`, `database/db-seed.ts`, `database/db-studio.ts`, the content-release commands, `feedback/export-question-feedback.ts`, `operations/requeue-renewal-notice.ts` and `seed/withdraw-questions.ts` |
 | `database/database-process.ts` | Runs `pnpm` with a given `DATABASE_URL` and the parent's output, and rejects on a non-zero exit. | Imported by `database/db-migrate.ts`, `database/db-studio.ts` and `database/managed/run-managed-db-migrate.ts` |
 | `database/db-generate.ts` | Offline Drizzle migration generation with arguments passed unchanged to drizzle-kit; no database credentials or dotenv. | `pnpm db:generate` |
 | `database/db-migrate.ts` | `drizzle-kit migrate` behind the human database guard. | `pnpm db:migrate` |
-| `database/db-seed.ts` | The question seed (`seed.ts`) behind the human database guard; parses the explicit placeholder flag before authorizing the target. | `pnpm db:seed` |
+| `database/db-seed.ts` | The question seed (`seed.ts`) behind the human database guard; refuses `--include-placeholders` for a remote target, acknowledged or not, before the acknowledgment check. | `pnpm db:seed` |
 | `database/db-studio.ts` | `drizzle-kit studio` behind the human database guard. | `pnpm db:studio` |
 | `database/managed/database-target-managed.ts` | The managed authorizer: validates the URL and asks for no acknowledgment. | Imported by `database/managed/database-command-managed.ts` and `database/verify-migration-ledger.ts` |
 | `database/managed/database-command-managed.ts` | The managed counterpart of `database/database-command.ts`. | Imported by `database/managed/run-managed-db-migrate.ts` and `database/managed/run-managed-db-seed.ts` |

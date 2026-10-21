@@ -9,11 +9,11 @@
 ## Summary
 
 Nothing in the E2E setup identifies a production database.
-- `pnpm test:e2e` accepts any host once `ALLOW_NON_LOCAL_DATABASE_URL=true` is set.
-- `pnpm exec playwright test` checks no host at all, and reads `DATABASE_URL` from `.env.local`.
+- Every connection the E2E code opens now refuses a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true` is set (fixed in part; see below). The app server Playwright starts is not covered.
+- With that opt-in, any host is accepted, production included.
 - The preflight requires Stripe and Clerk test-mode credentials, but those do not identify the database.
 
-Pointed at production, global setup writes before any fixture check:
+Pointed at production with the opt-in, global setup writes before any fixture check:
 1. It upserts the shared test user and that user's Stripe customer and subscription rows.
 2. The reset then republishes two placeholder fixtures, if both exist, even withdrawn ones.
 3. It deletes the test user's practice data.
@@ -21,30 +21,49 @@ Pointed at production, global setup writes before any fixture check:
 
 This is separate from BUG-353's ambient seed flag, and remains after that fix.
 
+Corrected 2026-10-19: every connection the E2E code opens now refuses a non-local host without the opt-in; the opt-in path and the app server remain.
+
 ## Evidence
 
-- **The host check.** `scripts/test-lanes/e2e-local-orchestrator.ts:113-118` checks the URL's host only on the `pnpm test:e2e` path. `ALLOW_NON_LOCAL_DATABASE_URL=true` admits any host.
-  - `playwright.config.ts:8` loads `.env.local` without overriding exported variables.
-  - So a direct `pnpm exec playwright test` reaches setup with whatever `DATABASE_URL` is there, and no host check runs.
-- **The preflight.** It refuses a non-test Stripe key (`tests/e2e/helpers/credential-health-check.ts:550-557`). Test-mode keys work against any database, so passing it does not prove a non-production target.
+- **The host check.**
+  - `scripts/test-lanes/e2e-local-orchestrator.ts:113-118` checks the URL's host on the `pnpm test:e2e` path.
+  - `playwright.config.ts:8` loads `.env.local` without overriding exported variables, so before the partial fix a direct `pnpm exec playwright test` reached setup with whatever `DATABASE_URL` was there, unchecked.
+  - On both paths, the E2E code's connections now refuse a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true`, which admits any host. The app server's do not; see "Fixed in part".
+- **The preflight.** It refuses a non-test Stripe key (`tests/e2e/helpers/credential-health-check.ts:569-576`). Test-mode keys work against any database, so passing it does not prove a non-production target.
 - **Setup's first writes.** `tests/e2e/global.setup.ts:16-17` runs `seedTestSubscription` before `runE2EUserStateReset`. That step:
-  - upserts `users` by email (`tests/e2e/helpers/seed-test-user.ts:214-216`, `ON CONFLICT (email) DO UPDATE SET clerk_user_id`);
-  - then writes `stripe_customers` (`:280`) and `stripe_subscriptions` (`:389-397`).
+  - upserts `users` by email (`tests/e2e/helpers/seed-test-user.ts:215-217`, `ON CONFLICT (email) DO UPDATE SET clerk_user_id`);
+  - then writes `stripe_customers` (`:281`) and `stripe_subscriptions` (`:390-398`).
 
   A production row holding the E2E email would be rebound to the test Clerk user.
 - **The reset** (`tests/e2e/helpers/reset-e2e-user-state.ts`):
-  - **Fixture check and republish.** `ensurePlaceholderQuestionsPublished` (`:186-218`) counts the two slugs in `REQUIRED_QUESTION_SLUGS`, and throws `E2E_RESET:PLACEHOLDER_FIXTURES_MISSING` if either is absent. That is after setup's subscription writes. Otherwise it sets any non-published status to `published`. It does not check an active release or a recorded withdrawal; the seed refuses to reactivate a withdrawn question (`scripts/seed/question-syncer.ts:226-231`).
-  - **Deletes.** `clearUserState` (`:233-253`) deletes the user's idempotency keys, attempts, bookmarks and practice sessions.
-  - **Inserts.** `seedDeterministicBaseline` (`:354-507`) inserts a session, its question states, two attempts and a bookmark.
+  - **Fixture check and republish.** `ensurePlaceholderQuestionsPublished` (`:186-230`) counts the two slugs in `REQUIRED_QUESTION_SLUGS`, and throws `E2E_RESET:PLACEHOLDER_FIXTURES_MISSING` if either is absent. That is after setup's subscription writes. Otherwise it sets any non-published status to `published`. It does not check an active release or a recorded withdrawal; the seed refuses to reactivate a withdrawn question (`scripts/seed/question-syncer.ts:226-231`).
+  - **Deletes.** `clearUserState` (`:234-254`) deletes the user's idempotency keys, attempts, bookmarks and practice sessions.
+  - **Inserts.** `seedDeterministicBaseline` (`:355-508`) inserts a session, its question states, two attempts and a bookmark.
 - **The guides.** The deploy-target examples in the E2E and promotion guides read a URL from `.env.local`, and that file does not prove a non-production identity.
 - **How this was checked.** From the source and the existing reset tests only. No production connection or production reproduction was attempted. Whether production holds the E2E email or the two fixture rows is unknown; the fixtures belong to BUG-353's owner census.
 
+## Fixed in part
+
+Before this fix, only `pnpm test:e2e` checked the host. A direct `pnpm exec playwright test`, or a `--no-deps` run whose specs reset the test user, reached the database that `.env.local` names. On 2026-10-19 that was the Vercel Development database in every clone; it was compared against Vercel's Production and Development variables without printing either.
+
+- **The guard.** `connectE2EDatabase` in `tests/e2e/helpers/e2e-database-target.ts` opens every connection the E2E code makes, through `guardE2EDatabaseUrl`. It refuses a non-local host without the opt-in, naming the host but no credentials.
+- **The preflight.** It refuses one with `E2E_PREFLIGHT:DATABASE_URL_NOT_LOCAL` before any validator connects.
+- **The scan.** `tests/e2e-database-connections.test.ts` fails on any other E2E file that loads the `postgres` module, under any name. A type-only import passes.
+- **The remedy text.** The preflight and reset no longer tell anyone to put `DATABASE_URL` in `.env.local`.
+- **The fixtures.** No seed command adds the placeholder fixtures to a remote database: `pnpm db:seed --include-placeholders` now refuses one, acknowledged or not, as the managed seed already did (BUG-353). If the owner keeps a deploy-target mode, its fence must cover that seed before the refusal is relaxed.
+
+What remains:
+- **The opt-in path.** A deploy-target check still accepts production, and that needs the owner's fence below.
+- **The app server.** The server Playwright starts reads the same `DATABASE_URL`, and nothing checks it. Even a run that global setup stops has already written there: Playwright waits for the server by polling `/api/health` (`playwright.config.ts:104`), which upserts a `rate_limits` row (`app/api/health/handler.ts:26`, `src/adapters/gateways/drizzle-rate-limiter.ts:64-74`). A deliberate `--no-deps` run of a spec that writes only through the app is not refused at all. A check inside the server's start command would close both; guarding the URL when the config loads would not, because `playwright.config.test.ts` imports the config with whatever `.env.local` holds.
+
 ## Impact
 
-An operator's target mistake can write to production:
+With the opt-in set, an operator's target mistake can write to production:
 - the test user's subscription rows, and the Clerk binding of any production row that holds the E2E email;
 - that user's practice data;
 - and, when both fixture rows exist, the visibility of two synthetic questions, withdrawn ones included.
+
+Without the opt-in, the E2E code's own connections refuse, but the app server still writes to whatever `DATABASE_URL` names: the health probe's rate-limit counter on every run, and whatever a `--no-deps` spec does through the app.
 
 A published row alone does not prove this reset published it, or that a learner saw it. Reads select published questions, and an active release does not fence this direct status change.
 
@@ -71,3 +90,5 @@ The owner decides whether deploy-target E2E remains, and which identity mechanis
 - #1560: the scripts directory audit, whose debt record covers database-target policy duplication.
 
 Corrected 2026-10-20: follow DEBT-532’s moved E2E planner and recheck its host-guard citation; the owner’s production-target decision is unchanged.
+
+Corrected 2026-10-21: retain #1584’s partial E2E connection guard and recheck the moved host guard and updated preflight citations.

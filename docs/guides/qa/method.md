@@ -29,6 +29,7 @@ The practice procedure has absorbed Flows A–D of the former stabilization chec
 - **Index:** `docs/guides/qa/README.md` lists the procedures, their statuses, the surfaces not yet covered, and the template.
 - **Procedures:** `docs/guides/qa/<subject>.md`, named by what they cover; there are no QA IDs.
 - **Evidence:** attach representative screenshots to the pull request or the run's report, not the repository. Working screenshots stay in the gitignored `audit-screenshots/`.
+- **Question content stays out of public evidence.** The repository and its pull requests are public, so a screenshot showing real question content (a stem, choices, an explanation, or a stem preview in a list) never goes into a pull request, a comment or a commit. Take such screens against the placeholder questions (seeded with `DATABASE_URL="$(pnpm local:test:target database-url)" pnpm db:seed --include-placeholders` after the [local database setup](../testing/integration-tests.md)), or keep them in `audit-screenshots/` and give the pull request a written result for each step.
 
 ## Procedure format
 
@@ -68,7 +69,7 @@ Rules of engagement (restating the standing mandates):
 
 ## When procedures run
 
-1. **Per PR (touched surfaces):** run the procedure(s) covering the UI you changed; attach representative screenshots to the PR (this carries out `AGENTS.md`'s rule that a PR shows screenshots of any changed UI).
+1. **Per PR (touched surfaces):** run the procedure(s) covering the UI you changed; attach representative screenshots to the PR, keeping question content out as the Evidence rules above say (this carries out `AGENTS.md`'s rule that a PR shows screenshots of any changed UI).
 2. **Gated runs:** the procedures under `docs/guides/qa/` whose header says `Promotion gate: yes`, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them (DEBT-465, 2026-10-03).
 3. **Post-deploy smoke:** the production-safe subset, against `addictionboards.com`.
 
