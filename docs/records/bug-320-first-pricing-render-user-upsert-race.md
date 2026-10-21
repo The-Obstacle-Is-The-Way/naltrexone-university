@@ -1,6 +1,6 @@
 # BUG-320: A New User's First Visit Can Fail When Two Requests Create Their Row at Once
 
-**Status:** Verifying — no `User could not be upserted` error in Sentry for two weeks after the deploy; due 2026-10-20
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -89,7 +89,9 @@ Shipped in #1391 and promoted in #1392, in production since 2026-10-06 07:00Z. T
 - [x] A 23505 on `users_email_uq` whose owner is the same Clerk user returns the row instead of throwing. It is pinned at the sanctioned error-translation boundary, red first.
 - [x] A cross-identity conflict still raises `UserEmailOwnershipConflictError`.
 - [x] A real-Postgres test of concurrent first-time upserts for one user ends with one row and no error.
-- [ ] Engineering, by 2026-10-20: a Sentry search through its API finds no `User could not be upserted due to a uniqueness constraint` event in Sentry for two weeks after the deploy. This is weak evidence on its own, since the error was seen twice in about three days. Record the result, and reopen if it recurs.
+- [x] Engineering, by 2026-10-20: a Sentry search through its API finds no `User could not be upserted due to a uniqueness constraint` event in Sentry for two weeks after the deploy. This is weak evidence on its own, since the error was seen twice in about three days. Record the result, and reopen if it recurs.
+
+  *Searched 2026-10-21,* in both Sentry projects, from the deploy (2026-10-06T07:00Z) to 2026-10-21T14:50Z, for three forms of the message: no event and no issue, in the two weeks or after. Ingestion was healthy: both projects accepted events every day, and nothing was rate-limited or dropped for quota. The search has no positive control, since the original events were deleted, but the same wildcard search found BUG-363's events.
 - [x] The "race-free" note is qualified to the race it covered: a dated correction in the frozen register history (2026-10-05).
 
 ## Related

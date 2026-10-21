@@ -1,6 +1,6 @@
 # BUG-340: Stripe Renamed Checkout's Save-Information Checkbox, So the Hosted Smoke Cannot Submit
 
-**Status:** Verifying — the next scheduled hosted Checkout run on `main` passes after promotion; due 2026-10-19
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-12
 
@@ -38,7 +38,7 @@ Option 1. The helper finds the box with a pattern that accepts both labels, "Sav
 ## Verification
 
 - [x] With the fix, the hosted lane passed 7 of 7 locally (2026-10-12, 19:24Z), after three red runs.
-- [ ] The scheduled hosted Checkout run on `main` passes after promotion, due 2026-10-19.
+- [x] Promotion #1474 put the fix on `main` on 2026-10-12. The next scheduled hosted Checkout run there passed on 2026-10-13, and so has every daily run since, nine through 2026-10-21.
 
 ## Related
 

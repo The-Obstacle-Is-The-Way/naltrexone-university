@@ -1,6 +1,6 @@
 # BUG-339: The Register Budget Test Can Time Out in CI's Coverage Run
 
-**Status:** Verifying — promotion to `main`, where CI runs the faster test; due 2026-10-19
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P3
 **Date:** 2026-10-12
 
@@ -38,7 +38,7 @@ Option 1. The budget cases call `auditRecordLifecycle`, and one new case require
 
 - [x] Under coverage locally, the file's tests take 0.15 s instead of 3.9 s (2026-10-12).
 - [x] Five mutations each fail the tests: counting characters instead of bytes, rejecting a file at its budget, dropping the archive budget, budgeting the whole records folder, and the full audit dropping the result (2026-10-12).
-- [ ] Promoted to `main`.
+- [x] Promoted to `main` by #1474 on 2026-10-12. Every CI run on `main` since, through 2026-10-21, passed with its coverage run, apart from one manual run on 2026-10-16 that DEBT-523's guard refused on purpose.
 
 ## Related
 

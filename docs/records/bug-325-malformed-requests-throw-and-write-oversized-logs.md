@@ -1,6 +1,6 @@
 # BUG-325: Malformed Anonymous Requests Make Our Code Throw and Write Oversized Error Logs
 
-**Status:** Verifying — no Sentry event from the fixed paths for two weeks after the deploy; due 2026-10-20
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P3 (first drafted as P2; lowered 2026-10-05, see item 5)
 **Date:** 2026-10-05 (found); filed 2026-10-06
 **Resolved:** —
@@ -115,7 +115,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 **Known gap.**
 - The new checkout-success tests hand-build their dependencies and Stripe's error, as the existing checkout-success tests do.
 - The maintained `FakeStripeCheckoutClient` throws a plain error for an unknown session, not Stripe's `resource_missing`.
-- Giving it Stripe's answer needs a shared provider-contract scenario. At closeout it becomes a Waiting row in the records index.
+- Giving it Stripe's answer needs a shared provider-contract scenario. At closeout it becomes a Waiting row in the records index, and the fake-contract register names the divergence.
 
 ## Verification
 
@@ -125,7 +125,9 @@ This is likely the report the owner remembered, that "a user with certain parame
 - [x] Item 4: decided with a trigger; production Sentry had none of these errors in 14 days.
 - [x] Item 5: the response plan is in the logging guide, `docs/architecture/observability.md` ("Sentry flood or quota exhaustion"). A flood is a monitoring outage, not a breach, so it links to the breach procedure instead of living in it.
 - [x] Item 6: each decided change shipped; `CLERK_JWT_KEY` moved to DEBT-503 item 5 on 2026-10-10.
-- [ ] Engineering, by 2026-10-20: search Sentry through its API for unhandled errors from the fixed paths since production assignment (2026-10-06T11:46:31.925Z, promotion #1399, `af02fe0a`). Record the query, time range, event count and whether ingestion was healthy. Developer retains 30 days, so this window is observable. Zero events is supporting evidence, not proof of every malformed input. Caught pino log lines are not in Sentry; unit assertions cover their content and level, and no production log capture has been made. *Corrected 2026-10-06 (#1410 review): no one-hour Vercel capture exists.* The original 14-day historical search remains an operator receipt.
+- [x] Engineering, by 2026-10-20: search Sentry through its API for unhandled errors from the fixed paths since production assignment (2026-10-06T11:46:31.925Z, promotion #1399, `af02fe0a`). Record the query, time range, event count and whether ingestion was healthy. Developer retains 30 days, so this window is observable. Zero events is supporting evidence, not proof of every malformed input. Caught pino log lines are not in Sentry; unit assertions cover their content and level, and no production log capture has been made. *Corrected 2026-10-06 (#1410 review): no one-hour Vercel capture exists.* The original 14-day historical search remains an operator receipt.
+
+  *Searched 2026-10-21,* in both Sentry projects, from 2026-10-06T11:46:31Z to 2026-10-21T14:50Z. The queries were unhandled errors on the `/pricing`, `/checkout/success`, webhook, `/app/questions/` and `/app/billing` transactions; the messages `formData.get` and `No such checkout.session`; and the two page transactions, handled or not. Each found no event. The only unhandled errors in the window, in either project, are BUG-363's three on `POST /`, which shows the wildcard search works; Next.js's refusals of malformed action posts (item 4) did not appear either. Ingestion was healthy: both projects accepted events every day, and nothing was rate-limited or dropped for quota.
 
 ## Related
 

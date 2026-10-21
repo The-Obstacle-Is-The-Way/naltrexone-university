@@ -1,6 +1,6 @@
 # BUG-327: Dependabot Branches Are Built on Vercel With Preview Secrets
 
-**Status:** Verifying — no Dependabot head deploys; a Dependabot merge through the tooling remains; due 2026-10-20
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06
 **Resolved:** —
@@ -67,7 +67,7 @@ Option 1, plus the digest pin.
 
 - [x] A test, red first, pins the `vercel.json` exclusion for Dependabot branches.
 - [x] Observation 2026-10-06: security PR [#1404](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1404), targeting `main`, carries the exclusion on head `9ccfabe5`. GitHub's deployments API returns zero records for that SHA; its checks contain no Vercel deployment. Dependabot later force-pushed #1404 to `aa516b6a`; that head also has zero deployments and no Vercel status, and its [CI run](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37499618792) fails on the same three versions.
-- [ ] Engineering, by 2026-10-20: a Dependabot PR with the exclusion merges through the checked-in tooling: #1404's successor, since #1404 was closed unmerged on 2026-10-07. No merge proof is claimed yet. On 2026-10-08 the heads of Dependabot's open #1425 and #1407 also had no deployment.
+- [x] No Dependabot pull request merges by itself any more, so a PR without a Vercel status never reaches the merge tooling. Since 2026-10-15 every Dependabot PR ships as a repo-owned bundle, because CodeRabbit gives a bot's PR no review seat (`docs/guides/dependencies/updating-dependencies.md`; #1522 re-authored #1520). No checked-in tool can merge a Dependabot head: the merge guard requires a CodeRabbit approval, which a bot's PR never gets, and the promotion check merges only `dev`. A bundle's branch is repo-owned, so Vercel builds it after the bundler has reviewed the diff, and the merge guard, which needs no Vercel status, treats it like any other PR. The exclusion holds: on 2026-10-08 the heads of #1425 and #1407 had no deployment, and on 2026-10-21 the heads of the three open Dependabot PRs, #1563, #1564 and #1565, had none either. *Corrected 2026-10-21: this check first asked for a Dependabot PR merged through the tooling, which the bundling rule has since ruled out.*
 
   #1404's [CI run](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37479614420) failed installation with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` for three versions: `@types/node@24.19.1`, `acorn@8.19.0` and `shell-quote@1.12.0`. The existing [security-patch playbook](../policies/supply-chain.md#urgent-cve-patches-before-the-7-day-cooldown) already covers waiting or a reviewed exact-version exception. No new debt is needed for a missing policy. Do not exempt unrelated lockfile churn merely to unblock the security bump.
 - [x] `ci.yml`'s Postgres image is pinned by digest, and the workflow test covers every workflow.

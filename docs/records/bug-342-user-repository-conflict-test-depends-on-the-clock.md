@@ -1,6 +1,6 @@
 # BUG-342: A User-Repository Conflict Test Fails When Its Two Writes Share a Millisecond
 
-**Status:** Verifying — promotion to `main`; due 2026-10-20
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P3
 **Date:** 2026-10-13
 
@@ -34,7 +34,7 @@ Option 1. Both repositories in the test share one fixed instant, which the test 
 ## Verification
 
 - [x] With the fixed clock and no explicit time, the test fails with CI's assertion; with the explicit time it passes, three runs in a row (2026-10-13).
-- [ ] Promoted to `main`.
+- [x] Promoted to `main` by #1485 on 2026-10-13.
 
 ## Related
 

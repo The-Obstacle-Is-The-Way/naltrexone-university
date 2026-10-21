@@ -1,6 +1,6 @@
 # BUG-341: A Documentation Test Run From a Worktree's Pre-Push Hook Marks the Clone Bare
 
-**Status:** Verifying — promotion to `main`; due 2026-10-19
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-12
 
@@ -37,7 +37,7 @@ Option 1. Before the fixture runs, the test removes every inherited `GIT_*` vari
 
 - [x] The new test fails without the fix (`core.bare` reads `true`) and passes with it. It fails again when the removal is narrowed to no variables (2026-10-12).
 - [x] The file passes with `GIT_DIR` set to this clone's `.git` in the environment, and the clone stays non-bare (2026-10-12).
-- [ ] Promoted to `main`.
+- [x] Promoted to `main` by #1481 on 2026-10-13.
 
 ## Related
 
