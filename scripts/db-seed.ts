@@ -1,5 +1,9 @@
 import { pathToFileURL } from 'node:url';
 import { runHumanDatabaseCommand } from './database-command';
+import {
+  classifyDatabaseTarget,
+  requireExplicitDatabaseUrl,
+} from './database-target';
 import { parseSeedOptions, type SeedOptions } from './seed/seed-options';
 
 type DbSeedInput = {
@@ -24,6 +28,18 @@ export async function runDbSeed({
   seed = seedDatabase,
 }: DbSeedInput = {}): Promise<void> {
   const options = parseSeedOptions(args, env);
+  // The fixtures are test data, and DB_TARGET_ACK proves which host was meant,
+  // not that it is not production, so no acknowledgment admits them to a
+  // remote target (BUG-353). This refusal comes first because the
+  // acknowledgment's refusal prints the code that would admit the target.
+  if (options.includePlaceholders) {
+    const target = classifyDatabaseTarget(requireExplicitDatabaseUrl(env));
+    if (target.kind !== 'LOCAL') {
+      throw new Error(
+        `db:seed adds the placeholder fixtures only to a local database, and ${target.display} is remote.`,
+      );
+    }
+  }
   await runHumanDatabaseCommand({
     env,
     log,
