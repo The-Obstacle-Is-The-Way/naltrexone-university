@@ -641,7 +641,7 @@ export async function runE2EUserStateReset(
 
   const { databaseUrl, clerkEmail } =
     sharedResetSupport.requireResolvedEnvOrThrow(resolvedEnv);
-  const sql = postgres(guardE2EDatabaseUrl(databaseUrl), { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(databaseUrl, env), { max: 1 });
 
   try {
     await services.ensurePlaceholderQuestionsPublished({ databaseUrl, sql });
