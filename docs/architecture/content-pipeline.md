@@ -80,7 +80,7 @@ PostgreSQL (questions, choices, tags, question_tags)
 
 10 hand-written example MDXs committed to the repo so the app works out of the box. By default, `pnpm db:seed` **excludes them** and, while no content release is active, archives the ten fixtures' rows by exact QID. They're templates, not production content.
 
-To include them in a local test database: `pnpm db:seed --include-placeholders`. The environment seeds (`db:seed:prod`, `db:seed:all`) never include them (BUG-353).
+To include them in a local test database: `pnpm db:seed --include-placeholders`, which refuses a remote target, acknowledged or not. The environment seeds (`db:seed:prod`, `db:seed:all`) never include them (BUG-353).
 
 ### Can I modify drafts freely?
 

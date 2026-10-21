@@ -296,7 +296,7 @@ DATABASE_URL="$LOCAL_E2E_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm d
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 
-Never use that E2E command against Production. Its opt-ins do not identify Production or prevent mutation: once preflight succeeds, setup writes the shared test user's subscription rows. The reset then checks that both placeholder fixture rows exist, and stops if either is missing; otherwise it republishes them and deletes and rebuilds that user's practice data (BUG-360). The target must therefore already hold both fixtures. This path does not seed, and these guides give no way to add them to a remote database: BUG-360 holds the owner's decision on whether this check stays.
+Never use that E2E command against Production. Its opt-ins do not identify Production or prevent mutation: once preflight succeeds, setup writes the shared test user's subscription rows. The reset then checks that both placeholder fixture rows exist, and stops if either is missing; otherwise it republishes them and deletes and rebuilds that user's practice data (BUG-360). The target must therefore already hold both fixtures. This path does not seed, and no seed command adds them to a remote database: `pnpm db:seed --include-placeholders` refuses one (BUG-353). BUG-360 holds the owner's decision on whether this check stays.
 
 Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.
 
@@ -363,6 +363,8 @@ Direct seeding is allowed only before a content release is active. Repeated matc
 ## 8. Promoting `dev` to `main`
 
 A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followed by the source PR numbers. CodeRabbit skips such titles, so a feature PR's title must never contain `Promote #`. A promotion needs no review of its own: it proves its sources' reviews instead (ADR-024).
+
+**Before opening one, run the gated QA procedures it needs.** A promotion ships everything `dev` holds that `main` lacks, not only the PR that prompted it, so run `git fetch` and read `origin/main..origin/dev` against each procedure whose header says `Promotion gate: yes`. If the range changes that procedure's flows, it must pass against the dev preview first ([QA method](../qa/method.md#when-procedures-run), item 2). The promotion's description names each procedure and either links its run or says why its flows are unchanged. If `dev` gains a merge before the promotion merges, fetch and check the range again, run any procedure whose flows the new merge changes, and update the description.
 
 1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm exec tsx scripts/verify-promotion.ts <PR>`. It verifies:
    - a same-repository `dev` → `main` PR, with up-to-date ancestry;
