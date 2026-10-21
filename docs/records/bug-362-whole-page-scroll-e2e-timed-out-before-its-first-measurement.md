@@ -32,7 +32,7 @@ Tests only. When it happens, it costs an investigation and a rerun. The helper s
 2. **Retry or lengthen the poll.** That would hide a page that stopped answering, and the E2E policy allows no retries.
 3. **Do nothing until it recurs.** The next failure would be no more explainable than this one.
 
-## Resolution (in progress)
+## Resolution (decided)
 
 Option 1. With it, the helper scrolls with `behavior: 'instant'`, which overrides the page's smooth scrolling. Each measurement then reads where its own call left the page, and the poll passes on its first call instead of after about 1.9 s. That change makes the measurement precise; it is not the fix for this failure.
 
