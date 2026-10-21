@@ -26,9 +26,11 @@ function sourceFiles(directory: string): string[] {
 
 // The module's name, not the name a file imports it as, so an aliased,
 // namespace, dynamic or required import is found too. A type-only import
-// loads nothing at run time.
+// loads nothing at run time; it must start a line and have an import
+// clause, so a comment that mentions one does not hide the import below it.
 const POSTGRES_MODULE = /(['"`])postgres\1/g;
-const TYPE_ONLY_IMPORT = /\bimport\s+type\s[^;'"`]*?from\s*(['"`])postgres\1/g;
+const TYPE_ONLY_IMPORT =
+  /^[ \t]*import\s+type\s+(?:[\w$]+\s+|\*\s*as\s+[\w$]+\s+|\{[^}]*\}\s*)from\s*(['"`])postgres\1/gm;
 
 function postgresLoads(files: Record<string, string>): string[] {
   return Object.entries(files).flatMap(([file, source]) => {
@@ -51,17 +53,24 @@ describe('E2E database connections', () => {
         [CONNECTION_MODULE]: "import postgres from 'postgres';",
         'a.ts': "import pg from 'postgres';\nconst sql = pg(url);",
         'b.ts':
-          "import type postgres from 'postgres';\ntype Sql = postgres.Sql;",
+          "import type postgres from 'postgres';\nimport type * as pg from 'postgres';",
         'c.ts': "\nconst { default: pg } = await import('postgres');",
         'd.ts':
           'import type {\n  Sql,\n} from \'postgres\';\nimport * as pg from "postgres";',
         'e.ts': "const pg = require('postgres');",
+        // The words "import type" in a comment do not make the import below
+        // them type-only.
+        'f.ts': "// Prefer import type for Sql\nimport pg from 'postgres';",
+        'g.ts':
+          "/*\nimport type checks are cheap\n*/\nimport pg from 'postgres';",
       }),
     ).toEqual([
       'a.ts:1 loads the postgres module; open connections with connectE2EDatabase.',
       'c.ts:2 loads the postgres module; open connections with connectE2EDatabase.',
       'd.ts:4 loads the postgres module; open connections with connectE2EDatabase.',
       'e.ts:1 loads the postgres module; open connections with connectE2EDatabase.',
+      'f.ts:2 loads the postgres module; open connections with connectE2EDatabase.',
+      'g.ts:4 loads the postgres module; open connections with connectE2EDatabase.',
     ]);
   });
 
