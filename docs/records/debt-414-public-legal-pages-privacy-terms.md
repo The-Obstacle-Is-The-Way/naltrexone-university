@@ -858,7 +858,7 @@ The security review of recent work (AUDIT-013) found two renewal-evidence gaps t
 
   *Corrected 2026-10-06: tagging replaces #1410's durable inbox, which added a table, retention and cleanup for a millisecond race and would have stored outcomes for unrelated mail against the released rule (#1410 review).*
 
-**F22, a trial cancelled in the portal is still offered "Add a card" (P4).**
+**F22, a trial cancelled in the portal is still offered "Add a card" (P3; its engineering is BUG-364).**
 - **The gap.** The add-card use case checks only for an unexpired trial (`src/application/use-cases/create-trial-payment-method-setup-session.ts:55-65`). The trial banner in `app/(app)/app/layout.tsx` and the billing page's renewal line show on the trial status alone. None of them reads `cancelAtPeriodEnd`, which already includes Stripe's portal-set `cancel_at`.
 - **Consequence.** A trial user who cancels in the portal and then adds a card gets an initial-offer renewal consent recorded and a renewal acknowledgment sent. Stripe still cancels at trial end and never charges. No money moves, but the record and the email state a renewal that will not happen.
 - **Decided.** When cancellation is scheduled:
@@ -871,6 +871,8 @@ The security review of recent work (AUDIT-013) found two renewal-evidence gaps t
   *Corrected 2026-10-06: the billing page offers a new subscription only once the trial no longer blocks Checkout, and completion rechecks cancellation (#1410).*
 
   This is distinct from DEBT-501 item 4, a card added at or after trial end.
+
+  *Corrected 2026-10-22: BUG-364 carries F22's engineering. The 2026-10-22 billing QA on the dev preview found the saved-card variant too: the banner and the Billing line still say the trial renews after a portal cancellation. That raises F22 to P3.*
 
 **F23, a quarantined notice cannot be requeued (P3).** Found 2026-10-12 while recording ADR-027. Option 1 shipped in #1557 and reached production through #1574 on 2026-10-19; the owner's provider configuration and verification remain; the procedure is the [requeue guide](../guides/operations/requeue-renewal-notice.md).
 - **The gap addressed by #1557.** `RequeueRenewalNoticeDeliveryUseCase` existed, was tested and was wired in `lib/container/use-cases.ts`, but no route, script or page called it. The runbook for `renewal_notice_outcome_unknown` ([observability](../architecture/observability.md#operational-alerts)) told the owner to check Resend before any manual resend, and there was no supported way to make one.
