@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build && tsx scripts/check-server-action-manifest.ts",
+    "build": "next build && tsx scripts/deploy/check-server-action-manifest.ts",
     "start": "next start",
     "prepare": "husky",
     "lint": "biome check . --error-on-warnings && pnpm lint:doubles",
@@ -39,7 +39,13 @@
     "local:test:target": "tsx scripts/test-lanes/resolve-local-test-target.ts",
     "content:import:drafts": "tsx scripts/import-draft-questions.ts",
     "db:seed:all": "tsx scripts/seed-all-environments.ts",
-    "db:seed:prod": "tsx scripts/seed-production.ts"
+    "db:seed:prod": "tsx scripts/seed-production.ts",
+    "pr:merge-reviewed": "tsx scripts/review/merge-reviewed-pr.ts",
+    "pr:verify-promotion": "tsx scripts/review/verify-promotion.ts",
+    "record:next": "tsx scripts/records/next-record-id.ts",
+    "docs:audit": "tsx scripts/records/documentation-archive.ts",
+    "secret:check-header": "tsx scripts/deploy/validate-header-safe-secret.ts",
+    "deps:verify-union": "tsx scripts/dependencies/verify-lockfile-union.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,mts,cjs,json}": [

@@ -17,7 +17,7 @@
 - **Found in use.** Another session pushed from a linked worktree at 22:25:59Z on 2026-10-12. Its clone came out with `core.bare = true`, and the session reset it. In a sandbox it reproduced the cause: `GIT_DIR` set to a linked worktree's directory sets the flag, and a plain `.git` does not.
 - **Reproduced red here.** The new test makes an outer repository with a linked worktree, stubs `GIT_DIR` to the worktree's directory, and runs the fixture. Before the fix the outer repository's `core.bare` reads `true`.
 - **Introduced by #1471** (commit cc056b55, promoted by #1474). The fixture landed with the git-ignore check.
-- **The only unsafe site.** A sweep of every test and script that starts git found three test files. `scripts/lockfile-union-git.test.ts` already removes inherited `GIT_*` variables (`isolatedGitEnv`) and has its own test for a hook's `GIT_DIR`. `tests/clerk-backend-api-boundary.test.ts` only runs `git ls-files` on this repository.
+- **The only unsafe site.** A sweep of every test and script that starts git found three test files. `scripts/dependencies/lockfile-union-git.test.ts` already removes inherited `GIT_*` variables (`isolatedGitEnv`) and has its own test for a hook's `GIT_DIR`. `tests/clerk-backend-api-boundary.test.ts` only runs `git ls-files` on this repository.
 
 ## Impact
 
@@ -25,7 +25,7 @@ It affects any session or person who pushes from a linked worktree while the pre
 
 ## Options
 
-1. **Remove every inherited `GIT_*` variable for the fixture's git commands,** as `scripts/lockfile-union-git.test.ts` already does. *Chosen:* the test then behaves the same from a hook, a terminal or CI.
+1. **Remove every inherited `GIT_*` variable for the fixture's git commands,** as `scripts/dependencies/lockfile-union-git.test.ts` already does. *Chosen:* the test then behaves the same from a hook, a terminal or CI.
 2. **Point only `GIT_DIR` at the fixture.** That leaves `GIT_WORK_TREE` and `GIT_INDEX_FILE` free to redirect the audit's own git commands.
 3. **Remove `GIT_*` in the pre-push hook or Vitest's setup for every test.** That covers tests not yet written, but a test would then be correct only when run through that one entry point. Every test that starts git in this repository now isolates itself.
 
@@ -43,3 +43,5 @@ Option 1. Before the fixture runs, the test removes every inherited `GIT_*` vari
 
 - BUG-339: the other fix to the documentation guard's tests this week.
 - DEBT-518 owns the documentation guard.
+
+Corrected 2026-10-19: update script paths after the non-content family moves in DEBT-532; behavior and remaining checks are unchanged.

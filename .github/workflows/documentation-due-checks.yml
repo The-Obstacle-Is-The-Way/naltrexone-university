@@ -48,4 +48,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: pnpm exec tsx scripts/documentation-due-checks.ts
+        run: pnpm exec tsx scripts/records/documentation-due-checks.ts

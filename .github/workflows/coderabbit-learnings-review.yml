@@ -52,4 +52,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: pnpm exec tsx scripts/coderabbit-learnings-review.ts
+        run: pnpm exec tsx scripts/review/coderabbit-learnings-review.ts

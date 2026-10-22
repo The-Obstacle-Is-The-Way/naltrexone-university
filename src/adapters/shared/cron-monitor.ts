@@ -14,7 +14,7 @@ const FLUSH_TIMEOUT_MS = 2_000;
 
 // DEBT-505: Sentry Crons records each run of a scheduled job, so a run that
 // fails, overruns or never starts shows on the monitor, which the watcher
-// outside Sentry's email reads (scripts/operational-alert-watcher.ts). A
+// outside Sentry's email reads (scripts/watchers/operational-alert-watcher.ts). A
 // check-in carries the monitor's name, status and timing only. Flushing
 // before resolving keeps a serverless instance from freezing with a check-in
 // still buffered; one that is lost anyway reads as a missed run, which the

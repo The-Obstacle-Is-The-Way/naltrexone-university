@@ -51,14 +51,14 @@ For the image: pin `postgres:16` by digest, and extend the workflow test to ever
 
 Option 1, plus the digest pin.
 - Option 1 restores the owner's 2026-09-19 boundary at no cost. Dependabot PRs still get typecheck, lint, unit, browser, integration and build in GitHub Actions, without shared secrets.
-- Before shipping, confirm the exact `deploymentEnabled` branch-pattern syntax in Vercel's documentation. Confirm also that `scripts/merge-reviewed-pr.ts` accepts a PR with no Vercel status.
+- Before shipping, confirm the exact `deploymentEnabled` branch-pattern syntax in Vercel's documentation. Confirm also that `scripts/review/merge-reviewed-pr.ts` accepts a PR with no Vercel status.
 - The protocol's "Vercel/Codecov checks … remain separate merge requirements" line changes to match.
 
 ## Progress
 
 **2026-10-06, the fix.** Tests were written red first.
 - **`vercel.json`** sets `git.deploymentEnabled` to `{ "dependabot/**": false }`. Vercel's documentation confirms the form: a map of minimatch patterns, where unlisted branches stay enabled and any matching true rule wins. `tests/vercel-config.test.ts` pins the exclusion, and fails if any rule could re-enable a Dependabot branch.
-- **Merging is unaffected.** `scripts/merge-reviewed-pr.ts` requires only the `test` check and Codecov's patch status, not a Vercel status, and the ruleset requires only `test`.
+- **Merging is unaffected.** `scripts/review/merge-reviewed-pr.ts` requires only the `test` check and Codecov's patch status, not a Vercel status, and the ruleset requires only `test`.
 - **`ci.yml`'s Postgres service** is pinned to the digest the hosted-checkout workflow already uses. `tests/ci-workflow.test.ts` now requires a digest for every service and job container, in every workflow.
 - **Docs.** `docs/guides/dependencies/updating-dependencies.md` and `docs/architecture/environments.md` describe the boundary.
 - **Existing branches.** Vercel reads the setting from each branch's own commit. So the open Dependabot pull requests, created before this, keep deploying until Dependabot rebases them onto a base that carries it (`dev` for routine updates, `main` for security updates).
@@ -76,3 +76,5 @@ Option 1, plus the digest pin.
 ## Related
 
 - DEBT-474 (archived): CI secret scope and action immutability.
+
+Corrected 2026-10-19: update script paths after the non-content family moves in DEBT-532; behavior and remaining checks are unchanged.

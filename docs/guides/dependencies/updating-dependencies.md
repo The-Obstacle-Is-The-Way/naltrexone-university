@@ -8,7 +8,7 @@ This is the on-call playbook for incoming Dependabot PRs and ad-hoc dependency w
 - Do not merge a red Dependabot PR, regardless of CodeRabbit state.
 - Do not push commits to Dependabot-owned branches. Ask Dependabot to rebase or recreate, or spin a separate repo-owned fix PR.
 - Do not bundle incidental app/test fixes into a dependency PR. Ship the fix first, then rebase the dependency PR.
-- Run the full local gate before pushing any repo-owned dependency or protocol PR:
+- Prepare a fresh local database with the [integration setup](../testing/integration-tests.md#local-setup), including migrations and seed. `db:test:up` alone starts services; it does not prepare their data. Run the full local gate before pushing any repo-owned dependency or protocol PR:
 
   ```sh
   pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm db:test:up && pnpm test:integration && pnpm build
@@ -86,32 +86,34 @@ The example bundles #826, #827 and #828, which is how #829 was built.
    pnpm install --lockfile-only --config.minimum-release-age=$CUTOFF
    ```
 
-   If this install fails, stop. The manifest from step 3 is wrong, for example a mistyped specifier, and the lockfile still holds step 4's specifiers. Fix `package.json`, stage it, and repeat step 5.
+   If this install fails, stop and diagnose its actual error. A mistyped specifier can leave the lockfile with step 4's specifiers; fix `package.json`, stage it, and repeat step 5. Network, policy and lifecycle-script failures need their own correction.
 
 6. Verify, and paste the printed table into the PR body:
 
    ```sh
    pnpm install --frozen-lockfile
-   node --import tsx scripts/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
+   node --import tsx scripts/dependencies/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
    ```
 
-   The verifier needs at least two sources. For a single-source PR, pass its base again as the second, `--source 'refs/pr/N^'`. It changes nothing, so the union stays exactly the source PR's. #1522 passed `origin/dev`, which matched the base only because #1520's parent was `dev`'s head.
+   The verifier accepts one or more sources. For a single-source PR, pass only `--source refs/pr/N` with `--base 'refs/pr/N^'`. List every source the bundle is intended to include: the verifier cannot infer an omitted source from a correct union of the supplied inputs.
 
-   If the frozen install fails, stop: the lockfile does not match `package.json`, so go back to step 5. Run the verifier through `node --import tsx`, not `pnpm exec`. Steps 4 and 5 leave `node_modules` stale, and `pnpm exec` then runs a plain `pnpm install` first (pnpm's `verify-deps-before-run`), which can rewrite `pnpm-lock.yaml` before the verifier reads it.
+   If the frozen install fails, stop and read its error. Return to step 5 for a manifest/lockfile mismatch; a lifecycle-script, network or policy failure does not by itself prove a mismatch. Run this frozen-input audit through `node --import tsx`. Both `pnpm exec` and `pnpm run` can invoke a plain install first when `node_modules` is stale (pnpm 11's default `verify-deps-before-run: install`), rewriting the lockfile before the verifier reads it. A package alias does not bypass that pre-run check.
 
    The two checks cover different things. The frozen install proves that the lockfile matches `package.json`. The verifier proves that the lockfile is the union of the sources, and each importer entry it compares includes the manifest `specifier`. So a pin dropped or altered while resolving step 3 fails one check or the other.
 
-Each argument is a git revision or a lockfile path. The verifier refuses a name that is both, and a candidate that is also a source, by name or by identical content. Revisions always come from the repository in the current directory, even inside a git hook that exports `GIT_DIR`. It parses the YAML and compares every root and workspace importer, including whether it exists at all, and each importer's dependencies. It also compares every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes. The script runs the same way through a symlink or without its `.ts` extension.
+Each argument is a git revision or a lockfile path. The verifier refuses a name that is both, and a candidate argument identical to a source argument, whether a path or revision. This argument check does not canonicalize different spellings of one path. Identical content is allowed; the structured comparison decides whether any source change is missing. Revisions always come from the repository in the current directory, even inside a git hook that exports `GIT_DIR`. It parses the YAML and compares every root and workspace importer, including whether it exists at all, and each importer's dependencies. It also compares every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes. The script runs the same way through a symlink or without its `.ts` extension.
 
 | Exit | Meaning |
 |---:|---|
 | 0 | The candidate changes exactly the union of the source changes. |
 | 1 | Unexpected failure, such as `git` being unavailable. Nothing was verified. |
-| 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, a document that is not a pnpm lockfile, or YAML that pnpm never writes (a `---` document marker or any directive such as `%YAML` or `%TAG`, anchors, aliases, explicit tags, non-string keys, or `.nan` and `.inf`). |
+| 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, a root mapping without `lockfileVersion`, malformed section/importer mappings, or YAML that pnpm never writes (a `---` document marker or any directive such as `%YAML` or `%TAG`, anchors, aliases, explicit tags, non-string keys, or `.nan` and `.inf`). |
 | 4 | Extra: the candidate changes an entry no source changes. |
 | 8 | Missing: the candidate omits a source change. |
 | 16 | Unmatched: the candidate changes an entry to a value no source proposes. |
 | 32 | Conflict: two sources change one entry differently. |
+
+The parser checks the shapes needed for comparison, not the complete pnpm lockfile schema. The frozen install supplies the pnpm compatibility check.
 
 Failure codes add up when several categories fail; 28 means extra, missing and unmatched. A newer transitive usually means a wrong cutoff: regenerate rather than edit the lockfile. A conflict needs a deliberate choice, such as asking Dependabot to recreate the sources from one base or bundling fewer of them. Record that choice in the PR.
 
@@ -193,7 +195,7 @@ An empty state flip or a stale prior review does not satisfy the repo rule.
 Current workflow boundaries (step names are the stable anchors):
 
 - `Build` derives `NEXT_PUBLIC_SKIP_CLERK` from Clerk public-key availability, with shape-valid placeholders when credentials are absent; no secret expression or Clerk switch is job-scoped.
-- `E2E smoke` receives real TEST-mode Clerk, Stripe, and E2E values only for main pushes and non-Dependabot same-repository PRs. The actor guard stays.
+- `E2E smoke` receives real TEST-mode Clerk, Stripe, and E2E values only for main pushes, manual runs on main, and non-Dependabot same-repository PRs. The actor guard stays.
 - `Evidence summary` reports the actual E2E step outcome and explicitly says shared TEST credentials are withheld from Dependabot; main E2E gates production promotion. Fork and earlier-failure reasons are unchanged.
 
 Dependabot PR CI still runs typecheck, lint, unit, browser, integration and build. Vercel does not build Dependabot branches at all: `vercel.json`'s `git.deploymentEnabled` sets `dependabot/**` to false, so no Preview secret reaches unreviewed dependency code. A Dependabot change is first built by Vercel after review: on `dev` for a routine update, and on `main` for a security update that targets it (BUG-327, pinned by `tests/vercel-config.test.ts`). Vercel reads that setting from the branch's own commit, so a Dependabot branch created before it must be rebased first. Codecov and exact-head CodeRabbit approval remain separate merge requirements, not a claim that every bot PR automatically receives a substantive review. The E2E omission is deliberate, not pending. Do not call later evidence PR-time proof: `dev`-targeted updates get promotion-PR E2E and main E2E; security updates targeting `main` get only main E2E. [Vercel's production gate](../release/promote-to-production.md#production-deployment-check) blocks production-domain assignment until main's check passes. Its build-time migrations still run before the gate and must remain compatible with the serving release.
@@ -217,7 +219,7 @@ These settings do not prove package contents are benign. They only shape Dependa
 
 ## CI's Postgres Image
 
-CI's `Start Postgres` steps pull one `postgres:16` digest from Docker Hub, then ECR Public, then Google's mirror, and `docker-compose.yml` runs the same digest locally (DEBT-516). Dependabot updates neither, so the refresh is by hand.
+CI's `Pull Postgres` steps pull one `postgres:16` digest from Docker Hub, then ECR Public, then Google's mirror, and `docker-compose.yml` runs the same digest locally (DEBT-516). Dependabot updates neither, so the refresh is by hand.
 
 - **When.** Refresh on each PostgreSQL 16 minor release (the [roadmap](https://www.postgresql.org/developer/roadmap/) lists the dates) or on an advisory against the image. A rebuild that changes only the Debian base needs no refresh.
 - **Resolve the digest from Docker Hub only**, never from a mirror's copy of the tag, and check its version:
@@ -227,7 +229,7 @@ CI's `Start Postgres` steps pull one `postgres:16` digest from Docker Hub, then 
   docker run --rm docker.io/library/postgres@<digest> postgres --version
   ```
 
-- **Confirm each registry serves it.** `--raw` reads only the index. Without it, ECR Public's limit of one unauthenticated pull per second refuses the per-platform reads (429).
+- **Confirm each registry serves it.** `--raw` returns the exact index body for this check. Formatted inspection can fetch child manifests too and hit ECR Public's limit of one unauthenticated pull per second (429); ordinary unformatted inspection need not make those extra reads.
 
   ```sh
   for registry in docker.io/library public.ecr.aws/docker/library mirror.gcr.io/library; do
@@ -242,7 +244,7 @@ CI's `Start Postgres` steps pull one `postgres:16` digest from Docker Hub, then 
 
 BUG-352 puts both CI images through `scripts/ci/pull-image.sh`. PgBouncer tries Docker Hub, then Google's mirror: two attempts per registry, ten seconds apart, with TERM after 60 seconds and KILL ten seconds later. Four stalled attempts plus two delays take at most 300 seconds, within the seven-minute step (apart from process overhead).
 
-The helper writes the serving repository to `GITHUB_ENV`. Compose uses that repository with its literal digest and `--pull never` in both creation and startup. A mirror pull need not create the Docker Hub reference locally, and Docker cannot tag a digest target. Local `pnpm db:test:up` retains the Docker Hub default and its normal cache behavior.
+The helper writes the serving repository to `GITHUB_ENV`. Compose uses that repository with its literal digest and `--pull never` at startup. A mirror pull need not create the Docker Hub reference locally, and Docker cannot tag a digest target. Local `pnpm db:test:up` retains the Docker Hub default and its normal cache behavior.
 
 - **When.** Refresh on a PgBouncer security release, a behavior change affecting transaction pooling or ignored startup parameters, or an image advisory. The records index's BUG-352 Waiting row holds the first refresh: a Docker Hub tag carrying PgBouncer 1.26.1 or later. Check the [image's tags](https://hub.docker.com/r/edoburu/pgbouncer/tags) during the weekly queue review; verify the executable version, not only the tag name.
 - **How.** Resolve the index digest from Docker Hub's versioned tag only. Inspect the release notes and run the version command without network access:
@@ -264,7 +266,7 @@ The helper writes the serving repository to `GITHUB_ENV`. Compose uses that repo
   done
   ```
 
-  Google's mirror is a cache, with no retention guarantee; direct pulls work but are outside its documented daemon-mirror usage. A refresh lands only when both sources serve the digest. If Docker Hub fails while the mirror lacks the pin, or a refresh waits more than 14 days for the mirror, adopt an owner-controlled GHCR copy (BUG-352 option 4).
+  Google's mirror is a cache, with no retention guarantee; direct pulls work but are outside its documented daemon-mirror usage. A refresh lands only when both sources serve the digest. If Docker Hub fails while the mirror lacks the pin, or a refresh waits more than 14 days for the mirror, ask the owner to decide whether to adopt an owner-controlled GHCR copy (BUG-352 option 4); that trigger does not authorize creating a package or adding a write-scoped copy step.
 - **Where.** Change `PGBOUNCER_IMAGE_DIGEST` in `.github/workflows/ci.yml` and the literal digest in `docker-compose.yml` together, including version comments. `tests/ci-service-images.test.ts` enforces equality, explicit registry lists and no implicit workflow pulls. New workflow images must use this helper with at least two registry repositories; declarative containers cannot run it before their initial pull. BUG-345's required pooler suite must pass unchanged, or the refresh PR must explain and prove the changed behavior. Do not make it advisory.
 
 ## Supply-Chain Boundary
