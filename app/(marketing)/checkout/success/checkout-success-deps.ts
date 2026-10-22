@@ -6,7 +6,6 @@ import type {
 
 const defaultModuleLoaders: CheckoutSuccessModuleLoaders = {
   loadContainer: () => import('@/lib/container'),
-  loadStripe: () => import('@/lib/stripe'),
   loadClerkServer: () => import('@clerk/nextjs/server'),
 };
 
@@ -16,11 +15,10 @@ export async function getCheckoutSuccessDeps(
 ): Promise<CheckoutSuccessDeps> {
   if (deps) return deps;
 
-  const { createContainer } = await loaders.loadContainer();
-  const { getStripe } = await loaders.loadStripe();
+  const { createRequestContainer } = await loaders.loadContainer();
   const { auth } = await loaders.loadClerkServer();
 
-  const container = createContainer() as CheckoutSuccessContainerLike;
+  const container = createRequestContainer() as CheckoutSuccessContainerLike;
 
   return {
     authGateway: container.createAuthGateway(),
@@ -28,7 +26,8 @@ export async function getCheckoutSuccessDeps(
     getClerkAuth: auth,
     logger: container.logger,
     rateLimiter: container.createRateLimiter(),
-    stripe: getStripe(),
+    stripe: container.stripe,
+    stripeBudget: container.stripeBudget,
     priceIds: {
       monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
       annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,

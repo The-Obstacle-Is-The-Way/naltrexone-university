@@ -5,6 +5,7 @@ import type {
   ClerkWebhookDeps,
   ClerkWebhookEvent,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
+import { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
 import { ApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
@@ -55,6 +56,7 @@ function createTestDeps() {
         del: async () => ({ deleted: true }),
       },
     },
+    stripeBudget: new StripeCallBudget(),
     createRateLimiter: () => rateLimiter,
     getClerkUserById: async () => null,
     transaction,
@@ -154,6 +156,41 @@ describe('POST /api/webhooks/clerk', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ received: true });
+  });
+
+  it("passes the request's Stripe budget to the customer deleter (DEBT-527)", async () => {
+    const {
+      POST,
+      createContainer,
+      verifyWebhook,
+      processClerkWebhook,
+      deleteStripeCustomer,
+    } = createTestDeps();
+    verifyWebhook.mockResolvedValue({
+      eventId: 'evt_1',
+      type: 'user.deleted',
+      data: { id: 'clerk_1' },
+    });
+    processClerkWebhook.mockImplementation(async (deps) => {
+      await deps.deleteStripeCustomer('cus_budgeted');
+    });
+
+    const res = await POST(
+      new Request('http://localhost/api/webhooks/clerk', {
+        method: 'POST',
+        body: 'raw',
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const container = createContainer.mock.results[0]?.value;
+    expect(container?.stripeBudget).toBeInstanceOf(StripeCallBudget);
+    expect(deleteStripeCustomer).toHaveBeenCalledWith(
+      container?.stripe,
+      container?.logger,
+      'cus_budgeted',
+      container?.stripeBudget,
+    );
   });
 
   it('returns 429 when rate limited', async () => {

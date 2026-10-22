@@ -8,7 +8,7 @@ export type LoadContainerFn<TContainer> = () => Promise<TContainer>;
 
 const loadDefaultAppContainer = cache(async (): Promise<AppContainer> => {
   const [
-    { createContainer },
+    { createRequestContainer },
     { db },
     { createRequestCachedQuestionRepository, createRequestCachedTagRepository },
     { DrizzleQuestionRepository, DrizzleTagRepository },
@@ -25,7 +25,7 @@ const loadDefaultAppContainer = cache(async (): Promise<AppContainer> => {
     new DrizzleTagRepository(db),
   );
 
-  return createContainer({
+  return createRequestContainer({
     repositories: {
       createQuestionRepository: (dbOverride: DrizzleDb = db) =>
         dbOverride === db
