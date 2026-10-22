@@ -24,6 +24,24 @@ find_apt_source_files() {
     -print0 2>/dev/null
 }
 
+# GitHub's Ubuntu runners name their mirrors in a list that each source
+# reaches through `mirror+file:`, so the Azure archive is named there, not in
+# a source file (BUG-366). Print each list a source names that exists.
+find_apt_mirror_lists() {
+  local mirror_list
+  while IFS= read -r -d '' source_file; do
+    { grep -oE 'mirror\+file:[^[:space:]]+' "$source_file" || true; } |
+      while IFS= read -r mirror_list; do
+        mirror_list="${mirror_list#mirror+file:}"
+        # `mirror+file:///path` and `mirror+file:/path` name the same file.
+        mirror_list="/${mirror_list#"${mirror_list%%[!/]*}"}"
+        if [[ -f "$mirror_list" ]]; then
+          printf '%s\0' "$mirror_list"
+        fi
+      done
+  done < <(find_apt_source_files)
+}
+
 remove_microsoft_sources() {
   while IFS= read -r -d '' source_file; do
     if grep -qE 'packages\.microsoft\.com' "$source_file"; then
@@ -51,7 +69,7 @@ fail_over_azure_archive_sources() {
     sudo cp "$replacement_file" "$source_file"
     rm -f "$replacement_file"
     rewrote_source=true
-  done < <(find_apt_source_files)
+  done < <(find_apt_source_files; find_apt_mirror_lists)
 
   if [[ "$rewrote_source" == true ]]; then
     echo '[playwright-install] Retrying apt dependencies through archive.ubuntu.com.'

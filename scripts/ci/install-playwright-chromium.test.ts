@@ -4,6 +4,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  rm,
   stat,
   writeFile,
 } from 'node:fs/promises';
@@ -19,7 +20,13 @@ const APT_GET_PATTERN = '(^|/)apt-get( |$)';
 
 async function createHarness(
   firstDependencyInstallHangs: boolean,
-  { firstPhaseLeavesAptRunning = false, leftoverAptIgnoresTerm = false } = {},
+  {
+    firstPhaseLeavesAptRunning = false,
+    leftoverAptIgnoresTerm = false,
+    // GitHub's Ubuntu runners name their mirrors in a list that the source
+    // reaches through `mirror+file:` (BUG-366); a source can also name one.
+    layout = 'mirror-list' as 'mirror-list' | 'direct',
+  } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), 'playwright-install-'));
   const aptRoot = join(root, 'etc', 'apt');
@@ -30,16 +37,32 @@ async function createHarness(
   const aptLockPath = join(root, 'apt-lock');
   const processLogPath = join(root, 'process.log');
   const ubuntuSource = join(sourcesDir, 'ubuntu.sources');
+  const mirrorList = join(aptRoot, 'apt-mirrors.txt');
   const microsoftSource = join(sourcesDir, 'microsoft-prod.list');
   const aptConfigDir = join(aptRoot, 'apt.conf.d');
   const unrelatedAptConfig = join(aptConfigDir, '99microsoft-proxy');
   await mkdir(sourcesDir, { recursive: true });
   await mkdir(aptConfigDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
-  await writeFile(
-    ubuntuSource,
-    'Types: deb\nURIs: http://azure.archive.ubuntu.com/ubuntu\nSuites: noble\n',
-  );
+  if (layout === 'mirror-list') {
+    // Both of the runner's stanzas name one list, here in both URI forms.
+    await writeFile(
+      ubuntuSource,
+      `Types: deb\nURIs: mirror+file:${mirrorList}\nSuites: noble noble-updates\n\n` +
+        `Types: deb\nURIs: mirror+file://${mirrorList}\nSuites: noble-security\n`,
+    );
+    await writeFile(
+      mirrorList,
+      'http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\n' +
+        'https://archive.ubuntu.com/ubuntu/\tpriority:2\n' +
+        'https://security.ubuntu.com/ubuntu/\tpriority:3\n',
+    );
+  } else {
+    await writeFile(
+      ubuntuSource,
+      'Types: deb\nURIs: http://azure.archive.ubuntu.com/ubuntu\nSuites: noble\n',
+    );
+  }
   await writeFile(
     microsoftSource,
     'deb https://packages.microsoft.com/ubuntu/24.04/prod noble main\n',
@@ -103,6 +126,9 @@ kill "$1" "$pid" 2>/dev/null
   return {
     root,
     ubuntuSource,
+    mirrorList,
+    // The file that names the Azure archive in this layout.
+    archiveFile: layout === 'mirror-list' ? mirrorList : ubuntuSource,
     microsoftSource,
     unrelatedAptConfig,
     logPath,
@@ -142,28 +168,57 @@ function stopIfRunning(pid: string): void {
 }
 
 describe('install-playwright-chromium.sh', () => {
-  it('kills a hung apt phase, preserves Ubuntu sources, and retries through the archive failover', async () => {
+  it.each([
+    ['the mirror list the runner names', 'mirror-list'],
+    ['a source that names the mirror', 'direct'],
+  ] as const)(
+    'kills a hung apt phase, preserves Ubuntu sources, and fails over to the archive in %s',
+    async (_where, layout) => {
+      const harness = await createHarness(true, { layout });
+      await chmod(harness.archiveFile, 0o640);
+      const fileBefore = await stat(harness.archiveFile);
+      const startedAt = Date.now();
+
+      const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
+        env: harness.env,
+      });
+
+      expect(Date.now() - startedAt).toBeLessThan(7_000);
+      expect(await readFile(harness.logPath, 'utf8')).toBe(
+        'exec playwright install-deps chromium\n' +
+          'exec playwright install-deps chromium\n' +
+          'exec playwright install chromium\n',
+      );
+      expect(stdout).toContain(
+        '[playwright-install] Retrying apt dependencies through archive.ubuntu.com.',
+      );
+      const archive = await readFile(harness.archiveFile, 'utf8');
+      expect(archive).toContain('http://archive.ubuntu.com/ubuntu');
+      expect(archive).not.toContain('azure.archive.ubuntu.com');
+      const fileAfter = await stat(harness.archiveFile);
+      expect(fileAfter.ino).toBe(fileBefore.ino);
+      expect(fileAfter.mode & 0o777).toBe(0o640);
+      await expect(stat(harness.microsoftSource)).rejects.toThrow();
+      await expect(stat(harness.unrelatedAptConfig)).resolves.toBeDefined();
+    },
+  );
+
+  it('still retries and installs Chromium when a source names a missing mirror list', async () => {
     const harness = await createHarness(true);
-    await chmod(harness.ubuntuSource, 0o640);
-    const sourceBefore = await stat(harness.ubuntuSource);
-    const startedAt = Date.now();
+    await rm(harness.mirrorList);
 
-    await execFileAsync('bash', [INSTALL_SCRIPT], { env: harness.env });
+    const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
+      env: harness.env,
+    });
 
-    expect(Date.now() - startedAt).toBeLessThan(7_000);
+    expect(stdout).toContain(
+      '[playwright-install] No Azure Ubuntu source was present; retrying the bounded apt phase once.',
+    );
     expect(await readFile(harness.logPath, 'utf8')).toBe(
       'exec playwright install-deps chromium\n' +
         'exec playwright install-deps chromium\n' +
         'exec playwright install chromium\n',
     );
-    expect(await readFile(harness.ubuntuSource, 'utf8')).toContain(
-      'http://archive.ubuntu.com/ubuntu',
-    );
-    const sourceAfter = await stat(harness.ubuntuSource);
-    expect(sourceAfter.ino).toBe(sourceBefore.ino);
-    expect(sourceAfter.mode & 0o777).toBe(0o640);
-    await expect(stat(harness.microsoftSource)).rejects.toThrow();
-    await expect(stat(harness.unrelatedAptConfig)).resolves.toBeDefined();
   });
 
   // BUG-311: `timeout` runs as the runner user and cannot stop the root
@@ -231,7 +286,7 @@ describe('install-playwright-chromium.sh', () => {
       'exec playwright install-deps chromium\n' +
         'exec playwright install chromium\n',
     );
-    expect(await readFile(harness.ubuntuSource, 'utf8')).toContain(
+    expect(await readFile(harness.archiveFile, 'utf8')).toContain(
       'http://azure.archive.ubuntu.com/ubuntu',
     );
   });
