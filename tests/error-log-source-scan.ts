@@ -2,6 +2,31 @@ import ts from '@typescript/typescript6';
 
 type Source = { filePath: string; contents: string };
 const LOG_METHODS = new Set(['error', 'warn', 'info', 'debug', 'fatal', 'log']);
+// Methods whose result still carries their receiver's text.
+const STRING_METHODS = new Set([
+  'toString',
+  'toLocaleString',
+  'valueOf',
+  'trim',
+  'trimStart',
+  'trimEnd',
+  'slice',
+  'substring',
+  'substr',
+  'toLowerCase',
+  'toUpperCase',
+  'toLocaleLowerCase',
+  'toLocaleUpperCase',
+  'replace',
+  'replaceAll',
+  'normalize',
+  'padStart',
+  'padEnd',
+  'concat',
+  'split',
+  'join',
+  'at',
+]);
 
 // Follow declarations, not identifier spellings: aliases and formatter helpers
 // must not hide the raw-message patterns this guard is intended to reject.
@@ -42,22 +67,34 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
           /(^|\/)safe-error-diagnostics$/.test(module.text)
         );
       });
-    // A logging boundary returns nothing: annotated `void`, or unannotated
-    // with no `return <value>`. A helper that logs and returns is not one.
-    const returnsNothing = (decl: ts.FunctionDeclaration) => {
-      if (decl.type) return decl.type.kind === ts.SyntaxKind.VoidKeyword;
+    // A logging boundary is a local function that logs and returns nothing:
+    // annotated `void`, or unannotated with no `return <value>`, or an arrow
+    // whose body is the log call. A helper that logs and returns is not one.
+    function isLoggingWrapper(
+      fn: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression,
+      seen: Set<ts.Node>,
+    ): boolean {
+      if (!fn.body) return false;
+      if (!ts.isBlock(fn.body))
+        return ts.isCallExpression(fn.body) && isLog(fn.body.expression, seen);
+      if (fn.type && fn.type.kind !== ts.SyntaxKind.VoidKeyword) return false;
+      let logs = false;
       let returnsValue = false;
-      function visitReturn(child: ts.Node): void {
+      function visit(child: ts.Node): void {
         if (ts.isReturnStatement(child) && child.expression)
           returnsValue = true;
-        else if (!ts.isFunctionLike(child)) ts.forEachChild(child, visitReturn);
+        if (ts.isCallExpression(child) && isLog(child.expression, seen))
+          logs = true;
+        else if (!ts.isFunctionLike(child)) ts.forEachChild(child, visit);
       }
-      if (decl.body) ts.forEachChild(decl.body, visitReturn);
-      return !returnsValue;
-    };
+      ts.forEachChild(fn.body, visit);
+      return logs && (fn.type !== undefined || !returnsValue);
+    }
     function isLog(node: ts.Node, seen = new Set<ts.Node>()): boolean {
       if (seen.has(node)) return false;
       seen.add(node);
+      if (ts.isArrowFunction(node) || ts.isFunctionExpression(node))
+        return isLoggingWrapper(node, seen);
       if (ts.isPropertyAccessExpression(node))
         return LOG_METHODS.has(node.name.text);
       if (
@@ -75,20 +112,8 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
         return declarations(node).some((decl) => {
           if (ts.isVariableDeclaration(decl) && decl.initializer)
             return isLog(decl.initializer, seen);
-          if (
-            ts.isFunctionDeclaration(decl) &&
-            decl.body &&
-            returnsNothing(decl)
-          ) {
-            let logs = false;
-            function visit(child: ts.Node): void {
-              if (ts.isCallExpression(child) && isLog(child.expression, seen))
-                logs = true;
-              else if (!ts.isFunctionLike(child)) ts.forEachChild(child, visit);
-            }
-            visit(decl.body);
-            return logs;
-          }
+          if (ts.isFunctionDeclaration(decl))
+            return isLoggingWrapper(decl, seen);
           return (
             ts.isBindingElement(decl) &&
             LOG_METHODS.has((decl.propertyName ?? decl.name).getText(file))
@@ -128,6 +153,12 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
             ? node.expression.text === 'String'
             : node.expression.getText(file) === 'JSON.stringify') &&
           node.arguments.some((arg) => tainted(arg, seen))
+        )
+          return true;
+        if (
+          ts.isPropertyAccessExpression(node.expression) &&
+          STRING_METHODS.has(node.expression.name.text) &&
+          tainted(node.expression.expression, seen)
         )
           return true;
         if (

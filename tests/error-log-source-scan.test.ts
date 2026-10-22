@@ -24,6 +24,12 @@ describe('raw error log source scan', () => {
     'function warnStopped(logger, context) { logger.warn(context); } warnStopped(logger, { error: error.message })',
     'function projectSafeErrorDiagnostics(error) { return error.message; } logger.error({ detail: projectSafeErrorDiagnostics(error) })',
     'logger.error({ detail: JSON.stringify(error.message) })',
+    'const warnStopped = (context) => { logger.warn(context); }; warnStopped({ detail: error.message })',
+    'const warnStopped = function (context) { logger.warn(context); }; warnStopped({ detail: error.message })',
+    'const warnStopped = (context) => logger.warn(context); warnStopped({ detail: error.message })',
+    'try { work(); } catch (failure) { logger.error({ detail: failure.toString() }); }',
+    'logger.error({ detail: error.message.trim() })',
+    'logger.error({ detail: [error.message].join(", ") })',
   ])('rejects demonstrated raw text flow: %s', (contents) => {
     expect(
       collectRawErrorLogIssues([{ filePath: 'sample.ts', contents }]),
@@ -43,6 +49,11 @@ describe('raw error log source scan', () => {
       logger.warn({ errorCode: error.code });
       function format(error) { logger.debug({ errorCode: error.code }); return 'failed'; }
       format(error.message);
+      const describe = (error) => { logger.debug({ errorCode: error.code }); return 'failed'; };
+      describe(error.message);
+      function label(error): string { logger.debug({ errorCode: error.code }); return 'failed'; }
+      label(error.message);
+      logger.warn({ errorCode: error.code.toUpperCase(), safe: projectSafeErrorDiagnostics(error).name?.trim() });
     `,
         },
       ]),

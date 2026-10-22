@@ -177,4 +177,11 @@ describe('vendor diagnostics allow-list', () => {
       ),
     ).toEqual({ name: 'Error' });
   });
+  it('reports a five-letter network code as a network code, not a SQLSTATE', () => {
+    expect(
+      projectSafeErrorDiagnostics(
+        Object.assign(new Error('private'), { code: 'EPIPE' }),
+      ),
+    ).toEqual({ name: 'Error', networkCode: 'EPIPE' });
+  });
 });

@@ -78,7 +78,10 @@ function getSqlState(value: object): string | null {
   return safelyInspect(() => {
     if (!('code' in value)) return null;
     const code = (value as { code?: unknown }).code;
-    return typeof code === 'string' && SQLSTATE_PATTERN.test(code)
+    // EPIPE also fits the SQLSTATE shape; a network code is never a SQLSTATE.
+    return typeof code === 'string' &&
+      SQLSTATE_PATTERN.test(code) &&
+      !NETWORK_CODES.has(code)
       ? code
       : null;
   });
