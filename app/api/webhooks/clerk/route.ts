@@ -1,5 +1,5 @@
 import { verifyWebhook } from '@clerk/nextjs/webhooks';
-import { createContainer } from '@/lib/container';
+import { createRequestContainer } from '@/lib/container';
 import { createRequestContext, getRequestLogger } from '@/lib/request-context';
 import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
@@ -32,11 +32,12 @@ export const POST = createWebhookHandler(
   () => {
     const ctx = createRequestContext();
     const logger = getRequestLogger(ctx);
-    const container = createContainer({ primitives: { logger } });
+    const container = createRequestContainer({ primitives: { logger } });
 
     return {
       logger: container.logger,
       stripe: container.stripe,
+      stripeBudget: container.stripeBudget,
       createRateLimiter: container.createRateLimiter,
       getClerkUserById: container.getClerkUserById,
       transaction: async (fn) =>
