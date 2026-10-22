@@ -255,6 +255,20 @@ export function scrubBreadcrumb(
 }
 
 /**
+ * The browser SDK's settings apart from its key and environment, kept here so
+ * the real-SDK tests initialize Sentry with what `sentry.client.config.ts`
+ * uses.
+ */
+export const SENTRY_CLIENT_SETTINGS = {
+  tracesSampleRate: 0,
+  replaysSessionSampleRate: 0,
+  replaysOnErrorSampleRate: 0,
+  dataCollection: SENTRY_DATA_COLLECTION,
+  beforeSend: scrubEvent,
+  beforeBreadcrumb: scrubBreadcrumb,
+} satisfies Sentry.BrowserOptions;
+
+/**
  * `beforeSend` on the server: `scrubEvent`, after dropping any breadcrumbs.
  * `maxBreadcrumbs: 0` stops the SDK recording them, but a scope's own
  * `addBreadcrumb` ignores that limit (BUG-331).
