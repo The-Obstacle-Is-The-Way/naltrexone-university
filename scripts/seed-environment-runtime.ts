@@ -52,7 +52,7 @@ export function createSeedEnvironmentRuntime(
           runImport: (args) =>
             runProcess(
               'pnpm',
-              ['content:import:drafts', '--', ...args],
+              ['content:import:drafts', ...args],
               process.env,
               false,
               spawnProcess,
@@ -132,7 +132,7 @@ async function seedDatabase(
   delete childEnv.DB_TARGET_ACK;
   await runProcess(
     'pnpm',
-    ['exec', 'tsx', 'scripts/internal/run-managed-db-seed.ts'],
+    ['exec', 'tsx', 'scripts/database/managed/run-managed-db-seed.ts'],
     childEnv,
     false,
     spawnProcess,

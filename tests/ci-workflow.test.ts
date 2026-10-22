@@ -276,7 +276,7 @@ describe('CI workflow', () => {
       expect(
         findParsedStep(filePath, 'Seed DB (placeholder content)').run,
       ).toBe(
-        'pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders',
+        'pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts --include-placeholders',
       );
     }
     for (const filePath of WORKFLOW_PATHS) {

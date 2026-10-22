@@ -3,10 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { choices, questionRevisions, questions } from '@/db/schema';
 import type { QuestionRevisionFields } from '@/lib/content/question-revision-hash';
-import {
-  appendQuestionRevision,
-  choiceIdByLabel,
-} from '@/scripts/seed/question-revision-writer';
+import { appendQuestionRevision } from '@/scripts/seed/question-revision-writer';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import {
@@ -14,6 +11,7 @@ import {
   significantMarkdownCases,
 } from '@/src/domain/test-helpers/markdown-normalization-cases';
 import { answeredOutcome } from '@/src/domain/value-objects';
+import { choiceIdByLabel } from '@/tests/shared/question-revision-fixtures';
 import {
   cleanupAfterEach,
   closeConnection,

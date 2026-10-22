@@ -124,33 +124,30 @@ Never use `drizzle-kit push` for this repository. It bypasses checked-in
 migration files and can miss extensions, constraints, custom SQL, and ledger
 history.
 
-The supported migration-generation entry is `pnpm db:generate`. Supply the
-database target explicitly; the command refuses dotenv fallback, classifies the
-target through the same human database boundary as migrate/studio/seed, prints
-only a credential-free target identity, and requires the exact `DB_TARGET_ACK`
-it reports before using a remote target:
+The supported migration-generation entry is `pnpm db:generate`. It reads the
+schema and snapshots through `drizzle.generate.config.ts`, writes migration
+files, and neither loads dotenv nor needs a database connection:
 
 ```bash
-DATABASE_URL="<verified target connection string>" pnpm db:generate
+pnpm db:generate
 ```
 
-Do not invoke the raw dependency CLI for repository work. It loads
-`drizzle.config.ts` directly and therefore does not provide the package entry's
-human acknowledgement boundary.
+Connected migrate/studio/seed commands still require an explicit `DATABASE_URL`
+and the human target guard. Do not invoke those dependency commands directly:
+`drizzle.config.ts` loads dotenv and does not provide the package entry's
+acknowledgment boundary.
 
 Git-triggered Vercel Preview and Production deploys run the Build Command in
 `vercel.json`, which `vercel.test.ts` pins. It checks a configured Clerk JWT key
 against Clerk's published keys and fails on a mismatch. With no key set it skips
 the check, and when Clerk's keys cannot be read it logs that the key went
 unchecked; either way the build continues.
-It then runs a content/ledger pre-check, applies the
-checked-in migration journal, runs an exact post-check, and then builds:
+The managed migrate command runs a content/ledger pre-check and applies the
+checked-in migration journal, then checks that every journal entry is applied with an accepted hash. The enclosing Vercel command runs `pnpm build` afterward:
 
 ```bash
 pnpm exec tsx scripts/deploy/check-clerk-jwt-key.ts \
-  && pnpm exec tsx scripts/verify-migration-ledger.ts pre \
-  && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts \
-  && pnpm exec tsx scripts/verify-migration-ledger.ts post \
+  && pnpm exec tsx scripts/database/managed/run-managed-db-migrate.ts \
   && pnpm build
 ```
 

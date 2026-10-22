@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import packageJson from '@/package.json';
 import { runHumanDatabaseCommand } from './database-command';
-import { runManagedDatabaseCommand } from './internal/database-command-managed';
+import { runManagedDatabaseCommand } from './managed/database-command-managed';
 
 describe('database command target boundary', () => {
   it('fails before execution when DATABASE_URL would come from fallback config', async () => {
@@ -58,19 +58,21 @@ describe('database command target boundary', () => {
     expect(execute).toHaveBeenCalledWith(databaseUrl);
   });
 
-  it('routes generate, migrate, studio, and seed through thin human wrappers with no managed flag', () => {
-    expect(packageJson.scripts['db:generate']).toBe(
-      'tsx scripts/db-generate.ts',
+  it('routes migrate, studio, and seed through thin human wrappers with no managed flag', () => {
+    expect(packageJson.scripts['db:migrate']).toBe(
+      'tsx scripts/database/db-migrate.ts',
     );
-    expect(packageJson.scripts['db:migrate']).toBe('tsx scripts/db-migrate.ts');
-    expect(packageJson.scripts['db:studio']).toBe('tsx scripts/db-studio.ts');
-    expect(packageJson.scripts['db:seed']).toBe('tsx scripts/db-seed.ts');
+    expect(packageJson.scripts['db:studio']).toBe(
+      'tsx scripts/database/db-studio.ts',
+    );
+    expect(packageJson.scripts['db:seed']).toBe(
+      'tsx scripts/database/db-seed.ts',
+    );
 
     for (const file of [
-      'scripts/db-generate.ts',
-      'scripts/db-migrate.ts',
-      'scripts/db-studio.ts',
-      'scripts/db-seed.ts',
+      'scripts/database/db-migrate.ts',
+      'scripts/database/db-studio.ts',
+      'scripts/database/db-seed.ts',
     ]) {
       const source = readFileSync(file, 'utf8');
       expect(source).toContain('runHumanDatabaseCommand');

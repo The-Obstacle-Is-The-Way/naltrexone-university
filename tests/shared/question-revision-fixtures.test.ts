@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { choiceIdByLabel } from './question-revision-writer';
+import { choiceIdByLabel } from './question-revision-fixtures';
 
 describe('choiceIdByLabel', () => {
   const appended = {
