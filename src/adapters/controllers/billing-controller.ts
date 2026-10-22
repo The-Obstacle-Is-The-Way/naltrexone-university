@@ -170,6 +170,7 @@ async function requireCurrentEmailFor(
 }
 
 export const createTrialPaymentMethodSetupSession = createAction({
+  action: IdempotentActionNames.TrialPaymentMethodSetup,
   schema: CreateTrialPaymentMethodSetupSessionInputSchema,
   getDeps,
   execute: async (input, d) => {
@@ -219,6 +220,7 @@ export const createTrialPaymentMethodSetupSession = createAction({
 });
 
 export const createCheckoutSession = createAction({
+  action: IdempotentActionNames.Checkout,
   schema: CreateCheckoutSessionInputSchema,
   getDeps,
   execute: async (input, d) => {
@@ -273,6 +275,7 @@ export const createCheckoutSession = createAction({
 });
 
 export const createPortalSession = createAction({
+  action: IdempotentActionNames.Portal,
   schema: CreatePortalSessionInputSchema,
   getDeps,
   execute: async (input, d) => {

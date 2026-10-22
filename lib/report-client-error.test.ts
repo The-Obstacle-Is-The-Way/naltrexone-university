@@ -54,7 +54,7 @@ describe('reportClientError', () => {
         component: 'PracticePage',
         action: 'toggleBookmark',
       },
-      error,
+      { name: 'Error' },
     );
   });
 

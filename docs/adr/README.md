@@ -19,7 +19,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-003](./adr-003-testing-strategy.md) | Testing Strategy | Accepted (amended 2026-08-23, 2026-09-24 and 2026-10-12) | 2026-01-31 |
 | [ADR-004](./adr-004-authentication-boundary.md) | Authentication Boundary | Accepted (amended 2026-10-07 and 2026-10-13) | 2026-01-31 |
 | [ADR-005](./adr-005-payment-boundary.md) | Payment Boundary | Accepted (amended 2026-10-13) | 2026-01-31 |
-| [ADR-006](./adr-006-error-handling-strategy.md) | Error Handling Strategy | Accepted | 2026-01-31 |
+| [ADR-006](./adr-006-error-handling-strategy.md) | Error Handling Strategy | Accepted (amended 2026-10-19) | 2026-01-31 |
 | [ADR-007](./adr-007-dependency-injection.md) | Dependency Injection | Accepted | 2026-01-31 |
 | [ADR-008](./adr-008-logging-observability.md) | Logging & Observability | Accepted | 2026-01-31 |
 | [ADR-009](./adr-009-security-hardening.md) | Security Hardening | Accepted | 2026-01-31 |
@@ -31,7 +31,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-015](./adr-015-idempotency-strategy.md) | Idempotency Strategy | Accepted (amended 2026-08-14, 2026-08-15, 2026-08-17 and 2026-10-13) | 2026-02-07 |
 | [ADR-016](./adr-016-rate-limiting.md) | Rate Limiting and Abuse Prevention | Accepted (amended 2026-10-13) | 2026-02-07 |
 | [ADR-017](./adr-017-webhook-processing-lifecycle.md) | Webhook Processing Lifecycle | Accepted (amended 2026-10-13) | 2026-02-07 |
-| [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
+| [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted (amended 2026-10-18 and 2026-10-19) | 2026-02-07 |
 | [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Accepted (amended 2026-10-03 and 2026-10-12) | 2026-08-13 |
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
 | [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted (amended 2026-10-03, 2026-10-18 and 2026-10-19) | 2026-09-27 |

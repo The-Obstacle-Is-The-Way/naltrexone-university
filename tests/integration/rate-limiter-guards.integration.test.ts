@@ -155,7 +155,7 @@ describe('rate-limit guards and triggered cleanup against real Postgres', () => 
     expect(logger.warnCalls).toEqual([
       {
         msg: 'Rate-limit window pruning failed',
-        context: { ...input, error: 'prune failed' },
+        context: { ...input, error: { name: 'Error' } },
       },
     ]);
   });
