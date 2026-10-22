@@ -4,35 +4,10 @@ import pino from 'pino';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHealthHandler } from '@/app/api/health/handler';
 import { handleError } from '@/src/adapters/controllers/action-result';
-import type { Logger, LoggerContext } from '@/src/application/ports/logger';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
+import { createSerializedLogger } from '@/tests/shared/serialized-logger';
 
 vi.mock('server-only', () => ({}));
-
-function createSerializedLogger() {
-  const lines: string[] = [];
-  const destination = {
-    write(line: string) {
-      lines.push(line);
-    },
-  };
-  const pinoLogger = pino(
-    { level: 'error', base: null, timestamp: false },
-    destination,
-  );
-  const logger: Logger = {
-    debug: (context: LoggerContext, msg: string) =>
-      pinoLogger.debug(context, msg),
-    info: (context: LoggerContext, msg: string) =>
-      pinoLogger.info(context, msg),
-    warn: (context: LoggerContext, msg: string) =>
-      pinoLogger.warn(context, msg),
-    error: (context: LoggerContext, msg: string) =>
-      pinoLogger.error(context, msg),
-  };
-
-  return { lines, logger };
-}
 
 async function importLogger() {
   vi.resetModules();

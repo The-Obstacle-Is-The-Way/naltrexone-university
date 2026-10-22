@@ -163,7 +163,7 @@ describe('processStripeWebhookEvent', () => {
     expect(logger.warnCalls).toHaveLength(1);
     expect(logger.warnCalls[0]).toMatchObject({
       msg: 'Webhook signature verification failed',
-      context: { error: 'FakeStripeCheckoutClient does not process webhooks' },
+      context: { error: { name: 'Error' }, reason: 'other' },
     });
     expect(stripe.webhookCalls).toEqual([
       { rawBody: '{}', signature: 'sig_test', secret: 'whsec_test' },

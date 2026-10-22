@@ -26,6 +26,7 @@ import {
   HTTP_UNAUTHORIZED,
 } from '@/src/adapters/shared/http-status';
 import { CRON_RECONCILE_STRIPE_SUBSCRIPTIONS_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type {
   Logger,
   OperationalAlerts,
@@ -172,7 +173,7 @@ async function handleCronRequest(
     deps.logger.error(
       {
         route: ROUTE,
-        error: error instanceof Error ? error.message : String(error),
+        error: projectSafeErrorDiagnostics(error),
       },
       'Cron reconciliation rate limiter failed',
     );
@@ -235,7 +236,7 @@ async function handleCronRequest(
       {
         route: ROUTE,
         task: 'reconcile',
-        error: error instanceof Error ? error.message : String(error),
+        error: projectSafeErrorDiagnostics(error),
       },
       'Stripe subscription reconciliation failed',
     );
@@ -263,7 +264,7 @@ async function handleCronRequest(
       {
         route: ROUTE,
         task: 'drain',
-        error: error instanceof Error ? error.message : String(error),
+        error: projectSafeErrorDiagnostics(error),
       },
       'Pending Stripe customer cleanup drain failed',
     );
