@@ -67,4 +67,15 @@ describe('allowlisted Clerk trace metadata', () => {
     expect(cookies).toContain('__client_uat length=12');
     expect(cookies).not.toContain('private-');
   });
+
+  it('shows a session claim of digits only by its length unless it is a JSON number', () => {
+    const cookies = describeClerkCookies([
+      {
+        name: '__session',
+        value: jwt({ iat: '12345678901234567890', exp: 1791560060 }),
+      },
+    ]);
+    expect(cookies).toContain('iat length=20 exp=1791560060');
+    expect(cookies).not.toContain('12345678901234567890');
+  });
 });

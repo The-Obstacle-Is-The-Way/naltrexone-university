@@ -67,9 +67,17 @@ function sessionTimes(token: string): string {
     );
     if (!isRecord(claims)) return '';
     return ['iat', 'exp']
-      .flatMap((name) =>
-        name in claims ? [numericMetadata(name, claims[name])] : [],
-      )
+      .flatMap((name) => {
+        if (!(name in claims)) return [];
+        const value = claims[name];
+        // Only a JSON number is a time; a string claim, even of digits, shows
+        // only its length.
+        return [
+          typeof value === 'string'
+            ? `${name} length=${value.length}`
+            : numericMetadata(name, value),
+        ];
+      })
       .join(' ');
   } catch {
     // An unreadable token still reports its length, never its value.
