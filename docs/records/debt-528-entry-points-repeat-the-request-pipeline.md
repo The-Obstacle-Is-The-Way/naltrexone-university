@@ -31,7 +31,8 @@ The demonstrated copies and drift are:
   - Renewal (`send-renewal-notices/route-handler.ts:36-51`) splits at the first space, so `Bearer <secret> extra` is refused.
   - Reconcile (`reconcile-stripe-subscriptions/route-handler.ts:71-81`) uses `split(' ', 2)`, which drops everything after the second space, so the same header is accepted.
   - Both use the same hash comparison. With the correct secret plus trailing text, renewal refuses (401) and reconcile accepts. The secret is still required, so this is not an authentication bypass.
-- Logging differs: renewal and health log through `projectSafeErrorDiagnostics`, while reconcile logs `error.message` (`route-handler.ts:175,238,266`). BUG-348's scan owns that fix.
+- Logging differed at `134b0578`: renewal and health logged through `projectSafeErrorDiagnostics`, while reconcile logged `error.message` (`route-handler.ts:175,238,266`). BUG-348 projects all three, and its scan keeps them projected.
+- `proxy.ts`, `lib/clerk-call-failures.ts` and `lib/clerk-backend-call-limit.ts` log with `console.*`, outside pino's level and redaction. BUG-348 projects their errors; moving them onto the shared logger belongs here.
 - The Stripe webhook checks for its signature header before the limiter; Clerk and Resend rate-limit first.
 
 **Webhook failure records:** `persistFailure` is written twice, at `src/adapters/controllers/clerk-webhook-controller.ts:187` and `stripe-webhook-controller.ts:418`, each with its own "already processed" check. BUG-183, then BUG-285 and DEBT-458, fixed the Stripe copy's transaction handling over four months.

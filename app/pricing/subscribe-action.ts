@@ -1,5 +1,6 @@
 import { toPricingRoute, toSignUpRedirectRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { errorDiagnosticPolicy } from '@/src/application/errors/error-diagnostic-policy';
 import type { CreateCheckoutSessionInput } from '@/src/application/use-cases';
 
 type RedirectFn = (url: string) => never;
@@ -59,11 +60,10 @@ export async function runSubscribeAction(
     plan: input.plan,
     idempotencyKeyLength: input.idempotencyKey?.length ?? null,
     errorCode: result.error.code,
-    errorMessage: result.error.message,
   };
   if (result.error.code === 'VALIDATION_ERROR') {
     deps.logWarn?.(context, 'Stripe checkout refused its input');
-  } else {
+  } else if (errorDiagnosticPolicy(result.error.code).logLevel === null) {
     deps.logError?.(context, 'Stripe checkout failed');
   }
 

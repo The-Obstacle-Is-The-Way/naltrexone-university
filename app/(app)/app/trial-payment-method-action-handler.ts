@@ -5,6 +5,7 @@ import { ROUTES } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createTrialPaymentMethodSetupSession } from '@/src/adapters/controllers/billing-controller';
 import { zDisclosureVersion, zUuid } from '@/src/adapters/shared/zod-schemas';
+import { errorDiagnosticPolicy } from '@/src/application/errors/error-diagnostic-policy';
 
 type CreateSessionFn = (input: {
   idempotencyKey?: string;
@@ -62,10 +63,12 @@ export async function executeCreateTrialPaymentMethodAction(
   }
 
   try {
-    appLogger.error(
-      { errorCode: result.error.code },
-      'Trial payment-method setup failed',
-    );
+    if (errorDiagnosticPolicy(result.error.code).logLevel === null) {
+      appLogger.error(
+        { errorCode: result.error.code },
+        'Trial payment-method setup failed',
+      );
+    }
   } catch {
     // Logging must not replace the safe redirect.
   }

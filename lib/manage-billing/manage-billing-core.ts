@@ -4,6 +4,7 @@ import type {
   ManageBillingRedirects,
   RedirectFn,
 } from '@/lib/manage-billing/manage-billing-types';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { ApplicationErrorCode } from '@/src/application/errors';
 
 export function getManageBillingErrorRedirect(
@@ -32,14 +33,7 @@ export async function runManageBillingAction(deps: {
         : {}),
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorContext = {
-      error: errorMessage,
-      ...(error instanceof Error ? { errorName: error.name } : {}),
-      ...(error instanceof Error && error.stack
-        ? { errorStack: error.stack }
-        : {}),
-    };
+    const errorContext = { error: projectSafeErrorDiagnostics(error) };
     try {
       deps.logger?.error(errorContext, 'Billing portal session creation threw');
     } catch {

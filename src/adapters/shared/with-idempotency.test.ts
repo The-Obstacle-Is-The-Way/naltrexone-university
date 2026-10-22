@@ -610,7 +610,7 @@ describe('withIdempotency', () => {
         userId: appUserId,
         action: 'billing:createCheckoutSession',
         key: '77777777-7777-7777-7777-777777777777',
-        error: 'prune failed',
+        error: { name: 'Error' },
       },
     });
     expect(execute).toHaveBeenCalledTimes(1);
