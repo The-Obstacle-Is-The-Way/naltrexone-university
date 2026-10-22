@@ -51,9 +51,9 @@ The code, read against Next 16.4.1:
 
 Option 1, chosen by the owner on 2026-10-22: a page whose data check finds no subscription sends the learner to Pricing. Pricing states the reason from the learner's own entitlement, not from the URL: a trial that never started, an ended trial, or an inactive subscription.
 - **Server-rendered pages.** The dashboard, bookmarks and history render on the server on every client navigation. When a data check returns `UNSUBSCRIBED`, they redirect to `/pricing?reason=subscription_required` (`app/(app)/app/shared/redirect-if-unsubscribed.ts`).
-- **Pages that load in the browser.** The practice, practice-session and question pages call server actions through one module (`app/(app)/app/shared/client-actions.ts`). When an action returns `UNSUBSCRIBED`, it makes a full navigation to Pricing, which leaves the app layout, and still returns the result.
+- **Pages that load in the browser.** The practice, practice-session and question pages call server actions through one module (`app/(app)/app/shared/client-actions.ts`). When an action returns `UNSUBSCRIBED`, a full navigation replaces the page with Pricing, as the server pages' `redirect()` does, and leaves the app layout. The action still returns its result.
   - The server actions cannot redirect themselves without importing Next.js into `src/adapters`.
-  - `tests/app-client-action-imports.test.ts` fails if app code imports an action directly.
+  - `tests/app-client-action-imports.test.ts` fails if an app page or a shared component imports an action directly, through the alias, a relative path or a dynamic import. It also fails if a client action skips the redirect or calls a different action, or if a controller action has no client action.
 - **Rule R2** names the proving tests.
 - **Rejected:** running the layout's gate in every page. It would have needed own-code module mocks in most page tests, against the test-double rules, and the data checks already carry the answer.
 - **Not changed: Billing.** It reads the subscription directly, so after a lost subscription it shows the true status, for example "Canceled", with **Manage in Stripe**. Its other links now lead to Pricing, so it is not a dead end; the stale frame above it clears on the next navigation or full load.
@@ -61,7 +61,7 @@ Option 1, chosen by the owner on 2026-10-22: a page whose data check finds no su
 ## Verification
 
 - [x] Red first, for the server pages: the helper and the dashboard, bookmarks and history pages redirect a learner whose data check returns `UNSUBSCRIBED` to Pricing. Removing the call fails each test.
-- [x] Red first, for the browser pages: `redirectOnUnsubscribed` navigates to Pricing on `UNSUBSCRIBED` and returns the result. The import scan failed while 14 hooks imported actions directly.
+- [x] Red first, for the browser pages: `redirectOnUnsubscribed` navigates to Pricing on `UNSUBSCRIBED` and returns the result. The import scan failed while 14 hooks imported actions directly. With one client action unwrapped, the scan fails; the page tests alone did not, as the adversarial review showed.
 - [ ] Dev preview: lose entitlement with the app open, for example by canceling immediately in the Stripe sandbox. Navigating in the app, and acting inside a practice session, each land on Pricing. Record whether the Billing observation was a client navigation (Network panel, Preserve log).
 - [ ] Production after promotion.
 

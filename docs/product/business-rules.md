@@ -189,6 +189,7 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `app/(app)/app/dashboard/page.test.tsx`: `sends a learner without a subscription to Pricing instead of a bare refusal`
 - `app/(app)/app/bookmarks/page.test.tsx`: `sends a learner without a subscription to Pricing instead of a bare refusal`
 - `app/(app)/app/shared/redirect-on-unsubscribed.test.ts`: `starts a full navigation to Pricing when the action finds no subscription, and still returns the result`
+- `tests/app-client-action-imports.test.ts`: `wraps every controller action in the Pricing redirect`
 
 ### R3. Access ends the instant the paid period ends, whatever the subscription's status says.
 

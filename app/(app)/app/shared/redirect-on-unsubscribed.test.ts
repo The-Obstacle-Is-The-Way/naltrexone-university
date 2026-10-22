@@ -1,8 +1,27 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { redirectOnUnsubscribed } from './redirect-on-unsubscribed';
 
 describe('redirectOnUnsubscribed', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('replaces the page with Pricing by default, as a server redirect does', async () => {
+    const replace = vi.fn();
+    vi.stubGlobal('window', { location: { replace } });
+    const action = redirectOnUnsubscribed(async () => ({
+      ok: false,
+      error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
+    }));
+
+    await action({});
+
+    expect(replace).toHaveBeenCalledWith(
+      '/pricing?reason=subscription_required',
+    );
+  });
+
   it('starts a full navigation to Pricing when the action finds no subscription, and still returns the result', async () => {
     const navigate = vi.fn();
     const refused: ActionResult<number> = {
