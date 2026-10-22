@@ -20,6 +20,9 @@ export function childProcessModuleMocks(
   sources: readonly TestSourceFile[],
 ): string[] {
   return sources.flatMap(({ filePath, contents }) => {
+    // Every flagged target is a literal spelling 'child_process', so a source
+    // without that text cannot produce a finding and is not parsed.
+    if (!contents.includes('child_process')) return [];
     const parsed = ts.createSourceFile(
       filePath,
       contents,
