@@ -24,4 +24,28 @@ describe('failed-fetch alert observer', () => {
 
     expect(calls).toEqual([[]]);
   });
+
+  it('skips an alert inside a parent with display: none, and still reports a later visible one', async () => {
+    const calls: unknown[][] = [];
+    window.__e2eFailedFetchAlert = (...args) => {
+      calls.push(args);
+    };
+    new Function(`(${observeFailedFetchAlerts.toString()})()`)();
+    const hiddenParent = document.createElement('div');
+    hiddenParent.style.display = 'none';
+    const hiddenAlert = document.createElement('div');
+    hiddenAlert.setAttribute('role', 'alert');
+    hiddenAlert.textContent = 'Failed to fetch';
+    hiddenParent.append(hiddenAlert);
+    document.body.append(hiddenParent);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(calls).toEqual([]);
+
+    const alert = document.createElement('div');
+    alert.setAttribute('role', 'alert');
+    alert.textContent = 'Failed to fetch';
+    document.body.append(alert);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(calls).toEqual([[]]);
+  });
 });

@@ -11,8 +11,18 @@ export function observeFailedFetchAlerts(): void {
     for (const alert of document.querySelectorAll('[role="alert"]')) {
       if (!alert.textContent?.includes('Failed to fetch')) continue;
       if (alert.closest('[hidden]')) continue;
-      const style = getComputedStyle(alert);
-      if (style.display === 'none' || style.visibility === 'hidden') continue;
+      // Visibility is inherited, so the alert's own value is final; display is
+      // not, so a parent with display: none hides the alert without changing it.
+      if (getComputedStyle(alert).visibility === 'hidden') continue;
+      let shown = true;
+      for (
+        let element: Element | null = alert;
+        element && shown;
+        element = element.parentElement
+      ) {
+        shown = getComputedStyle(element).display !== 'none';
+      }
+      if (!shown) continue;
       observer.disconnect();
       window.__e2eFailedFetchAlert?.();
       break;
