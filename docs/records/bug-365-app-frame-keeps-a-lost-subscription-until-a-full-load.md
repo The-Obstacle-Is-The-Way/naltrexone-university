@@ -1,6 +1,6 @@
 # BUG-365: The App Frame Keeps a Lost Subscription Until a Full Load
 
-**Status:** In Progress — the client-loaded practice and question pages still show the refusal; reproduce the Billing observation with request capture
+**Status:** Verifying — promotion to main and the dev-preview check; due 2026-10-29
 **Priority:** P3
 **Date:** 2026-10-22
 
@@ -49,26 +49,21 @@ The code, read against Next 16.4.1:
 
 ## Resolution (decided)
 
-Option 1, chosen by the owner on 2026-10-22.
-- **Server-rendered pages redirect.** When a data check returns `UNSUBSCRIBED`, the page redirects to `/pricing?reason=subscription_required`, through one helper (`app/(app)/app/shared/redirect-if-unsubscribed.ts`). This covers the dashboard, bookmarks and history, whose server render runs on every client navigation.
-  - Pricing states the reason from the learner's own entitlement, not from the URL: a trial that never started, an ended trial, or an inactive subscription.
-  - Rule R2 names the proving tests.
-- **Rejected during implementation: running the layout's gate in every page.** It would have needed an own-code module mock in most page tests, against the repository's test-double rules, and the data checks already carry the answer.
-- **What remains.** The practice session, question and practice-start pages load their data in the browser through server actions. There, a refusal still shows as an error until the next navigation.
-  - The next step is a shared client helper that makes a full-page navigation to Pricing on `UNSUBSCRIBED`.
-  - Server actions cannot redirect from `src/adapters` without importing Next.js into the adapter layer.
+Option 1, chosen by the owner on 2026-10-22: a page whose data check finds no subscription sends the learner to Pricing. Pricing states the reason from the learner's own entitlement, not from the URL: a trial that never started, an ended trial, or an inactive subscription.
+- **Server-rendered pages.** The dashboard, bookmarks and history render on the server on every client navigation. When a data check returns `UNSUBSCRIBED`, they redirect to `/pricing?reason=subscription_required` (`app/(app)/app/shared/redirect-if-unsubscribed.ts`).
+- **Pages that load in the browser.** The practice, practice-session and question pages call server actions through one module (`app/(app)/app/shared/client-actions.ts`). When an action returns `UNSUBSCRIBED`, it makes a full navigation to Pricing, which leaves the app layout, and still returns the result.
+  - The server actions cannot redirect themselves without importing Next.js into `src/adapters`.
+  - `tests/app-client-action-imports.test.ts` fails if app code imports an action directly.
+- **Rule R2** names the proving tests.
+- **Rejected:** running the layout's gate in every page. It would have needed own-code module mocks in most page tests, against the test-double rules, and the data checks already carry the answer.
+- **Not changed: Billing.** It reads the subscription directly, so after a lost subscription it shows the true status, for example "Canceled", with **Manage in Stripe**. Its other links now lead to Pricing, so it is not a dead end; the stale frame above it clears on the next navigation or full load.
 
 ## Verification
 
-- [ ] Reproduce observation 2 in Chrome with the Network panel set to preserve the log, after checking the row's status in the database first:
-  1. From an app page loaded before the cancellation, click "Manage billing". Expected: a request with the `RSC` header, no document request, the stale banner, and "Canceled".
-  2. Press Cmd+R. Expected: a document request for `/app/billing` and a redirect to `/pricing`, possibly as a streamed 200 whose body redirects.
-  3. Repeat with back and forward: Cache Components preserves routes there with `<Activity>`.
-
-  If step 2 renders both the banner and "Canceled", the explanation above fails: capture the Vercel runtime logs and the row's `updated_at`.
-- [x] Red first: the helper and the dashboard, bookmarks and history pages redirect a learner whose data check returns `UNSUBSCRIBED` to Pricing. Removing the call fails each test.
-- [ ] Client-loaded pages: the practice session, question and practice-start pages navigate to Pricing on `UNSUBSCRIBED`.
-- [ ] Dev preview: lose entitlement with a tab open, navigate in the app, and land on Pricing.
+- [x] Red first, for the server pages: the helper and the dashboard, bookmarks and history pages redirect a learner whose data check returns `UNSUBSCRIBED` to Pricing. Removing the call fails each test.
+- [x] Red first, for the browser pages: `redirectOnUnsubscribed` navigates to Pricing on `UNSUBSCRIBED` and returns the result. The import scan failed while 14 hooks imported actions directly.
+- [ ] Dev preview: lose entitlement with the app open, for example by canceling immediately in the Stripe sandbox. Navigating in the app, and acting inside a practice session, each land on Pricing. Record whether the Billing observation was a client navigation (Network panel, Preserve log).
+- [ ] Production after promotion.
 
 ## Related
 
