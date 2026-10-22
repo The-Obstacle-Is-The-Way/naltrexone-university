@@ -9,6 +9,11 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import {
+  type ReportedModule,
+  type ReporterContext,
+  RuleProofReporter,
+} from './rule-proof-reporter.mts';
 
 const folders: string[] = [];
 afterEach(() => {
@@ -269,5 +274,111 @@ describe('executed rule proofs through the real Vitest reporter', () => {
     expect(result.stdout + result.stderr).not.toContain(
       'Rule proofs: unit passed',
     );
+  });
+});
+
+describe('rule proof reporter decisions', () => {
+  function lane(extraFiles: string[] = []) {
+    const root = mkdtempSync(path.join(tmpdir(), 'rule-proof-lane-'));
+    folders.push(root);
+    writeFileSync(
+      path.join(root, 'register.md'),
+      '### R1. A rule.\n- `proof.test.ts`: `proof`\n',
+    );
+    writeFileSync(
+      path.join(root, 'proof.test.ts'),
+      "import { it } from 'vitest';\nit('proof', () => {});\n",
+    );
+    const files = ['proof.test.ts', ...extraFiles];
+    const context = (
+      config: Partial<ReporterContext['config']> = {},
+    ): ReporterContext => ({
+      config: { root, watch: false, typecheck: { only: false }, ...config },
+      globTestSpecifications: async () =>
+        files.map((file) => ({ moduleId: path.join(root, file) })),
+    });
+    const proofModule = (state = 'passed'): ReportedModule => ({
+      moduleId: path.join(root, 'proof.test.ts'),
+      children: {
+        *allTests() {
+          yield {
+            name: 'proof',
+            location: { line: 2, column: 1 },
+            result: () => ({ state }),
+            meta: () => ({}),
+          };
+        },
+      },
+    });
+    return { root, context, proofModule };
+  }
+
+  function reporter(argv: string[] = []) {
+    const messages: string[] = [];
+    const record = (message: string) => {
+      messages.push(message);
+    };
+    return {
+      messages,
+      reporter: new RuleProofReporter('unit', 'register.md', argv, {
+        log: record,
+        warn: record,
+      }),
+    };
+  }
+
+  it('attests a full run whose registered proof passed', async () => {
+    const { context, proofModule } = lane();
+    const { reporter: subject, messages } = reporter();
+    subject.onInit(context());
+    await subject.onTestRunEnd([proofModule()], [], 'passed');
+    expect(messages).toEqual(['Rule proofs: unit passed']);
+  });
+
+  it('fails a full run that did not complete', async () => {
+    const { context, proofModule } = lane();
+    const { reporter: subject } = reporter();
+    subject.onInit(context());
+    await expect(
+      subject.onTestRunEnd([proofModule()], [], 'failed'),
+    ).rejects.toThrow('Test run did not complete successfully');
+  });
+
+  it('fails a full run whose registered proof did not pass', async () => {
+    const { context, proofModule } = lane();
+    const { reporter: subject } = reporter();
+    subject.onInit(context());
+    await expect(
+      subject.onTestRunEnd([proofModule('failed')], [], 'passed'),
+    ).rejects.toThrow('missing, ambiguous or nonpassing proof');
+  });
+
+  it('skips the audit of a command-line filtered run', async () => {
+    const { context } = lane();
+    const { reporter: subject, messages } = reporter(['-t', 'proof']);
+    subject.onInit(context());
+    await subject.onTestRunEnd([], [], 'passed');
+    expect(messages).toEqual([
+      'Rule proofs: unit SKIPPED (focused/watch/sharded run; not a full-lane receipt)',
+    ]);
+  });
+
+  it('refuses a configuration that filters a required run', async () => {
+    const { context, proofModule } = lane();
+    const { reporter: subject } = reporter();
+    subject.onInit(context({ testNamePattern: /proof/ }));
+    await expect(
+      subject.onTestRunEnd([proofModule()], [], 'passed'),
+    ).rejects.toThrow('configuration filters a required unfiltered run');
+  });
+
+  it('skips the audit of a run that covered part of the lane', async () => {
+    const { context, proofModule } = lane(['other.test.ts']);
+    const { reporter: subject, messages } = reporter();
+    subject.onInit(context());
+    await subject.onTestRunEnd([proofModule()], [], 'passed');
+    expect(messages).toEqual([
+      'Rule proofs: unit SKIPPED (run covered part of the lane; not a full-lane receipt)',
+    ]);
   });
 });

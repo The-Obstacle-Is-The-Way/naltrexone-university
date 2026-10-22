@@ -219,6 +219,29 @@ describe('the scripts directory check', () => {
     },
   );
 
+  it.each([
+    [
+      'a table header without its delimiter',
+      ['| File | What it does | Run by |', ''],
+      'A table header must be followed by its delimiter.',
+    ],
+    [
+      'a table delimiter without its header',
+      ['| --- | --- | --- |'],
+      'A table delimiter needs its table header.',
+    ],
+  ])('rejects %s', (_name, lines, message) => {
+    expect(() =>
+      parseScriptsDirectory(
+        [
+          '<!-- scripts-directory:start -->',
+          ...lines,
+          '<!-- scripts-directory:end -->',
+        ].join('\n'),
+      ),
+    ).toThrow(message);
+  });
+
   it('rejects rows that have no table header and delimiter', () => {
     expect(() =>
       parseScriptsDirectory(
@@ -362,6 +385,17 @@ describe('the callers a row names', () => {
   function issuesFor(file: string, runBy: string): string[] {
     return collectRunByIssues([{ file, purpose: 'Does it.', runBy }], callers);
   }
+
+  it('reports a Vercel caller when vercel.json has no build command', () => {
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Check', runBy: '`vercel.json`' }],
+        { packageScripts: {}, readWorkflow: () => null, vercelConfig: '{}' },
+      ),
+    ).toEqual([
+      'check.ts names `vercel.json`, whose build command does not reference it.',
+    ]);
+  });
 
   it('accepts a package script whose command references the file', () => {
     expect(issuesFor('db-migrate.ts', '`pnpm db:migrate`')).toEqual([]);

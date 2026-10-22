@@ -6,6 +6,8 @@ import { promisify } from 'node:util';
 import postgres from 'postgres';
 import { afterEach, describe, expect, it } from 'vitest';
 import journal from '@/db/migrations/meta/_journal.json';
+import { MigrationLedgerVerificationError } from '@/scripts/database/migration-ledger';
+import { runMigrationLedgerVerification } from '@/scripts/database/verify-migration-ledger';
 import { withRecordedCli } from '../shared/recorded-cli';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 
@@ -140,5 +142,26 @@ describe('managed migration ledger boundary against PostgreSQL', () => {
     const before = await ledger(fixture.url);
     expect(await migrate(fixture.url)).toBe(1);
     expect(await ledger(fixture.url)).toEqual(before);
+  });
+});
+
+describe('migration ledger verification against PostgreSQL', () => {
+  it('passes both phases on a fully migrated database', async () => {
+    const fixture = await database();
+    await expect(
+      runMigrationLedgerVerification('pre', fixture.url),
+    ).resolves.toBeUndefined();
+    await expect(
+      runMigrationLedgerVerification('post', fixture.url),
+    ).resolves.toBeUndefined();
+  });
+  it('allows a pending journal entry before migrating, and refuses it after', async () => {
+    const fixture = await partialDatabase();
+    await expect(
+      runMigrationLedgerVerification('pre', fixture.url),
+    ).resolves.toBeUndefined();
+    await expect(
+      runMigrationLedgerVerification('post', fixture.url),
+    ).rejects.toBeInstanceOf(MigrationLedgerVerificationError);
   });
 });

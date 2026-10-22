@@ -12,6 +12,8 @@ describe('database target authorization', () => {
     () => requireExplicitDatabaseUrl({}),
     () => classifyDatabaseTarget('not-a-database-url'),
     () => classifyDatabaseTarget('postgres://user:password@localhost/'),
+    () => classifyDatabaseTarget('mysql://user:password@localhost/app'),
+    () => authorizeManagedDatabaseTargets([]),
   ])(
     'identifies an input failure separately from an infrastructure error',
     (operation) => {
@@ -23,6 +25,18 @@ describe('database target authorization', () => {
       }
     },
   );
+
+  it('refuses a non-Postgres protocol with the stable invalid-URL message', () => {
+    expect(() =>
+      classifyDatabaseTarget('mysql://user:password@localhost/app'),
+    ).toThrow('The explicitly supplied DATABASE_URL is invalid.');
+  });
+
+  it('requires at least one target', () => {
+    expect(() => authorizeManagedDatabaseTargets([])).toThrow(
+      'At least one explicit DATABASE_URL is required.',
+    );
+  });
 
   it('refuses implicit dotenv fallback when DATABASE_URL is not supplied', () => {
     expect(() => requireExplicitDatabaseUrl({})).toThrow(

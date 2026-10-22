@@ -1,13 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { globSync } from 'tinyglobby';
-import {
-  parseCLI,
-  type Reporter,
-  type TestModule,
-  type TestRunEndReason,
-  type Vitest,
-} from 'vitest/node';
+import { parseCLI, type Reporter, type TestRunEndReason } from 'vitest/node';
 import {
   auditExecutedRuleProofs,
   type ExecutedProof,
@@ -26,21 +20,56 @@ declare module 'vitest' {
   }
 }
 
+// The parts of Vitest's context and results the audit reads, so a test can
+// drive the reporter in process; Vitest's own objects satisfy them.
+export type ReporterContext = {
+  config: {
+    root: string;
+    watch: boolean;
+    typecheck: { only?: boolean };
+    testNamePattern?: unknown;
+    shard?: unknown;
+    changed?: unknown;
+    related?: unknown;
+    project?: unknown;
+    tagsFilter?: unknown;
+    cliExclude?: unknown;
+  };
+  globTestSpecifications(): Promise<ReadonlyArray<{ moduleId: string }>>;
+};
+export type ReportedModule = {
+  moduleId: string;
+  children: {
+    allTests(): Iterable<{
+      name: string;
+      location?: { line: number; column: number } | undefined;
+      result(): { state: string };
+      meta(): { ruleProof?: RuleProof | undefined };
+    }>;
+  };
+};
+type ReporterOutput = {
+  log(message: string): void;
+  warn(message: string): void;
+};
+
 export class RuleProofReporter implements Reporter {
   private root = process.cwd();
-  private ctx: Vitest | undefined;
+  private ctx: ReporterContext | undefined;
   private focused = false;
   private configuredFilter = false;
   constructor(
     private readonly lane: ProofLane,
     private readonly registerPath = RULE_REGISTER_PATH,
+    private readonly argv: readonly string[] = process.argv.slice(2),
+    private readonly output: ReporterOutput = console,
   ) {}
 
-  onInit(ctx: Vitest) {
+  onInit(ctx: ReporterContext) {
     this.ctx = ctx;
     this.root = ctx.config.root;
     // parseCLI mutates its input; never hand it process.argv itself.
-    const { filter, options } = parseCLI(['vitest', ...process.argv.slice(2)]);
+    const { filter, options } = parseCLI(['vitest', ...this.argv]);
     const hasFilter = (value: unknown) =>
       Array.isArray(value) ? value.length > 0 : Boolean(value);
     // These are configuration booleans, not Vitest's test.only API.
@@ -72,12 +101,12 @@ export class RuleProofReporter implements Reporter {
   }
 
   async onTestRunEnd(
-    modules: ReadonlyArray<TestModule>,
+    modules: ReadonlyArray<ReportedModule>,
     errors: ReadonlyArray<unknown>,
     reason: TestRunEndReason,
   ) {
     if (this.focused) {
-      console.warn(
+      this.output.warn(
         `Rule proofs: ${this.lane} SKIPPED (focused/watch/sharded run; not a full-lane receipt)`,
       );
       return;
@@ -91,7 +120,7 @@ export class RuleProofReporter implements Reporter {
     const ran = new Set(modules.map((module) => module.moduleId));
     const lane = (await this.ctx?.globTestSpecifications()) ?? [];
     if (lane.some((specification) => !ran.has(specification.moduleId))) {
-      console.warn(
+      this.output.warn(
         `Rule proofs: ${this.lane} SKIPPED (run covered part of the lane; not a full-lane receipt)`,
       );
       return;
@@ -152,6 +181,6 @@ export class RuleProofReporter implements Reporter {
     );
     if (problems.length > 0)
       throw new Error(`Rule proof audit failed:\n${problems.join('\n')}`);
-    console.log(`Rule proofs: ${this.lane} passed`);
+    this.output.log(`Rule proofs: ${this.lane} passed`);
   }
 }

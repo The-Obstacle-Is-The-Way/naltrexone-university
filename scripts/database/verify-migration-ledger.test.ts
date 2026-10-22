@@ -113,3 +113,53 @@ describe('ledger command diagnostics before connection', () => {
     expect(output.lines).toEqual([]);
   });
 });
+
+describe('ledger command results', () => {
+  it.each([
+    [
+      'pre',
+      '[migration-ledger:pre] Applied migrations match accepted hashes; pending journal entries are allowed.',
+    ],
+    [
+      'post',
+      '[migration-ledger:post] Every journal entry is applied and matches an accepted hash.',
+    ],
+  ] as const)('reports a verified %s phase', async (phase, line) => {
+    const output = outputBuffer();
+    const verified: string[] = [];
+    const code = await runMigrationLedgerCommand({
+      args: [phase],
+      env: { DATABASE_URL: 'postgres://test:test@localhost:1/ledger_test' },
+      output,
+      verify: async (requested) => {
+        verified.push(requested);
+      },
+    });
+    expect(code).toBe(0);
+    expect(verified).toEqual([phase]);
+    expect(output.lines).toEqual([line]);
+    expect(output.errors).toEqual([]);
+  });
+
+  it.each([
+    [[], {}, 'Usage: verify-migration-ledger.ts <pre|post>'],
+    [['pre'], {}, 'An explicit DATABASE_URL is required'],
+  ] as const)(
+    'reports an input error without verifying: %j',
+    async (args, env, message) => {
+      const output = outputBuffer();
+      let verified = false;
+      const code = await runMigrationLedgerCommand({
+        args,
+        env,
+        output,
+        verify: async () => {
+          verified = true;
+        },
+      });
+      expect(code).toBe(1);
+      expect(verified).toBe(false);
+      expect(output.errors.join('\n')).toContain(message);
+    },
+  );
+});

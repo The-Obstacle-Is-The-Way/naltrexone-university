@@ -104,3 +104,89 @@ describe('end-to-end proofs', () => {
     },
   );
 });
+
+describe('plain proofs and their metadata', () => {
+  const file = 'tests/plain.test.ts';
+  function auditPlain(
+    source: string,
+    results: ExecutedProof[] = [],
+    title = 'proof',
+  ) {
+    return auditExecutedRuleProofs(
+      [{ id: 'R1', rule: 'A rule.', proofs: [{ file, title }] }],
+      'unit',
+      results,
+      () => source,
+    ).join('\n');
+  }
+  const passed = (line: number, column: number): ExecutedProof => ({
+    file,
+    title: 'proof',
+    state: 'passed',
+    location: { line, column },
+  });
+
+  it('accepts a plain proof that ran at its declared location', () => {
+    expect(auditPlain("it('proof', () => {});", [passed(1, 1)])).toBe('');
+  });
+  it('rejects a same-title result reported at another location', () => {
+    expect(auditPlain("it('proof', () => {});", [passed(2, 1)])).toContain(
+      'R1: missing, ambiguous or nonpassing proof in tests/plain.test.ts: proof',
+    );
+  });
+  it('requires literal metadata on a parameterized proof', () => {
+    expect(
+      auditPlain("it.each([1])('proof %i', () => {});", [], 'proof %i'),
+    ).toContain(
+      'parameterized or shared proof needs literal file/title metadata',
+    );
+  });
+  it.each([
+    [
+      'metadata naming another declaration',
+      `it('proof', { meta: { ruleProof: { file: '${file}', title: 'other' } } }, () => {});`,
+      'Metadata does not identify its registered owning declaration',
+    ],
+    [
+      'shorthand metadata',
+      `const ruleProof = { file: '${file}', title: 'proof' }; it('proof', { meta: { ruleProof } }, () => {});`,
+      'Rule proof metadata requires an ordinary literal property',
+    ],
+    [
+      'metadata outside the declaration options',
+      `const options = { meta: { ruleProof: { file: '${file}', title: 'proof' } } }; it('proof', options, () => {});`,
+      'Rule proof metadata must be literal declaration options',
+    ],
+    [
+      'metadata assigned at runtime',
+      `const options = { meta: {} }; options.meta.ruleProof = { file: '${file}', title: 'proof' }; it('proof', () => {});`,
+      'Rule proof metadata cannot be reassigned at runtime',
+    ],
+  ])('rejects %s', (_name, source, problem) => {
+    expect(auditPlain(source, [passed(1, 1)])).toContain(problem);
+  });
+  it.each([
+    ['missing', "it('other', () => {});"],
+    ['repeated', "it('proof', () => {}); it('proof', () => {});"],
+  ])('rejects a %s declaration', (_name, source) => {
+    expect(auditPlain(source, [passed(1, 1)])).toContain(
+      'R1: ambiguous or missing declaration tests/plain.test.ts: proof',
+    );
+  });
+  it('refuses a proof file that no test lane runs', () => {
+    expect(() =>
+      auditExecutedRuleProofs(
+        [
+          {
+            id: 'R1',
+            rule: 'A rule.',
+            proofs: [{ file: 'docs/plain.md', title: 'proof' }],
+          },
+        ],
+        'unit',
+        [],
+        () => '',
+      ),
+    ).toThrow('No required test lane for docs/plain.md');
+  });
+});
