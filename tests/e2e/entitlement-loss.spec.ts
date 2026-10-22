@@ -52,6 +52,11 @@ test.describe('entitlement loss', () => {
   test('redirects an unentitled user and rejects an in-flight Server Action', async ({
     page,
   }) => {
+    const pricingUrl = /\/pricing\?reason=subscription_required$/;
+    const trialOffer = page.getByText(
+      'Start your free trial to access the app — no card required.',
+    );
+
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
     await page.goto('/app/practice');
@@ -99,19 +104,15 @@ test.describe('entitlement loss', () => {
       expect(
         await withTimeout(actionBody.promise, ACTION_BODY_TIMEOUT_MS),
       ).toContain('UNSUBSCRIBED');
-      await expect(
-        page.getByRole('alert').filter({ hasText: 'Subscription required' }),
-      ).toHaveText('Subscription required');
+      // BUG-365: the refused action leaves the app frame for Pricing.
+      await expect(page).toHaveURL(pricingUrl);
+      await expect(trialOffer).toBeVisible();
     } finally {
       await page.unroute(matchesActionPage, captureActionBody);
     }
 
     await page.goto('/app/dashboard');
-    await expect(page).toHaveURL(/\/pricing\?reason=subscription_required$/);
-    await expect(
-      page.getByText(
-        'Start your free trial to access the app — no card required.',
-      ),
-    ).toBeVisible();
+    await expect(page).toHaveURL(pricingUrl);
+    await expect(trialOffer).toBeVisible();
   });
 });
