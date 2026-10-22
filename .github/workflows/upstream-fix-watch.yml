@@ -3,7 +3,7 @@ name: Upstream fix watch
 # A workaround waiting for an upstream fix gets no Dependabot pull request
 # when the fix ships (DEBT-500). Weekly, this job raises one issue, assigned to
 # the repository owner, for each watched fix that has landed and been released.
-# The watches are in scripts/upstream-fix-watch.ts.
+# The watches are in scripts/watchers/upstream-fix-watch.ts.
 
 on:
   schedule:
@@ -49,4 +49,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: pnpm exec tsx scripts/upstream-fix-watch.ts
+        run: pnpm exec tsx scripts/watchers/upstream-fix-watch.ts

@@ -1,0 +1,462 @@
+import { describe, expect, it, vi } from 'vitest';
+import packageJson from '../../package.json';
+import { type CommandInvocation, runCommandPlan } from '../lib/command-plan';
+import {
+  createE2ECommandPlan,
+  shouldUseIsolatedLocalE2E,
+} from './e2e-local-orchestrator';
+import { resolveLocalTestTarget } from './resolve-local-test-target';
+import { runLocalE2E } from './run-local-e2e';
+
+describe('shouldUseIsolatedLocalE2E', () => {
+  it('uses the database-isolated Docker flow for local runs', () => {
+    expect(shouldUseIsolatedLocalE2E({})).toBe(true);
+  });
+
+  it('does not treat CI as permission to use an inherited database target', () => {
+    expect(shouldUseIsolatedLocalE2E({ CI: 'true' })).toBe(true);
+  });
+
+  it('allows an explicit local deploy-target database run', () => {
+    expect(
+      shouldUseIsolatedLocalE2E({ E2E_USE_EXISTING_DATABASE: 'true' }),
+    ).toBe(false);
+  });
+});
+
+describe('createE2ECommandPlan', () => {
+  it('builds the isolated local Docker migrate seed Playwright sequence', () => {
+    const plan = createE2ECommandPlan({
+      cwd: '/repo/a',
+      env: {
+        LOCAL_TEST_INSTANCE: 'bug245',
+        DB_TEST_PORT: '5544',
+        LOCAL_TEST_APP_PORT: '3301',
+      },
+      playwrightArgs: ['tests/e2e/smoke.spec.ts', '--project=chromium'],
+    });
+    const dockerUrl =
+      'postgresql://postgres:postgres@127.0.0.1:5544/addiction_boards_test';
+    const targetEnv = {
+      COMPOSE_PROJECT_NAME: 'naltrexone-test-bug245',
+      DATABASE_URL: dockerUrl,
+      DB_TEST_PORT: '5544',
+      LOCAL_TEST_INSTANCE: 'bug245',
+      NEXT_PUBLIC_APP_URL: 'http://127.0.0.1:3301',
+      PORT: '3301',
+    };
+
+    expect(plan.map((step) => step.label)).toEqual([
+      'Start isolated local Docker test database',
+      'Migrate isolated local Docker test database',
+      'Seed isolated local Docker test database',
+      'Run Playwright E2E against isolated local test target',
+    ]);
+    expect(plan[0]).toMatchObject({
+      command: 'pnpm',
+      args: ['exec', 'tsx', 'scripts/test-lanes/run-local-test-db.ts', 'up'],
+      env: targetEnv,
+    });
+    expect(plan[1]).toMatchObject({
+      command: 'pnpm',
+      args: [
+        'exec',
+        'tsx',
+        'scripts/database/managed/run-managed-db-migrate.ts',
+      ],
+      env: targetEnv,
+    });
+    expect(plan[2]).toMatchObject({
+      command: 'pnpm',
+      args: [
+        'exec',
+        'tsx',
+        'scripts/database/managed/run-managed-db-seed.ts',
+        '--include-placeholders',
+      ],
+      env: targetEnv,
+    });
+    expect(plan[2]?.env).not.toHaveProperty('SEED_INCLUDE_PLACEHOLDERS');
+    expect(plan[3]).toMatchObject({
+      command: 'pnpm',
+      args: [
+        'exec',
+        'playwright',
+        'test',
+        'tests/e2e/smoke.spec.ts',
+        '--project=chromium',
+      ],
+      env: targetEnv,
+      omitInheritedEnv: ['NO_COLOR'],
+    });
+    expect(JSON.stringify(plan)).not.toContain('kill -9');
+    expect(JSON.stringify(plan)).not.toContain('lsof -ti:3000');
+  });
+
+  // DEBT-508: clones must not share a Stripe test customer, so each clone's
+  // run owns one, named by the instance that also picks its database port.
+  describe('Stripe test customer owner', () => {
+    function playwrightStepEnv(input: {
+      env: Record<string, string>;
+      cwd?: string;
+    }) {
+      const plan = createE2ECommandPlan({
+        cwd: input.cwd ?? '/repo/a',
+        env: input.env,
+      });
+      return plan.map((step) => step.env?.E2E_STRIPE_OWNER);
+    }
+
+    it('gives only the Playwright step the clone instance owner', () => {
+      expect(
+        playwrightStepEnv({ env: { LOCAL_TEST_INSTANCE: 'bug245' } }),
+      ).toEqual([undefined, undefined, undefined, 'local-clone-bug245']);
+    });
+
+    it('derives the owner from the worktree when no instance is set', () => {
+      const target = resolveLocalTestTarget({ env: {}, cwd: '/repo/clone-2' });
+
+      expect(playwrightStepEnv({ env: {}, cwd: '/repo/clone-2' })[3]).toBe(
+        `local-clone-${target.instanceId}`,
+      );
+    });
+
+    it('keeps an owner exported in the shell', () => {
+      expect(
+        playwrightStepEnv({
+          env: { LOCAL_TEST_INSTANCE: 'bug245', E2E_STRIPE_OWNER: ' mine ' },
+        })[3],
+      ).toBe('mine');
+    });
+
+    // .env.local is loaded by Playwright after this plan, without overriding,
+    // so an existing-database run needs the owner here too, or a real key
+    // leaves the seed without one.
+    it.each([
+      [{}, 'local-clone-bug245'],
+      [{ E2E_STRIPE_OWNER: 'github-ci-1-1' }, 'github-ci-1-1'],
+    ])('gives an existing-database run the same owner: %o', (extra, owner) => {
+      const plan = createE2ECommandPlan({
+        cwd: '/repo/a',
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          LOCAL_TEST_INSTANCE: 'bug245',
+          DATABASE_URL:
+            'postgresql://postgres:postgres@127.0.0.1:5432/addiction_boards_test',
+          ...extra,
+        },
+      });
+
+      expect(plan.map((step) => step.env?.E2E_STRIPE_OWNER)).toEqual([owner]);
+    });
+  });
+
+  it('uses the isolated target when CI is set without the explicit passthrough flag', () => {
+    const plan = createE2ECommandPlan({
+      cwd: '/repo/a',
+      env: {
+        CI: 'true',
+        LOCAL_TEST_INSTANCE: 'ci-env-local-run',
+        DB_TEST_PORT: '5544',
+        LOCAL_TEST_APP_PORT: '3301',
+        DATABASE_URL:
+          'postgresql://postgres:postgres@localhost:5432/addiction_boards_test',
+      },
+      playwrightArgs: ['tests/e2e/practice.spec.ts'],
+    });
+
+    expect(plan.map((step) => step.label)).toEqual([
+      'Start isolated local Docker test database',
+      'Migrate isolated local Docker test database',
+      'Seed isolated local Docker test database',
+      'Run Playwright E2E against isolated local test target',
+    ]);
+    expect(plan[3]?.env?.DATABASE_URL).toBe(
+      'postgresql://postgres:postgres@127.0.0.1:5544/addiction_boards_test',
+    );
+  });
+
+  it('refuses a non-local existing database without the explicit non-local override', () => {
+    expect(() =>
+      createE2ECommandPlan({
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL: 'postgresql://deploy-target.example/app',
+        },
+        playwrightArgs: [],
+      }),
+    ).toThrow('Refusing to run E2E against non-local DATABASE_URL host');
+  });
+
+  it('passes through an intentional non-local target when both opt-ins are explicit', () => {
+    const plan = createE2ECommandPlan({
+      env: {
+        E2E_USE_EXISTING_DATABASE: 'true',
+        ALLOW_NON_LOCAL_DATABASE_URL: 'true',
+        DATABASE_URL: 'postgresql://deploy-target.example/app',
+        LOCAL_TEST_INSTANCE: 'deploy-check',
+      },
+      playwrightArgs: [],
+    });
+
+    expect(plan).toEqual([
+      {
+        label: 'Run Playwright E2E',
+        command: 'pnpm',
+        args: ['exec', 'playwright', 'test'],
+        env: { E2E_STRIPE_OWNER: 'local-clone-deploy-check' },
+        omitInheritedEnv: ['NO_COLOR'],
+      },
+    ]);
+  });
+
+  it('accepts an IPv6 loopback existing database without a non-local override', () => {
+    expect(() =>
+      createE2ECommandPlan({
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL: 'postgresql://[::1]:5432/app',
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  it('fails closed when existing-database mode has no database URL', () => {
+    expect(() =>
+      createE2ECommandPlan({
+        env: { E2E_USE_EXISTING_DATABASE: 'true', DATABASE_URL: '' },
+      }),
+    ).toThrow('DATABASE_URL is required when E2E_USE_EXISTING_DATABASE=true');
+  });
+
+  it('fails closed when the existing database URL is malformed', () => {
+    expect(() =>
+      createE2ECommandPlan({
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL: 'not-a-database-url',
+        },
+      }),
+    ).toThrow(
+      'DATABASE_URL must be a valid URL when E2E_USE_EXISTING_DATABASE=true',
+    );
+  });
+});
+
+describe('runCommandPlan', () => {
+  it('stops before migrations when database readiness fails', async () => {
+    const failure = new Error('Database readiness timed out.');
+    const labels: string[] = [];
+    await expect(
+      runCommandPlan(createE2ECommandPlan({ cwd: '/repo/a', env: {} }), {
+        env: {},
+        runCommand: async (invocation) => {
+          labels.push(invocation.label);
+          throw failure;
+        },
+      }),
+    ).rejects.toBe(failure);
+    expect(labels).toEqual(['Start isolated local Docker test database']);
+  });
+
+  it('omits inherited NO_COLOR only from the Playwright child environment', async () => {
+    const invocations: CommandInvocation[] = [];
+    const runCommand = vi.fn(async (invocation: CommandInvocation) => {
+      invocations.push(invocation);
+    });
+    const baseEnv = {
+      NO_COLOR: '1',
+      CLERK_SECRET_KEY: 'sk_test_clerk',
+    };
+    const plan = createE2ECommandPlan({
+      cwd: '/repo/a',
+      env: {
+        LOCAL_TEST_INSTANCE: 'bug245',
+        DB_TEST_PORT: '5544',
+        LOCAL_TEST_APP_PORT: '3301',
+      },
+      playwrightArgs: ['tests/e2e/smoke.spec.ts'],
+    });
+
+    await runCommandPlan(plan, {
+      env: baseEnv,
+      runCommand,
+    });
+
+    expect(invocations).toHaveLength(4);
+    for (const invocation of invocations.slice(0, 3)) {
+      expect(invocation?.env).toMatchObject({ NO_COLOR: '1' });
+    }
+    expect(invocations[3]?.args).toContain('playwright');
+    expect(invocations[3]?.env).not.toHaveProperty('NO_COLOR');
+  });
+
+  it('executes steps in order and merges per-step environment overrides', async () => {
+    const runCommand = vi.fn(async () => {});
+    const baseEnv = {
+      DATABASE_URL: 'postgresql://remote.example/app',
+      CLERK_SECRET_KEY: 'sk_test_clerk',
+    };
+
+    await runCommandPlan(
+      [
+        {
+          label: 'first',
+          command: 'pnpm',
+          args: ['db:migrate'],
+          env: { DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1/db' },
+        },
+        {
+          label: 'second',
+          command: 'pnpm',
+          args: ['exec', 'playwright', 'test'],
+        },
+      ],
+      {
+        env: baseEnv,
+        runCommand,
+      },
+    );
+
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(runCommand).toHaveBeenNthCalledWith(1, {
+      label: 'first',
+      command: 'pnpm',
+      args: ['db:migrate'],
+      env: {
+        ...baseEnv,
+        DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1/db',
+      },
+    });
+    expect(runCommand).toHaveBeenNthCalledWith(2, {
+      label: 'second',
+      command: 'pnpm',
+      args: ['exec', 'playwright', 'test'],
+      env: baseEnv,
+    });
+  });
+
+  it('uses the default child-process runner when no command runner is injected', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(
+      runCommandPlan([
+        {
+          label: 'node success',
+          command: process.execPath,
+          args: ['-e', 'process.exit(0)'],
+        },
+      ]),
+    ).resolves.toBeUndefined();
+
+    expect(log).toHaveBeenCalledWith('[test-lane] node success');
+    log.mockRestore();
+  });
+
+  it('reports the failing step when the default child-process runner exits nonzero', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(
+      runCommandPlan([
+        {
+          label: 'node failure',
+          command: process.execPath,
+          args: ['-e', 'process.exit(7)'],
+        },
+      ]),
+    ).rejects.toThrow(
+      `Command failed during "node failure": ${process.execPath} -e process.exit(7) (exit code 7).`,
+    );
+
+    log.mockRestore();
+  });
+});
+
+describe('runLocalE2E', () => {
+  it('builds the command plan from process-like inputs and executes it', async () => {
+    const createPlan = vi.fn(() => [
+      {
+        label: 'run',
+        command: 'pnpm',
+        args: ['exec', 'playwright', 'test'],
+      },
+    ]);
+    const runPlan = vi.fn(async () => {});
+    const env = { CI: 'true' };
+
+    await runLocalE2E({
+      argv: [
+        'node',
+        'scripts/test-lanes/run-local-e2e.ts',
+        '--project=chromium',
+      ],
+      env,
+      createPlan,
+      runPlan,
+    });
+
+    expect(createPlan).toHaveBeenCalledWith({
+      env,
+      playwrightArgs: ['--project=chromium'],
+    });
+    expect(runPlan).toHaveBeenCalledWith(createPlan.mock.results[0]?.value, {
+      env,
+    });
+  });
+});
+
+describe('package scripts', () => {
+  it('loads browser tests through the native-ESM config', () => {
+    expect(packageJson.scripts['test:browser']).toBe(
+      'vitest run --config vitest.browser.config.mts',
+    );
+    expect(packageJson.scripts['test:browser:coverage']).toBe(
+      'vitest run --config vitest.browser.config.mts --coverage',
+    );
+  });
+
+  it('fails both lint entry points when Biome reports a warning', () => {
+    expect(packageJson.scripts.lint).toBe(
+      'biome check . --error-on-warnings && pnpm lint:doubles',
+    );
+    expect(packageJson.scripts['lint:ci']).toBe(
+      'biome ci . --error-on-warnings',
+    );
+  });
+
+  it('routes both E2E lanes through the database-isolated local orchestrator', () => {
+    expect(packageJson.scripts['test:e2e']).toBe(
+      'tsx scripts/test-lanes/run-local-e2e.ts --project=chromium --project=mobile-smoke',
+    );
+    expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
+      'tsx scripts/test-lanes/run-local-e2e.ts --project=stripe-hosted',
+    );
+  });
+
+  it('routes local integration and DB lifecycle scripts through the local target resolver', () => {
+    expect(packageJson.scripts['test:integration']).toBe(
+      'tsx scripts/test-lanes/run-local-integration.ts',
+    );
+    expect(packageJson.scripts['test:integration:coverage']).toBe(
+      'tsx scripts/test-lanes/run-local-integration.ts --coverage',
+    );
+    expect(packageJson.scripts['db:test:up']).toBe(
+      'tsx scripts/test-lanes/run-local-test-db.ts up',
+    );
+    expect(packageJson.scripts['db:test:down']).toBe(
+      'tsx scripts/test-lanes/run-local-test-db.ts down',
+    );
+    expect(packageJson.scripts['db:test:reset']).toBe(
+      'tsx scripts/test-lanes/run-local-test-db.ts reset',
+    );
+    expect(packageJson.scripts['local:test:target']).toBe(
+      'tsx scripts/test-lanes/resolve-local-test-target.ts',
+    );
+  });
+
+  it('exposes the fail-closed Stripe provider contracts through the dedicated runner', () => {
+    expect(packageJson.scripts['test:stripe-provider']).toBe(
+      'tsx scripts/test-lanes/run-stripe-provider-contracts.ts',
+    );
+  });
+});

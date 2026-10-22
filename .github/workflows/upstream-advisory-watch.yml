@@ -42,4 +42,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: node scripts/upstream-advisory-watch.mts
+        run: node scripts/watchers/upstream-advisory-watch.mts

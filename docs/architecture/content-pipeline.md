@@ -51,11 +51,15 @@ This document serves two purposes:
 
 ## 2. Content Directory Quick Reference
 
+Bare `db:seed`, migration, withdrawal and release commands below require an explicit `DATABASE_URL` for the intended target. The environment seed commands resolve named targets themselves; `db:seed:prod` refuses a caller-supplied `DATABASE_URL`. Remote human commands also require the exact `DB_TARGET_ACK` reported by the target guard. Local Docker commands such as `db:test:reset` resolve their own clone-specific target. The examples never authorize a production mutation.
+
 ### Which directory feeds production?
 
 **The bare seed (`pnpm db:seed`) reads non-hidden `content/questions/**/*.mdx`.** It does not import drafts. The managed production seed first imports `content/drafts/questions` as published content, then invokes the bare seed. Once a release is active, both seeds refuse that database; staging reads an archived commit of the content repository's `main` instead.
 
 ### How the three directories relate
+
+This is the manual sequence. The environment seed commands automate both arrows after target authorization.
 
 ```text
 content/drafts/questions/**/*.md       YOUR WORKSPACE (raw authoring, gitignored)
@@ -63,7 +67,7 @@ content/drafts/questions/**/*.md       YOUR WORKSPACE (raw authoring, gitignored
         │                              The bare seed does not read it directly.
         │
         │  pnpm content:import:drafts  (explicit command or environment-seed preparation)
-        │  Validates tags against canonical taxonomy, expands slugs to
+        │  Validates topic/substance/treatment enums and diagnosis slug syntax; expands to
         │  {slug, name, kind} objects, splits multi-Q files into 1 MDX each.
         ▼
 content/questions/imported/**/*.mdx    GENERATED OUTPUT (gitignored)
@@ -210,9 +214,9 @@ read a staging bundle while it is being generated or reviewed:
 ```bash
 CONTENT_STAGE_DIR="$(mktemp -d)"
 # Validate input and path boundaries without writing:
-pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --dry-run
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR" --dry-run
 # Generate the complete staged bundle (default status: draft):
-pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR"
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR"
 ```
 
 The importer accepts an absent or empty output directory. A populated output
@@ -295,7 +299,7 @@ The app selects and shows new questions only when they are **published**: `Drizz
 To exclude placeholders from your runtime database, seed without `--include-placeholders`:
 
 ```bash
-pnpm db:seed
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm db:seed
 ```
 
 This excludes `content/questions/placeholder/**/*.mdx` from the seed input and archives only the ten committed fixture slugs listed in `scripts/seed/placeholder-archiver.ts`. An authored question is not synthetic merely because its slug starts with `placeholder-` (BUG-315).
@@ -305,7 +309,7 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 `scripts/seed/withdraw-questions.ts` withdraws questions by QID, the content slug. It needs an explicit `DATABASE_URL`, and a remote target also needs the exact `DB_TARGET_ACK`. Without `--apply` it is a dry run that reports the target, the QIDs and the counts.
 
 ```bash
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-questions.ts \
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm content:withdraw \
   --qid "example-qid" --reason "Why it is withdrawn" --authority "Who ordered it"
 # Check the dry run's target, QIDs and counts, then repeat the command with --apply.
 ```
@@ -321,9 +325,9 @@ ADR-021 phase 4's operator commands live in `scripts/content-release/`. Like the
 ```bash
 # Adopt what is live as the first release (once). Preview it, then apply the plan it printed.
 # Every bootstrap and activation names why, and on whose authority (DEBT-490).
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts \
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm content:release:bootstrap \
   --reason "Why" --authority "Who"
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts \
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm content:release:bootstrap \
   --reason "Why" --authority "Who" --plan "<plan-id>" --apply
 # Stage the selected commit of the content repository main as a release. Every question the
 # active release names must appear in the bundle unless it is withdrawn; name
@@ -332,29 +336,29 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootst
 # after the bootstrap also names, with --baseline, the full commit ID the
 # owner's live-key check compared, as recorded in BUG-351. The command trusts
 # that ID, so copy it from the record, never from memory.
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts \
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm content:release:stage \
   --repo "$CONTENT_REPOSITORY" --commit "<full-commit-id>" --apply
 # Preview its activation: it prints the plan id, every question it archives,
 # publishes, updates, reverts or withdraws, any that replace a held revision,
 # and the items a hold or withdrawal leaves out.
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm content:release:activate \
   --repo "$CONTENT_REPOSITORY" --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who"
 # A plan that returns a question to an earlier answer key needs --revert <qid>
 # for each such question, at staging and at activation (BUG-351).
 # Apply exactly the plan you reviewed. If the plan has changed since, nothing is applied.
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm content:release:activate \
   --repo "$CONTENT_REPOSITORY" --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who" \
   --plan "<plan-id>" --apply
 # Roll back: preview and apply a previously activated release the same way; --repo is optional.
 # Hold a question's live revision, or lift that hold with --lift. A lift that
 # returns a question to an earlier answer key needs --revert too.
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-questions.ts \
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm content:hold \
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
 
 Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published (DEBT-483).
 
-**Read-only live-key comparison (BUG-351).** Before the bootstrap, the owner compares production's published current answer keys with one commit of the content repository's `main`: with an explicit authorized `DATABASE_URL`, `pnpm exec tsx scripts/content-release/compare-live-keys.ts --repo "$CONTENT_REPOSITORY" --commit "<full-commit-id>"`. It reads the commit through the same archive reader and parser as staging, compares each correct choice's label and normalized text as the release planner does, and prints only counts and the commit. Record that full commit ID in BUG-351: the first release after the bootstrap names it as `--baseline`.
+**Read-only live-key comparison (BUG-351).** Before the bootstrap, the owner compares production's published current answer keys with one commit of the content repository's `main`: with an explicit authorized `DATABASE_URL`, `pnpm content:keys:compare --repo "$CONTENT_REPOSITORY" --commit "<full-commit-id>"`. It reads the commit through the same archive reader and parser as staging, compares each correct choice's label and normalized text as the release planner does, and prints only counts and the commit. Record that full commit ID in BUG-351: the first release after the bootstrap names it as `--baseline`.
 
 **Source admission (BUG-351).** Supply the intended content repository with its current local `main` reference and a full commit ID. Staging archives that commit and converts its tracked `recall.md` and `vignettes.md` files under `questions/`, the content repository's authoring root, with the app's parser; a copy elsewhere, such as a backup or an artifact, is ignored, and a question ID that appears in two files is refused. It does not read mutable checkout files, app drafts or imported MDX, and it does not execute content-repository code. Unlisted source questions default to published; use `--draft <qid>` or `--archive <qid>` for explicit dispositions. Each name must occur in the commit and may have only one disposition. A `--draft` holds only for the release that names it: the next stage publishes the question again unless it repeats `--draft`.
 
@@ -366,7 +370,7 @@ The v5 manifest binds the commit to the release and its activation plan. Git's f
 - **A withdrawn member** may be absent.
 - **Staging refuses a bundle that leaves out any other member**, and names them, so a stale or partial content folder cannot remove questions silently. Activation repeats the check for any release never active before.
 - **A revert is named (DEBT-492).** A file whose content matches only an earlier revision, not the current one, moves its question *back* to that revision, which can undo an answer-key correction. Staging refuses that unless the question is named with `--revert <qid>`. The plan lists it under "Revert to an earlier revision", apart from "Publish" (not live now) and "Update to a newer revision". A rollback restores earlier revisions by definition, so a content revert alone does not refuse it; its plan names each revert, and it also archives questions added since.
-- **A return to an earlier answer key is named (BUG-351).** The stage and activation previews list answer-key changes apart from other changes. A change whose key equals one this database once had live needs `--revert <qid>` at staging and at activation, with the activation's reason and authority. "Once live" means a revision in an activated release, or one of the pre-bootstrap revisions the bootstrap froze in its manifest. A rollback and a hold lift publish through activation, so they need the name too.
+- **A return to an earlier answer key is named (BUG-351).** The stage and activation previews list answer-key changes apart from other changes. A change whose key matches the conservative prior-key set needs `--revert <qid>` at staging and at activation, with the activation's reason and authority. That set includes revisions named by activated releases, even if an overlay excluded them, and every revision stored before bootstrap, including draft-only revisions. Bootstrap freezes those IDs in its manifest; membership does not prove that learners ever saw the key. A rollback and a hold lift publish through activation, so they need the name too.
 
 **Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. It locks only the release pointer, not question rows, so learners can start sessions while a stage runs (DEBT-492). An archive disposition becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its source question may only keep an archive disposition) and refuses a bundle with no published file, and is one transaction.
 
@@ -389,9 +393,9 @@ A hold takes effect at once: it re-applies the active release, which archives th
 
 An unpublished question with any unlifted hold remains **Under review** and out of scores, even after retirement. A published replacement is available without lifting the old hold. Lifting the last hold on an omitted question changes its label to **Retired** without publishing it; withdrawals still win. Past scores then follow the fair-chance and key-correction rules (ADR-022). A named lift passes through the same answer-key-return guard as a live-revision lift.
 
-**Read-only normalization census.** With an explicit authorized `DATABASE_URL`, run `pnpm exec tsx scripts/content-release/census-normalization.ts`. It accepts no flags and opens a read-only transaction. Its JSON contains only counts: revisions, choices, revisions with noncanonical fields, each of the five Markdown field types, and the correct-choice text subset. Optional empty strings are compared with the seed's `null`; whitespace-only strings follow its normalizer. No question identifiers, text or hashes are emitted. No stored field, hash or historical row is changed. Counts measure normalization differences, not clinical errors.
+**Read-only normalization census.** With an explicit authorized `DATABASE_URL`, run `pnpm content:census:normalization`. It accepts no flags and opens a read-only transaction. Its JSON contains only counts: revisions, choices, revisions with noncanonical fields, each of the five Markdown field types, and the correct-choice text subset. Optional empty strings are compared with the seed's `null`; whitespace-only strings follow its normalizer. No question identifiers, text or hashes are emitted. No stored field, hash or historical row is changed. Counts measure normalization differences, not clinical errors.
 
-**Read-only key-return census (BUG-351).** With an explicit authorized `DATABASE_URL`, run `pnpm exec tsx scripts/content-release/census-key-returns.ts`. It accepts no flags and opens one read-only, repeatable-read transaction. It counts revisions whose answer key changed from the one before and matches an earlier revision's, comparing ADR-022's key: each correct choice's exact label and normalized text, through the same SQL normalization the score reads use. Its JSON contains only counts: candidate revisions, their questions, those that are published and current, attempts bound to them and answered, and revisions without exactly one correct choice. No question identifiers, text or hashes are emitted, and nothing is changed.
+**Read-only key-return census (BUG-351).** With an explicit authorized `DATABASE_URL`, run `pnpm content:census:key-returns`. It accepts no flags and opens one read-only, repeatable-read transaction. It counts revisions whose answer key changed from the one before and matches an earlier revision's, comparing ADR-022's key: each correct choice's exact label and normalized text, through the same SQL normalization the score reads use. Its JSON contains only counts: candidate revisions, their questions, those that are published and current, attempts bound to them and answered, and revisions without exactly one correct choice. No question identifiers, text or hashes are emitted, and nothing is changed.
 
 ---
 
@@ -445,7 +449,7 @@ The domain `Question` entity has `choices: Choice[]` always in this canonical or
 
 - `createQuestionSeed(userId, questionId)` → deterministic numeric seed via `hashString("userId:questionId")`
 - `shuffleWithSeed(items, seed)` → Fisher-Yates shuffle with Mulberry32 PRNG
-- Same user + same question = same shuffle every time. Different users can see different orders; seeds and permutations can collide.
+- The same user, question and ordered input choices produce the same shuffle. Changing the choices can change their order; different users can also receive the same order.
 
 **Shuffle application:** `src/application/shared/shuffled-choice-views.ts`
 
@@ -521,7 +525,7 @@ ALL CONTEXTS (consistent — all shuffled):
   Labels always match.
 ```
 
-All listed callers of `buildShuffledChoiceViews` produce consistent shuffled labels. The shuffle remains deterministic per `(userId, questionId)` pair.
+All listed callers of `buildShuffledChoiceViews` produce consistent shuffled labels. The shuffle remains deterministic for a `(userId, questionId)` pair and unchanged ordered input choices.
 
 ---
 
@@ -579,7 +583,7 @@ Recommended end-to-end sanity check:
 
 ```bash
 pnpm db:test:reset
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 # Prerequisite: approved MDX is already placed under content/questions/.
 # Generate/review replacements separately using the clean-staging procedure above.
@@ -587,20 +591,21 @@ DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 DATABASE_URL="$TEST_DATABASE_URL" pnpm dev
 ```
 
-The test DB host port is per-clone (resolved by `scripts/resolve-local-test-target.ts`); never hardcode `localhost:5434`. See `docs/guides/testing/integration-tests.md`.
+The test DB host port is per-clone (resolved by `scripts/test-lanes/resolve-local-test-target.ts`); never hardcode `localhost:5434`. See `docs/guides/testing/integration-tests.md`.
 
 ---
 
 ## 14. Operations: Seeding (Staging / Production)
 
-Seeding requires two things:
+Before seeding:
 
-1. Access to the target DB (`DATABASE_URL`)
-2. Access to the question MDX files on disk (`content/questions/**/*.mdx`)
+1. Select the target explicitly with `DATABASE_URL`; remote human commands also require the exact `DB_TARGET_ACK` printed by the target guard. Never copy an acknowledgment from another target.
+2. Prepare and review the intended question MDX files on disk (`content/questions/**/*.mdx`).
+3. Confirm migrations are current and no content release is active. Use the release procedure once one is active.
 
 Because real content is gitignored, you must ensure the environment running `pnpm db:seed` has the MDX files available (for example, by syncing from a private content repo, or running the seed from your local machine against the remote database).
 
-Before seeding, ensure the target database schema is up to date. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass:
+Before seeding, ensure the target database schema is up to date. The command below refuses a remote target until its exact acknowledgment is explicitly supplied; follow the [migration target procedure](../guides/database/migrations.md#deployment-contract).
 
 ```bash
 DATABASE_URL="<target-db-url>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
@@ -672,7 +677,7 @@ By default, `pnpm db:seed` **excludes** placeholder questions and, while no cont
 
 - Scans `content/drafts/questions/` for files named `recall.md` and `vignettes.md`
 - Splits multi-question blocks within each file into individual questions
-- Validates tag slugs against the canonical taxonomy in `lib/content/draft-taxonomy.ts`
+- Validates topic, substance and treatment slugs against `lib/content/draft-taxonomy.ts`; diagnosis slugs need only kebab-case syntax and receive title-cased names
 - Requires an absent or empty output root (`--out`) before actual writes
 - Writes one `.mdx` file per question into that fresh output tree
 
@@ -680,7 +685,7 @@ By default, `pnpm db:seed` **excludes** placeholder questions and, while no cont
 
 - **Does not prune or merge existing output.** A populated destination is refused for actual writes. Generate into a fresh temporary directory outside `content/questions/` and preserve the current imported tree during review. Removing a draft does not withdraw its database row; withdraw it explicitly, as [Withdrawing a Question](#withdrawing-a-question) describes.
 - **Does not touch the database.** Import itself is a local file operation. A plain import needs a separate seed; the environment-seed wrappers run both steps.
-- **Does not read from `content/questions/`.** It reads drafts and writes MDX. The seed reads MDX.
+- **Defaults to draft input.** `--in` can select another input root, including a path under `content/questions/`; it still expects the draft file names and format. The seed reads canonical MDX.
 
 ### Dry-run mode
 
@@ -690,7 +695,7 @@ certify the empty-destination prerequisite for a later write:
 
 ```bash
 CONTENT_STAGE_DIR="$(mktemp -d)"
-pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --dry-run
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR" --dry-run
 ```
 
 ### Status flag
@@ -700,9 +705,9 @@ Controls the `status` field in generated MDX frontmatter:
 ```bash
 # Choose one status per newly created staging directory:
 CONTENT_STAGE_DIR="$(mktemp -d)"
-pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --status draft
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR" --status draft
 # An approved published-status artifact also needs its own fresh destination:
-# pnpm content:import:drafts -- --out "$ANOTHER_EMPTY_STAGE_DIR" --status published
+# pnpm content:import:drafts --out "$ANOTHER_EMPTY_STAGE_DIR" --status published
 ```
 
 ---
@@ -711,10 +716,10 @@ pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --status draft
 
 ### Practice shows "Internal error" on Start session / Submit
 
-This usually means the database is missing newer tables required by server actions (for example `rate_limits` or `idempotency_keys`).
+Missing migration tables (for example `rate_limits` or `idempotency_keys`) are one possible cause. The same public error covers other internal failures. Read the server log and compare the target migration ledger before choosing a fix.
 
-Fix:
+If migrations are missing, select the intended target explicitly; a remote target also requires its exact acknowledgment:
 
 ```bash
-pnpm db:migrate
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm db:migrate
 ```

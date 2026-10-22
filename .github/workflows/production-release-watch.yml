@@ -6,7 +6,7 @@ name: Production release watch
 # Hourly, this job keeps one issue, assigned to the repository owner, open
 # while main's head has no passing CI run on main, a push run or a manual one,
 # or no successful production deployment. The checks are in
-# scripts/production-release-watch.ts.
+# scripts/watchers/production-release-watch.ts.
 
 on:
   schedule:
@@ -54,4 +54,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: pnpm exec tsx scripts/production-release-watch.ts
+        run: pnpm exec tsx scripts/watchers/production-release-watch.ts

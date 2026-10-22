@@ -10,7 +10,7 @@
 
 ## Summary
 
-When local E2E is interrupted, `scripts/e2e-local-orchestrator.ts` lists every process with `ps` to find the process groups its command started. The listing had a one-second time limit. A loaded CI runner took longer, which failed a unit test on promotion #1461.
+When local E2E is interrupted, `scripts/lib/command-plan.ts` lists every process with `ps` to find the process groups its command started. The listing had a one-second time limit. A loaded CI runner took longer, which failed a unit test on promotion #1461.
 
 On a developer machine the same cut-off has a real consequence. The orchestrator falls back to killing only the root process group. A detached group, such as Playwright's web server, keeps running and holds the app's port.
 
@@ -60,3 +60,5 @@ On a developer machine the same cut-off has a real consequence. The orchestrator
 
 - #939 added the process listing and its one-second limit.
 - DEBT-518 uses this record as an example of what a small fix costs under the current record process.
+
+Corrected 2026-10-19: name the shared command runner that now owns process cleanup; the five-second bound and verification window are unchanged.

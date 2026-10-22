@@ -276,7 +276,7 @@ describe('CI workflow', () => {
       expect(
         findParsedStep(filePath, 'Seed DB (placeholder content)').run,
       ).toBe(
-        'pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders',
+        'pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts --include-placeholders',
       );
     }
     for (const filePath of WORKFLOW_PATHS) {
@@ -710,7 +710,7 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     const workflow = readStripeHostedWorkflow();
 
     expect(
-      findParsedStep(STRIPE_HOSTED_WORKFLOW_PATH, 'Start Postgres').env
+      findParsedStep(STRIPE_HOSTED_WORKFLOW_PATH, 'Pull Postgres').env
         ?.POSTGRES_IMAGE_DIGEST,
     ).toBe(PINNED_POSTGRES_16_DIGEST);
     expect(workflow).toContain(`uses: ${PINNED_SETUP_NODE}`);

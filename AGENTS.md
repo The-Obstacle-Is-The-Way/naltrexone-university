@@ -25,9 +25,9 @@ Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle 
    - Use `git --no-pager`, and `git commit -m "…"`.
    - Never `pnpm -s <cmd>`: it runs `<cmd>` as a script or binary, which can open Vim and hang.
 5. **Never touch a remote database by accident.**
-   - Database commands need an explicit `DATABASE_URL`; remote targets also need `DB_TARGET_ACK`.
+   - Commands that connect to a database need an explicit `DATABASE_URL`; remote targets also need `DB_TARGET_ACK`.
    - Never `drizzle-kit push`.
-   - Local tests resolve a per-clone target: `pnpm exec tsx scripts/resolve-local-test-target.ts env`. Never hardcode its port, and never blanket-kill `:3000`; another clone may own it.
+   - Local tests resolve a per-clone target: `pnpm local:test:target env`. Never hardcode its port, and never blanket-kill `:3000`; another clone may own it.
 6. **Never bypass review or protection.** No `--admin`, ruleset bypass, Force Promote, or direct push to `dev` or `main`.
 
 ## Before Writing Code
@@ -66,7 +66,7 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 - **Integration database:**
 
   ```bash
-  TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders && pnpm test:integration
+  pnpm test:integration # starts this clone’s database, migrates, seeds, then tests
   ```
 
 - **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](./docs/guides/testing/e2e-tests.md).
@@ -96,11 +96,11 @@ Read the matching rule before editing. Claude Code loads these by path, and Code
 6. Merge only with the merge guard, never the button or `gh pr merge`:
 
    ```bash
-   pnpm exec tsx scripts/merge-reviewed-pr.ts <PR>          # read-only check
-   pnpm exec tsx scripts/merge-reviewed-pr.ts <PR> --merge  # verify and merge
+   pnpm pr:merge-reviewed <PR>          # read-only check
+   pnpm pr:merge-reviewed <PR> --merge  # verify and merge
    ```
 
-7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`. A promotion ships all of `dev`, so first pass every gated QA procedure whose flows `dev` changes ([QA method](docs/guides/qa/method.md#when-procedures-run), item 2).
+7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm pr:verify-promotion <PR> --merge` after `git fetch`. A promotion ships all of `dev`, so first pass every gated QA procedure whose flows `dev` changes ([QA method](docs/guides/qa/method.md#when-procedures-run), item 2).
 
 Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, link ADR or record changes, and show screenshots of any changed UI, never of real questions: the repository is public, so capture the placeholder questions or describe the result ([QA method](docs/guides/qa/method.md), Evidence). How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](./docs/guides/release/promote-to-production.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
 
@@ -108,7 +108,7 @@ Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the 
 
 Open bug and debt records are in `docs/records/`, with one index. Its ["How Records Work"](docs/records/README.md#how-records-work) section holds the rules.
 - Read **Now** and the Waiting triggers relevant to your work at session start, and triage any overdue dated action, in any live status, before new work. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
-- A new ID comes from `pnpm exec tsx scripts/next-record-id.ts bug` (or `debt`).
+- A new ID comes from `pnpm record:next bug` (or `debt`).
 - Write the record first and have a second agent challenge it. Before any push involving an exploitable security finding, apply the index’s private-review and disclosure exception; a public draft PR is not private.
 - Ship it with its fix. Specify new features in [`docs/product/`](docs/product/README.md); multi-PR duration alone is not debt.
 - Only the index links records; elsewhere, cite the ID.
@@ -121,7 +121,8 @@ pnpm lint            # Biome, plus the test-double ratchet (pnpm lint:doubles)
 pnpm typecheck
 pnpm test --run      # unit; pnpm test:browser; pnpm test:integration
 pnpm test:e2e        # required E2E; pnpm test:e2e:stripe-hosted is observational
-pnpm db:generate | db:migrate | db:seed | db:studio   # explicit DATABASE_URL
+pnpm db:generate                                     # offline, no credentials
+pnpm db:migrate | db:seed | db:studio                  # explicit DATABASE_URL
 pnpm db:test:up | db:test:down                         # local test database
 pnpm local:test:target                                 # this clone's local target
 pnpm quality:crap | test:mutation                      # observational quality reports
@@ -134,5 +135,6 @@ pnpm quality:crap | test:mutation                      # observational quality r
 - [`docs/product/specification.md`](docs/product/specification.md): the product specification. Where it disagrees with the code on a schema or type, the code is right; correct the spec.
 - [`docs/design-system/`](docs/design-system/README.md): the design system. [`docs/guides/`](docs/guides/README.md): how to test, release, review and merge, and run UI QA. [`docs/architecture/`](docs/architecture/README.md): how the system is built. The map: [`docs/README.md`](docs/README.md).
 - [`docs/guides/testing/browser-automation.md`](./docs/guides/testing/browser-automation.md): browser checks behind Clerk sign-in. Never skip a visual check because a page redirects to sign-in: sign in first. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
+- [`scripts/README.md`](scripts/README.md): the script directory and entry-point conventions. Use the package command for operator tasks; guarded entry points share `scripts/lib/entry-point.mts`, enforced by `tests/script-entry-points.test.ts`.
 - [`.agents/skills/`](.agents/skills/README.md): vendored agent skills and their refresh procedure.
 - CI secrets: step-scoped credentials, SHA-pinned actions, and no credentials for Dependabot ([the CI Secret Standard](./docs/architecture/environments.md#ci-secret-standard)).

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
-import { readQuestionFeedbackRows } from '@/scripts/export-question-feedback';
+import { readQuestionFeedbackRows } from '@/scripts/feedback/export-question-feedback';
 import {
   answeredRevisionIdOf,
   cleanupAfterEach,

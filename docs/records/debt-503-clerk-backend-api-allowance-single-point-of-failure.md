@@ -144,7 +144,7 @@ This record holds the structural fixes, so that the allowance stops being the on
   *Changed 2026-10-10, while building: the daily comparison is dropped. The build step catches a wrong key before it deploys, and the rejected-signature alert catches a key that stops matching within a minute of signed-in traffic. A daily check would add only the hours without traffic, for another job, port and alert.*
 - **Built 2026-10-10, test-first** (steps 1 to 4).
   - `lib/clerk-jwt-key.ts` parses and validates the key, and compares it with Clerk's published keys. `proxy.ts` passes it as `jwtKey`; an unreadable key is logged and left out, so Clerk fetches as before.
-  - `scripts/check-clerk-jwt-key.ts` checks it on every deploy (step 3).
+  - `scripts/deploy/check-clerk-jwt-key.ts` checks it on every deploy (step 3).
   - Item 3's detector counts `token-invalid-signature` apart, as `clerk_session_tokens_rejected` (`CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD`).
   - **Proof.** `lib/clerk-jwt-key-sdk.test.ts` runs the real middleware: with the key, a signed-in visitor verifies with no call to Clerk; with another key, the visitor is signed out with `token-invalid-signature`. Against the development instance's published keys, read 2026-10-10, the build step passes Clerk's real key in both newline forms; it is RSA 2048 with exponent 65537.
 - **Built in #1458,** with item 3, whose detector it extends; the production key follows its promotion. The owner asked on 2026-10-10 for this to be fixed now or soon. Asked about the production setting itself, the owner left it to engineering judgment the same day, since the service is pre-revenue with no live users: the cheapest time to change sign-in.
@@ -167,3 +167,5 @@ Criteria to meet before closing: each item shipped with red-first tests, or left
 
 - BUG-323: the request limits this builds on.
 - DEBT-502 item 4: where item 1 was first recorded.
+
+Corrected 2026-10-19: update script paths after the non-content family moves in DEBT-532; behavior and remaining checks are unchanged.

@@ -50,7 +50,7 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 - `pnpm db:seed:prod --plan` prints only the target database (`scripts/seed-environment-targets.ts:100-103`). There is no content preview.
 
   *Corrected 2026-10-19: removed the extra pnpm separator, which the entry point rejects before showing the plan.*
-- The production seed imports `content/drafts/questions` with `--status published` (`scripts/prepare-seed-corpus.ts:24`, `scripts/import-draft-questions.ts:20`). That folder is untracked, and a manual copy refreshes it.
+- The production seed imports `content/drafts/questions` with `--status published` (`scripts/prepare-seed-corpus.ts:24`, `scripts/import-draft-questions.ts:19`). That folder is untracked, and a manual copy refreshes it.
 - `pnpm db:seed` reads the configured MDX corpus under `content/questions/` without importing drafts; `imported/` is part of that corpus. Its remote-target acknowledgment is a separate protection from content freshness.
 - Each question is its own transaction, so a refusal partway through a run leaves the earlier questions written.
 - The checked-in CI seed uses its test database, the Vercel build runs migrations, and `db:seed:all` excludes its resolved production target. This does not prove which commands or direct SQL have run on production. Supported release activation, rollback, holds and withdrawals also change content availability; they must participate in the publication boundary below.
@@ -65,7 +65,7 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 - `components/question/question-update-notice.tsx`, `components/question/ungraded-review.ts` and `components/question/feedback-ungraded.tsx:138-143` hold the notices, the labels and the withheld explanation.
 - `src/adapters/repositories/drizzle-practice-session-repository.ts:624-639`: a session binds each question's revision when it starts.
 
-**Corrected 2026-10-19:** the content-pipeline guide now distinguishes the bare seed, the managed seed's automatic draft import, and commit-bound release staging. The earlier claim that drafts were decoupled until a manual import contradicted `prepare-seed-corpus.ts:24` and `import-draft-questions.ts:20`.
+**Corrected 2026-10-19:** the content-pipeline guide now distinguishes the bare seed, the managed seed's automatic draft import, and commit-bound release staging. The earlier claim that drafts were decoupled until a manual import contradicted `prepare-seed-corpus.ts:24` and `import-draft-questions.ts:19`.
 
 **Exposure**, independently remeasured on 2026-10-17 using the app importer/parser and counts only. Historical trees were read with `git archive` in disposable scratch directories; no content-repository files were changed.
 - **The four named app clones:** `naltrexone-university`, `-1`, `-2` and `-3`. Each has 948 valid draft questions and 948 valid imported questions. Their answer keys match the content repository's pinned `main` snapshot. The draft content matches the March development snapshot; one non-key question change separates it from that pinned snapshot. This proves agreement with that source, **not** agreement with the unqueried production database.
@@ -187,3 +187,5 @@ The strict authoring schema has no publication status (`scripts/draft-question-i
 - DEBT-446 (closed): parked Part 3b, whose scope this record takes.
 - DEBT-492 (closed): the builder's revert refusal.
 - ADR-021 and ADR-022 Decision 4: revisions, releases and key correction.
+
+Corrected 2026-10-19: refresh the importer input citation and record the corrected guide; source admission and the owner live-key check remain open.

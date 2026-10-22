@@ -232,7 +232,7 @@ The same probe confirmed Endive's Checkout change against the API itself. A setu
    - The response holds the signing secret. Under `umask 077`, extract the `secret` field alone into a private file (`jq -j .secret`). Never print it.
    - Don't create the endpoint through a tool that prints its response into a transcript, such as the Stripe MCP write tool. Use the Stripe CLI with a live key, or the Dashboard.
 3. `vercel env add STRIPE_WEBHOOK_SECRET_NEXT production --sensitive < "$SECRET_FILE"`. Production's variables are sensitive and cannot be pulled back to compare, so step 6's probe is the check.
-4. After `git fetch`, merge the promotion with `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge`. Its production deployment carries the pin and both secrets. Vercel holds the alias until `main`'s CI passes.
+4. After `git fetch`, merge the promotion with `pnpm pr:verify-promotion <PR> --merge`. Its production deployment carries the pin and both secrets. Vercel holds the alias until `main`'s CI passes.
 5. Once a production deployment of the promotion's merge commit is ready on the production domain and `/api/health` answers 200, enable the new endpoint.
 6. Verify with a live probe event: a subscription-mode Checkout Session created and expired through the API, as on 2026-10-11. Both endpoints must acknowledge it, so it ends with `pending_webhooks: 0`. If it doesn't, disable the new endpoint again: production is still served by the old one.
 7. After at least a week of overlap, contract:
