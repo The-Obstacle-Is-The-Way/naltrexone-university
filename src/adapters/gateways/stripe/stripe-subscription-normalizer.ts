@@ -17,6 +17,7 @@ import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
+import type { StripeCallBudget } from './stripe-call-budget';
 import { stripeSubscriptionEndsByPeriodEnd } from './stripe-cancellation';
 import { callStripeWithRetry } from './stripe-retry';
 import { stripeSubscriptionStatusToSubscriptionStatus } from './stripe-subscription-status';
@@ -125,6 +126,7 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
   event: { id: string; type: string };
   priceIds: StripePriceIds;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   webhookE2EOwner?: string | undefined;
 }): Promise<NonNullable<WebhookEventResult['subscriptionUpdate']>> {
   const stripeSubscriptionId =
@@ -141,6 +143,7 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
         operation: 'subscriptions.retrieve',
         fn: () => stripeSubscriptions.retrieve(stripeSubscriptionId),
         logger: input.logger,
+        budget: input.budget,
       });
     } catch (error) {
       if (isApplicationError(error)) {

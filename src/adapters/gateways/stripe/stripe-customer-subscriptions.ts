@@ -3,6 +3,7 @@ import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { SubscriptionObservation } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { StripeCallBudget } from './stripe-call-budget';
 import {
   getBlockingSubscriptionStatus,
   SUBSCRIPTION_LIST_LIMIT,
@@ -32,6 +33,7 @@ export async function listStripeBlockingCustomerSubscriptions(input: {
   externalCustomerId: string;
   priceIds: StripePriceIds;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   webhookE2EOwner?: string | undefined;
 }): Promise<SubscriptionObservation[]> {
   const { subscriptions } = input.stripe;
@@ -44,6 +46,7 @@ export async function listStripeBlockingCustomerSubscriptions(input: {
         limit: SUBSCRIPTION_LIST_LIMIT,
       }),
     logger: input.logger,
+    budget: input.budget,
   });
 
   const observations: SubscriptionObservation[] = [];
@@ -57,6 +60,7 @@ export async function listStripeBlockingCustomerSubscriptions(input: {
       event: SYNC_SOURCE,
       priceIds: input.priceIds,
       logger: input.logger,
+      budget: input.budget,
       webhookE2EOwner: input.webhookE2EOwner,
     });
     if (observation.externalCustomerId !== input.externalCustomerId) {
