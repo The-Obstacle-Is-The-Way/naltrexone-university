@@ -53,6 +53,8 @@ describe('raw error log source scan', () => {
       describe(error.message);
       function label(error): string { logger.debug({ errorCode: error.code }); return 'failed'; }
       label(error.message);
+      async function persistFailure(deps, error): Promise<void> { deps.logger.error({ error: projectSafeErrorDiagnostics(error) }, 'Failed'); }
+      try { work(); } catch (failure) { persistFailure(deps, failure); }
       logger.warn({ errorCode: error.code.toUpperCase(), safe: projectSafeErrorDiagnostics(error).name?.trim() });
     `,
         },

@@ -70,6 +70,10 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
     // A logging boundary is a local function that logs and returns nothing:
     // annotated `void`, or unannotated with no `return <value>`, or an arrow
     // whose body is the log call. A helper that logs and returns is not one.
+    // Nor is an async helper annotated `Promise<void>`: the webhook and
+    // idempotency failure helpers take the raw error and project it before
+    // they log, and telling them from a forwarding wrapper needs per-argument
+    // flow, which this scan does not trace.
     function isLoggingWrapper(
       fn: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression,
       seen: Set<ts.Node>,
