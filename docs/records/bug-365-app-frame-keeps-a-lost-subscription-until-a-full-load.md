@@ -1,6 +1,6 @@
 # BUG-365: The App Frame Keeps a Lost Subscription Until a Full Load
 
-**Status:** In Progress — every app page runs the subscription gate; reproduce the Billing observation with request capture
+**Status:** In Progress — the client-loaded practice and question pages still show the refusal; reproduce the Billing observation with request capture
 **Priority:** P3
 **Date:** 2026-10-22
 
@@ -49,11 +49,14 @@ The code, read against Next 16.4.1:
 
 ## Resolution (decided)
 
-Option 1, chosen by the owner on 2026-10-22. It is implemented by checking close to the data, at each page:
-- **Every page runs the gate.** Each page under `/app` runs the same subscription gate as the layout before it loads data. A learner without entitlement who navigates in the app is redirected to `/pricing` with the entitlement's reason.
-- **A full load costs nothing extra.** The layout and the page share one memoized entitlement read per request.
-- **A source scan keeps the gate in place:** it fails when an app page does not call it.
-- **What remains.** An action that fails inside a page already on screen still shows the controllers' refusal until the next navigation. That is a rarer case than navigating, and it does not expose data.
+Option 1, chosen by the owner on 2026-10-22.
+- **Server-rendered pages redirect.** When a data check returns `UNSUBSCRIBED`, the page redirects to `/pricing?reason=subscription_required`, through one helper (`app/(app)/app/shared/redirect-if-unsubscribed.ts`). This covers the dashboard, bookmarks and history, whose server render runs on every client navigation.
+  - Pricing states the reason from the learner's own entitlement, not from the URL: a trial that never started, an ended trial, or an inactive subscription.
+  - Rule R2 names the proving tests.
+- **Rejected during implementation: running the layout's gate in every page.** It would have needed an own-code module mock in most page tests, against the repository's test-double rules, and the data checks already carry the answer.
+- **What remains.** The practice session, question and practice-start pages load their data in the browser through server actions. There, a refusal still shows as an error until the next navigation.
+  - The next step is a shared client helper that makes a full-page navigation to Pricing on `UNSUBSCRIBED`.
+  - Server actions cannot redirect from `src/adapters` without importing Next.js into the adapter layer.
 
 ## Verification
 
@@ -63,7 +66,8 @@ Option 1, chosen by the owner on 2026-10-22. It is implemented by checking close
   3. Repeat with back and forward: Cache Components preserves routes there with `<Activity>`.
 
   If step 2 renders both the banner and "Canceled", the explanation above fails: capture the Vercel runtime logs and the row's `updated_at`.
-- [ ] Red test first: each app page redirects a learner without entitlement to `/pricing` with the reason, and the source scan fails for a page that does not call the gate.
+- [x] Red first: the helper and the dashboard, bookmarks and history pages redirect a learner whose data check returns `UNSUBSCRIBED` to Pricing. Removing the call fails each test.
+- [ ] Client-loaded pages: the practice session, question and practice-start pages navigate to Pricing on `UNSUBSCRIBED`.
 - [ ] Dev preview: lose entitlement with a tab open, navigate in the app, and land on Pricing.
 
 ## Related

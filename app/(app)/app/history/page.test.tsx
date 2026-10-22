@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+
+import { redirect } from 'next/navigation';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { toQuestionRoute } from '@/lib/routes';
@@ -55,6 +57,7 @@ vi.mock('next/link', () => ({
 }));
 
 vi.mock('next/navigation', () => ({
+  redirect: vi.fn(),
   useRouter: () => ({ push: vi.fn() }),
 }));
 
@@ -86,6 +89,29 @@ describe('app/(app)/app/history/page', () => {
     expect(getTabLinkAriaCurrent(html, 'Questions')).toBeNull();
     expect(getSessionHistoryFn).toHaveBeenCalledWith({ limit: 20, offset: 0 });
   });
+
+  // BUG-365: client navigation keeps the layout, so its gate does not rerun.
+  it.each(['sessions', 'questions'])(
+    'sends a learner without a subscription on the %s tab to Pricing',
+    async (tab) => {
+      const unsubscribed = async (_input: unknown) =>
+        ({
+          ok: false,
+          error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
+        }) as const;
+      const HistoryPage = createHistoryPage({
+        getSessionHistoryFn: unsubscribed,
+        getAttemptedQuestionsFn: unsubscribed,
+        getTagsFn: unsubscribed,
+      });
+
+      await HistoryPage({ searchParams: Promise.resolve({ tab }) });
+
+      expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+        '/pricing?reason=subscription_required',
+      );
+    },
+  );
 
   it('passes sessions mode filter to session history fetch when mode is provided', async () => {
     const output: GetSessionHistoryOutput = {

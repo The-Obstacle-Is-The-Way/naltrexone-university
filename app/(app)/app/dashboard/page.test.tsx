@@ -746,4 +746,26 @@ describe('app/(app)/app/dashboard', () => {
       false,
     );
   });
+
+  // BUG-365: client navigation keeps the layout, so its gate does not rerun.
+  it('sends a learner without a subscription to Pricing instead of a bare refusal', () => {
+    expect(() =>
+      renderDashboard({
+        statsResult: {
+          ok: false,
+          error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
+        },
+        sessionHistoryResult: {
+          ok: false,
+          error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
+        },
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        digest: expect.stringContaining(
+          ';/pricing?reason=subscription_required;',
+        ),
+      }),
+    );
+  });
 });

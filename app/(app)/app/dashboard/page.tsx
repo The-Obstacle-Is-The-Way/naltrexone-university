@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { isResultNotScored } from '@/app/(app)/app/shared/components/review-navigator-utils';
+import { redirectIfUnsubscribed } from '@/app/(app)/app/shared/redirect-if-unsubscribed';
 import { ErrorCard } from '@/components/error-card';
 import {
   questionAvailabilityHeading,
@@ -320,6 +321,7 @@ export function renderDashboard({
   statsResult: ActionResult<UserStatsOutput>;
   sessionHistoryResult: ActionResult<GetSessionHistoryOutput>;
 }) {
+  redirectIfUnsubscribed([statsResult, sessionHistoryResult]);
   if (!statsResult.ok) {
     return (
       <div className="space-y-6">
