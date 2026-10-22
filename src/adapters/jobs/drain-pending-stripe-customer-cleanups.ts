@@ -1,3 +1,4 @@
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { Logger } from '@/src/application/ports/logger';
 import type { PendingStripeCustomerCleanupRepository } from '@/src/application/ports/repositories';
 
@@ -112,7 +113,7 @@ export async function drainPendingStripeCustomerCleanups(
         failures.push({ eventId: row.eventId, error: message });
         failedEventIds.push(row.eventId);
         deps.logger.error(
-          { eventId: row.eventId, error: message },
+          { eventId: row.eventId, error: projectSafeErrorDiagnostics(error) },
           'Pending Stripe customer cleanup drain failed',
         );
       }

@@ -23,6 +23,7 @@ import {
 } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
 import { sentryEnvironmentFor } from '@/lib/sentry-data-collection';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 
@@ -215,7 +216,7 @@ function configuredClerkJwtKey(): string | undefined {
   } catch (error) {
     console.error({
       event: 'clerk_jwt_key_unreadable',
-      reason: error instanceof Error ? error.message : 'unknown',
+      reason: projectSafeErrorDiagnostics(error),
     });
     return undefined;
   }

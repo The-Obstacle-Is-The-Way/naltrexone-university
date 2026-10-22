@@ -1,6 +1,6 @@
 # ADR-018: Resilience Patterns (Retry and Backoff)
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-18 and 2026-10-19 (shared Stripe transport limits, caller deadlines and safe retry diagnostics)
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-005 (Payment Boundary), ADR-006 (Error Handling Strategy)
@@ -143,3 +143,40 @@ Internal errors (database constraint violations, validation errors, domain error
 - ADR-005 (Payment Boundary) — Stripe isolation at adapter layer
 - ADR-006 (Error Handling Strategy) — Error classification and propagation
 - ADR-008 (Logging & Observability) — Structured logging for retry events
+
+## Amendment — 2026-10-18: shared Stripe transport limits
+
+Decided for DEBT-527's first step.
+
+The shared client in `lib/stripe-client.ts`, used by `getStripe`, uses the SDK's fetch client. Its ten-second timeout stays armed through the response body and aborts the transport. The default Node client's socket-idle timeout did not bound a continuously trickling body.
+
+The SDK gets one network retry. This retains one recovery for a connection failure, a 409, or `stripe-should-retry: true`. The SDK honors `stripe-should-retry: false`; the existing outer wrapper still applies its own transient-status classifier. A closed connection can also trigger the SDK's first retry, but does not add a third HTTP attempt.
+
+The timeout is a backstop against a hang, not a latency target. A try cut off while Stripe is still processing it fails even if Stripe completes it, and its retry with the same key meets a 409 while the first is in flight; so a short limit turns a slow success on the payment path into an error. Ten seconds sits well above Stripe's normal latency. A call that times out before headers ends after two tries and one 500-ms SDK delay, 20.5 seconds, inside the 30-second request limit; the outer wrapper does not retry a timeout (next paragraph). Repeated retryable 5xx responses, which both layers retry, can reach six HTTP attempts; the outer classifier does not retry a 409, so it reaches two. This is not a caller deadline: it does not cover sequential calls or per-request overrides. Tighten the limit only from measured Stripe latency. The reconciliation path keeps its five-second timeout and one SDK retry.
+
+A timeout before headers can use the SDK retry. A timeout or cut-off body after headers becomes `StripeConnectionError` after the SDK's retry decision. That error has no top-level code or status, so the unchanged outer retry predicate does not retry it; the outage classifier still counts it. A lost write response remains indeterminate. Callers retain their idempotency keys and recovery policies.
+
+
+## Amendment — 2026-10-19: Stripe caller deadlines and one retry owner
+
+Interactive and webhook Stripe work shares one monotonic 25-second deadline per request, leaving five seconds of the 30-second request limit for persistence and the response. Sequential provider calls consume the same budget. The per-attempt limit remains ten seconds; each attempt uses the smaller of that limit and the remaining caller time.
+
+The budgeted transport owns at most one retry, after a 500-ms backoff. It honors the provider's retry header, retries a connection failure or a 409, 429 or 5xx response when allowed, and starts neither an attempt nor backoff after exhaustion. It declines a backoff that cannot fit. A retryable response body is canceled before waiting. The fetch transport aborts in-flight work, including a response body that keeps trickling.
+
+The SDK has zero configured retries on this path, and the adapter wrapper adds none. Positive per-request SDK retry overrides are not permitted on budgeted clients. The SDK's exceptional closed-connection retry must not add another attempt after the transport has exhausted its retry; the original transport error remains available as the cause.
+
+Transport retries retain warning logs with the HTTP method and resource family, attempt count, delay, status and projected diagnostics. They exclude path identifiers, query values and raw error messages. Logging failure must not prevent provider recovery.
+
+The checkout-success path uses the shared adapter wrapper and circuit breaker. A budget already exhausted before a call is refused before the breaker, without counting a new provider outage. An attempted provider call that ends in an outage still counts, with one exception. A connection failure the caller's own deadline caused counts neither as an outage nor as a success: the deadline gave the call's first attempt less than the attempt limit, or refused an attempt or the retry's backoff, and less than one backoff of the caller's time remains. Such a failure says nothing about Stripe's health; if it is a half-open probe, the next call probes. A call whose first attempt had the full limit counts as before.
+
+A deadline or lost response does not prove that Stripe refused a write. It remains an unknown outcome, with the same idempotency key and existing recovery path. A later request receives a new caller budget; a write whose idempotency key the caller derives keeps that key.
+
+The reconciliation cron retains its separate policy. Unbudgeted clients retain the shared ten-second attempt limit, one SDK retry, and the existing outer retry classifier. Only a pre-header timeout can use both SDK attempts and the backoff; a body timeout ends after one attempt.
+
+## Amendment — 2026-10-19: Safe retry diagnostics
+
+Section 4's error context no longer includes the raw message. Retry events still retain their operation, attempt, maximum attempts and delay. Error diagnostics use the shared projection, including preserved causes, and omit messages, stacks and response bodies.
+
+The vendor allow-list retains Stripe error types `StripeError`, `StripeAPIError`, `StripeConnectionError`, `StripeAuthenticationError`, `StripePermissionError`, `StripeRateLimitError`, `StripeInvalidRequestError`, `StripeCardError`, `StripeIdempotencyError` and `StripeSignatureVerificationError`. It retains codes `resource_missing`, `rate_limit`, `idempotency_key_in_use`, `parameter_missing`, `parameter_invalid_integer`, `parameter_unknown`, `api_key_expired` and `card_declined`. Other vendor strings are omitted.
+
+Network codes are limited to `ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`, `ENOTFOUND`, `ECONNREFUSED`, `EHOSTUNREACH` and `EPIPE`. Request IDs must start with `req_` followed by 1–128 alphanumeric characters. HTTP failure status is an integer from 400 through 599. These fields are diagnostic metadata; they do not alter retry eligibility, circuit-breaker decisions or idempotent replay.

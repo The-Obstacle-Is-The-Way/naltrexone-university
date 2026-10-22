@@ -1,3 +1,8 @@
+import { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
+import {
+  type StripeRequestClient,
+  stripeRequestClient,
+} from '@/src/adapters/gateways/stripe/stripe-request-client';
 import 'server-only';
 import { NobleSha256Hasher } from '@/src/adapters/gateways';
 import { alertWhenClerkRefuses } from '@/src/adapters/gateways/clerk-refusal-alert';
@@ -17,6 +22,7 @@ import { db } from './db';
 import { env } from './env';
 import { logger } from './logger';
 import { getStripe } from './stripe';
+import { createStripeClient } from './stripe-client';
 
 export type {
   ContainerOverrides,
@@ -41,6 +47,7 @@ export function createContainerPrimitives(
     env,
     logger,
     getStripe,
+    stripeBudget: undefined,
     now: () => new Date(),
     sha256Hasher: new NobleSha256Hasher(),
     ...overrides,
@@ -138,4 +145,29 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     ...useCases,
     ...controllers,
   } as const;
+}
+
+/** A fresh deadline and client per HTTP request; cron keeps its own policy. */
+export function createRequestContainer(overrides: ContainerOverrides = {}) {
+  const stripeBudget =
+    overrides.primitives?.stripeBudget ?? new StripeCallBudget();
+  const makeStripe =
+    overrides.primitives?.getStripe ??
+    (() =>
+      createStripeClient(
+        (overrides.primitives?.env ?? env).STRIPE_SECRET_KEY,
+        {},
+        undefined,
+        stripeBudget,
+        overrides.primitives?.logger ?? logger,
+      ));
+  let stripe: StripeRequestClient | undefined;
+  return createContainer({
+    ...overrides,
+    primitives: {
+      ...overrides.primitives,
+      stripeBudget,
+      getStripe: () => (stripe ??= stripeRequestClient(makeStripe())),
+    },
+  });
 }

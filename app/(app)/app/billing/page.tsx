@@ -41,8 +41,8 @@ export type BillingPageDeps = {
 async function getDeps(deps?: BillingPageDeps): Promise<BillingPageDeps> {
   if (deps) return deps;
 
-  const { createContainer } = await import('@/lib/container');
-  const container = createContainer();
+  const { createRequestContainer } = await import('@/lib/container');
+  const container = createRequestContainer();
 
   return {
     authGateway: container.createAuthGateway(),

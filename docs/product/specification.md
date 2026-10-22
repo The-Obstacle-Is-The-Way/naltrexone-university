@@ -1630,8 +1630,9 @@ No “exact” schema is duplicated here.
 The entry point is [scripts/seed.ts](../../scripts/seed.ts), invoked with
 `pnpm db:seed` (through [scripts/db-seed.ts](../../scripts/db-seed.ts), which
 enforces the target guard) under the [database-target safety procedure](../architecture/environments.md).
-Target selection and acknowledgement are mandatory; a content update does not
-authorize a different database.
+An explicit target is mandatory; human commands also require acknowledgment
+for remote targets. Local and managed entry points have their own authorization
+contracts. A content update does not authorize a different database.
 
 - [question-parser.ts](../../scripts/seed/question-parser.ts) parses each file
   into its canonical representation: the question's fields, its ordered choices
@@ -1770,7 +1771,7 @@ import { db } from '@/lib/db';  // ERROR! Domain cannot import frameworks
 
 1. **Server Actions are Controllers** — Controllers live in `src/adapters/controllers/` as `server-only` `*-controller.ts` modules, NOT in `app/_actions/`. The actions a browser calls are one-parameter `'use server'` wrappers: `*-actions.ts` beside the controllers, or beside the route for a form action (e.g. `app/pricing/subscribe-actions.ts`) (BUG-324)
 2. **Composition Root** — All dependency wiring in `lib/container.ts`, `lib/container/**` and `lib/controller-helpers.ts`
-3. **Domain has ZERO imports** — No framework code, no database, no external services
+3. **Domain has no external dependencies** — Relative imports within the domain are allowed; no framework, database or external-service imports
 4. **Unit tests colocated** — `*.test.ts(x)` next to their source
 5. **Integration/E2E centralized** — In `/tests/` directory
 
@@ -1778,7 +1779,7 @@ import { db } from '@/lib/db';  // ERROR! Domain cannot import frameworks
 
 ## 7. Vertical Slice Specifications
 
-These slices are the original build plan, kept as history. They were corrected where they would mislead about today's system; §4, the code and the rest of `docs/product/` describe current behaviour.
+These slices are the original build plan, kept as history. They were corrected where they would mislead about today's system; §4, the code and the rest of `docs/product/` describe current behavior.
 
 ### SLICE-0: Foundation
 
@@ -1802,10 +1803,10 @@ As a user, I can load the site, sign up/sign in, and access the deployed app so 
 
 1. Create Next.js 16+ app with App Router and TypeScript strict mode.
    Next.js 16 requires Node.js 20.9+ and TypeScript 5.1+. ([Next.js][3])
-2. **Use pnpm as the package manager.** pnpm provides better dependency isolation (prevents phantom dependencies), uses 70% less disk space than npm, and is 3x faster. Remove any `package-lock.json` and use only `pnpm-lock.yaml`.
+2. **Use pnpm as the package manager.** The repository uses pnpm's dependency layout and lockfile; no repository benchmark establishes a disk-space or speed multiplier. Remove any `package-lock.json` and use only `pnpm-lock.yaml`.
 3. Install Tailwind CSS v4 and configure PostCSS using `@tailwindcss/postcss`; add `@import "tailwindcss";` to `app/globals.css`. ([Tailwind CSS][4])
 4. Install shadcn/ui and generate required base components (Button, Card, Badge, Dialog, Tabs, DropdownMenu, Separator).
-5. **Install Biome for linting and formatting.** Biome is 10-100x faster than ESLint+Prettier and provides both linting and formatting in a single tool with one config file (`biome.json`). Next.js 16 removed `next lint`, so Biome is the modern replacement. ([Biome][9])
+5. **Install Biome for linting and formatting.** Biome provides linting and formatting with one config file (`biome.json`); no repository speed multiplier is asserted. Next.js 16 removed `next lint`, so Biome is the modern replacement. ([Biome][9])
 6. Install Drizzle ORM + drizzle-kit and configure migrations output to `/db/migrations`.
 7. Add Neon Postgres connection via `DATABASE_URL`.
 8. Add Clerk integration:
@@ -2181,31 +2182,11 @@ it('returns isCorrect=true when correct choice selected', () => {
 
 **Example Use Case Test (with Fakes):**
 
-```typescript
-// src/application/use-cases/submit-answer-standalone.test.ts
-import { SubmitAnswerUseCase } from './submit-answer';
-import {
-  FakeAttemptRepository,
-  FakeLogger,
-  FakePracticeSessionRepository,
-  FakeQuestionRepository,
-} from '../test-helpers/fakes';
+See the executable example in
+[`submit-answer-standalone.test.ts`](../../src/application/use-cases/submit-answer-standalone.test.ts),
+which builds a published question with matching choice IDs, injects the fake
+repositories, submits the answer and checks the resulting attempt.
 
-it('records attempt when answer submitted', async () => {
-  const questionRepo = new FakeQuestionRepository([question]);
-  const attemptRepo = new FakeAttemptRepository();
-  const useCase = new SubmitAnswerUseCase(
-    questionRepo,
-    attemptRepo,
-    new FakePracticeSessionRepository(),
-    new FakeLogger(),
-  );
-
-  await useCase.execute({ userId: 'u1', questionId: 'q1', choiceId: 'c1' });
-
-  expect(attemptRepo.getAll()).toHaveLength(1);
-});
-```
 
 ### 8.2 Integration Tests (Vitest + real Postgres)
 
@@ -2413,7 +2394,7 @@ This list records the original build order. Today's release procedure is the [de
 8. Implement Stripe webhook endpoint and set `STRIPE_WEBHOOK_SECRET`.
 9. Implement pricing + checkout + success sync.
 10. Implement subscription gate for `/app/*`.
-11. Add seed script + placeholder questions (seeded only with `SEED_INCLUDE_PLACEHOLDERS=true`, as CI does); run `pnpm db:seed` against preview/prod by hand, with an explicit `DATABASE_URL` and `DB_TARGET_ACK`, after each content change (deploys do not seed).
+11. Add seed script + placeholder questions (seeded only with `--include-placeholders`, as CI does); before an active release exists, run `pnpm db:seed` against preview/prod by hand with an explicit `DATABASE_URL` and `DB_TARGET_ACK`; after bootstrap use reviewed releases (deploys do not seed).
 12. Add GitHub Actions workflow and ensure green on PR.
 13. Connect repo to Vercel:
 

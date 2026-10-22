@@ -1,4 +1,5 @@
-import postgres from 'postgres';
+import type postgres from 'postgres';
+import { connectE2EDatabase } from './e2e-database-target';
 import {
   appendNonSecretCause,
   createSharedE2EResetSupport,
@@ -34,7 +35,7 @@ const REQUIRED_ENV_VARS: readonly SharedRequiredEnvVar[] = [
     key: 'DATABASE_URL',
     code: 'E2E_RESET:DATABASE_URL_MISSING',
     message: 'DATABASE_URL is missing.',
-    fix: 'Set DATABASE_URL in .env.local (dev) or repository secrets (CI).',
+    fix: "Run E2E through pnpm test:e2e, which supplies this clone's local database; CI sets DATABASE_URL in its workflow.",
   },
   {
     key: 'E2E_CLERK_USER_USERNAME',
@@ -199,7 +200,7 @@ const defaultServices: E2EUserStateResetServices = {
         throw new E2EUserStateResetError(
           'E2E_RESET:PLACEHOLDER_FIXTURES_MISSING',
           'Required placeholder question fixtures were not found in the active database.',
-          `Run SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed and ensure ${REQUIRED_QUESTION_SLUGS.placeholder01} and ${REQUIRED_QUESTION_SLUGS.placeholder02} exist.`,
+          `Seed a local test database with pnpm db:seed --include-placeholders so that ${REQUIRED_QUESTION_SLUGS.placeholder01} and ${REQUIRED_QUESTION_SLUGS.placeholder02} exist. Never add them to production.`,
         );
       }
 
@@ -640,7 +641,7 @@ export async function runE2EUserStateReset(
 
   const { databaseUrl, clerkEmail } =
     sharedResetSupport.requireResolvedEnvOrThrow(resolvedEnv);
-  const sql = postgres(databaseUrl, { max: 1 });
+  const sql = connectE2EDatabase(databaseUrl, env);
 
   try {
     await services.ensurePlaceholderQuestionsPublished({ databaseUrl, sql });

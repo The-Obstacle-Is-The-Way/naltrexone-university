@@ -1,6 +1,6 @@
 # BUG-350: The Billing Page States a Scheduled Cancellation as a UTC Date, a Day Late for a US Evening
 
-**Status:** Verifying — billing and email share the explicit cutoff formatter; promotion to main remains, due 2026-10-21
+**Status:** Verifying — billing and email share the explicit cutoff formatter; promotion to main remains, due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -41,7 +41,7 @@ Option 1: the billing page calls F06's existing formatter directly. Six page cas
 - [x] The billing page states a scheduled cancellation with F06's formatter.
 - [x] The billing page and email formatter agree on explicit UTC, Eastern and Pacific cutoff times, including daylight saving boundaries.
 - [x] No other page formats a billing cutoff in UTC alone. The other page-level trial display is a relative days-left banner; Checkout success uses the period end to decide access, not as a displayed date.
-- [ ] Promote to `main`; due 2026-10-21.
+- [ ] Promote to `main`; due 2026-10-26. *Re-dated 2026-10-22 from 2026-10-21:* the pull request was still waiting for review. Its promotion needs the billing-and-entitlement QA, since the Billing page changes.
 
 ## Related
 

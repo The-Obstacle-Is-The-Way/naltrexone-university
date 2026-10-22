@@ -309,7 +309,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
     });
     expect(logger.errorCalls).toEqual([
       {
-        context: { eventId: 'evt_stale', error: 'stripe outage' },
+        context: { eventId: 'evt_stale', error: { name: 'Error' } },
         msg: 'Pending Stripe customer cleanup drain failed',
       },
     ]);

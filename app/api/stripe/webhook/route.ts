@@ -1,4 +1,4 @@
-import { createContainer } from '@/lib/container';
+import { createRequestContainer } from '@/lib/container';
 import { createRequestContext, getRequestLogger } from '@/lib/request-context';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { createWebhookHandler } from './handler';
@@ -8,5 +8,5 @@ export const maxDuration = 30;
 export const POST = createWebhookHandler(() => {
   const ctx = createRequestContext();
   const logger = getRequestLogger(ctx);
-  return createContainer({ primitives: { logger } });
+  return createRequestContainer({ primitives: { logger } });
 }, processStripeWebhook);
