@@ -194,7 +194,6 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/api/webhooks/clerk/route.test.ts', 2],
   ['app/pricing/page-actions.test.tsx', 3],
   ['app/pricing/page.test.tsx', 3],
-  ['lib/logger.test.ts', 1],
   ['src/adapters/controllers/question-view-controller.test.ts', 1],
   [
     'src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment.ts',
