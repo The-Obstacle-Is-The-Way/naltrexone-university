@@ -1,8 +1,9 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+import { test } from './helpers/clerk-auth-test';
 import {
   expectVerdictPillVisible,
   selectChoiceByLabel,
