@@ -33,7 +33,7 @@ From any clone, run this read-only probe with a fixed long-path fixture. The
 fixture directory need not exist; the resolver only uses the path string:
 
 ```bash
-pnpm exec tsx -e "import {resolveLocalTestTarget,createLocalTestTargetEnv} from './scripts/resolve-local-test-target';const cwd='/tmp/naltrexone-university-external-audit-20261006';const a=resolveLocalTestTarget({env:{},cwd});const b=resolveLocalTestTarget({env:createLocalTestTargetEnv(a),cwd});console.log(JSON.stringify({firstLength:a.instanceId.length,secondLength:b.instanceId.length,sameInstance:a.instanceId===b.instanceId,sameProject:a.composeProjectName===b.composeProjectName,samePort:a.dbPort===b.dbPort}));"
+pnpm exec tsx -e "import {resolveLocalTestTarget,createLocalTestTargetEnv} from './scripts/test-lanes/resolve-local-test-target';const cwd='/tmp/naltrexone-university-external-audit-20261006';const a=resolveLocalTestTarget({env:{},cwd});const b=resolveLocalTestTarget({env:createLocalTestTargetEnv(a),cwd});console.log(JSON.stringify({firstLength:a.instanceId.length,secondLength:b.instanceId.length,sameInstance:a.instanceId===b.instanceId,sameProject:a.composeProjectName===b.composeProjectName,samePort:a.dbPort===b.dbPort}));"
 ```
 
 Output: `firstLength=54`, `secondLength=48`, `sameInstance=false`,
@@ -79,3 +79,5 @@ ports through the existing script. This is a local workaround, not a shipped fix
 
 - [Testing infrastructure](../guides/testing/e2e-tests.md).
 - AUDIT-014, the external record audit.
+
+Corrected 2026-10-19: update the executable reproduction import after DEBT-532 moved test-lane files; the cited baseline and E2E defect remain unchanged.

@@ -231,6 +231,14 @@ export function runAttemptScoreContract(
   describe(`${adapterName} attempt score contract`, () => {
     it.each(scenarios)(
       '$name',
+      {
+        meta: {
+          ruleProof: {
+            file: 'tests/shared/attempt-score-contract.ts',
+            title: '$name',
+          },
+        },
+      },
       async ({ attempts, sinceDaysAgo, expected }) => {
         const { repository, userId, now } = await (await createHarness()).seed(
           attempts,

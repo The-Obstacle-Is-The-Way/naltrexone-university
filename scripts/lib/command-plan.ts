@@ -1,13 +1,8 @@
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
-import {
-  createLocalTestTargetEnv,
-  isTruthyEnvFlag,
-  resolveLocalTestTarget,
-} from './resolve-local-test-target';
 
-export type E2ECommandEnv = Readonly<Record<string, string | undefined>>;
+export type CommandEnv = Readonly<Record<string, string | undefined>>;
 
-export type E2ECommandStep = {
+export type CommandStep = {
   label: string;
   command: string;
   args: string[];
@@ -15,136 +10,20 @@ export type E2ECommandStep = {
   omitInheritedEnv?: string[];
 };
 
-export type E2ECommandInvocation = {
+export type CommandInvocation = {
   label: string;
   command: string;
   args: string[];
-  env: E2ECommandEnv;
-};
-
-type CreateE2ECommandPlanInput = {
-  env?: E2ECommandEnv;
-  cwd?: string;
-  playwrightArgs?: string[];
+  env: CommandEnv;
 };
 
 type RunCommandPlanInput = {
-  env?: E2ECommandEnv;
-  runCommand?: (invocation: E2ECommandInvocation) => Promise<void>;
+  env?: CommandEnv;
+  runCommand?: (invocation: CommandInvocation) => Promise<void>;
 };
 
-export function shouldUseIsolatedLocalE2E(
-  env: E2ECommandEnv = process.env,
-): boolean {
-  return !isTruthyEnvFlag(env.E2E_USE_EXISTING_DATABASE);
-}
-
-export function resolveLocalE2EDatabaseUrl(
-  env: E2ECommandEnv = process.env,
-  cwd: string = process.cwd(),
-): string {
-  return resolveLocalTestTarget({ env, cwd }).databaseUrl;
-}
-
-export function createE2ECommandPlan({
-  env = process.env,
-  cwd = process.cwd(),
-  playwrightArgs = [],
-}: CreateE2ECommandPlanInput = {}): E2ECommandStep[] {
-  if (!shouldUseIsolatedLocalE2E(env)) {
-    assertExistingE2EDatabaseTarget(env);
-    return [
-      {
-        label: 'Run Playwright E2E',
-        command: 'pnpm',
-        args: ['exec', 'playwright', 'test', ...playwrightArgs],
-        env: {
-          E2E_STRIPE_OWNER: localStripeOwner(
-            env,
-            resolveLocalTestTarget({ env, cwd }).instanceId,
-          ),
-        },
-        omitInheritedEnv: ['NO_COLOR'],
-      },
-    ];
-  }
-
-  const target = resolveLocalTestTarget({ env, cwd });
-  const targetEnv = createLocalTestTargetEnv(target);
-  return [
-    {
-      label: 'Start isolated local Docker test database',
-      command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/run-local-test-db.ts', 'up'],
-      env: targetEnv,
-    },
-    {
-      label: 'Migrate isolated local Docker test database',
-      command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/internal/run-managed-db-migrate.ts'],
-      env: targetEnv,
-    },
-    {
-      label: 'Seed isolated local Docker test database',
-      command: 'pnpm',
-      args: [
-        'exec',
-        'tsx',
-        'scripts/internal/run-managed-db-seed.ts',
-        '--include-placeholders',
-      ],
-      env: targetEnv,
-    },
-    {
-      label: 'Run Playwright E2E against isolated local test target',
-      command: 'pnpm',
-      args: ['exec', 'playwright', 'test', ...playwrightArgs],
-      env: {
-        ...targetEnv,
-        E2E_STRIPE_OWNER: localStripeOwner(env, target.instanceId),
-      },
-      omitInheritedEnv: ['NO_COLOR'],
-    },
-  ];
-}
-
-// DEBT-508: each clone's runs own one Stripe test customer, named by the
-// instance that also picks the clone's database port, so concurrent clones
-// never change each other's subscriptions. An owner exported in the shell
-// wins (CI and the hosted workflow set theirs there). One in .env.local is
-// ignored: Playwright loads that file afterwards without overriding.
-function localStripeOwner(env: E2ECommandEnv, instanceId: string): string {
-  return env.E2E_STRIPE_OWNER?.trim() || `local-clone-${instanceId}`;
-}
-
-function assertExistingE2EDatabaseTarget(env: E2ECommandEnv): void {
-  const databaseUrl = env.DATABASE_URL?.trim();
-  if (!databaseUrl) {
-    throw new Error(
-      'DATABASE_URL is required when E2E_USE_EXISTING_DATABASE=true.',
-    );
-  }
-
-  let parsed: URL;
-  try {
-    parsed = new URL(databaseUrl);
-  } catch {
-    throw new Error(
-      'DATABASE_URL must be a valid URL when E2E_USE_EXISTING_DATABASE=true.',
-    );
-  }
-
-  const localHosts = new Set(['127.0.0.1', '[::1]', 'localhost']);
-  const allowNonLocal = isTruthyEnvFlag(env.ALLOW_NON_LOCAL_DATABASE_URL);
-  if (!allowNonLocal && !localHosts.has(parsed.hostname)) {
-    throw new Error(
-      `Refusing to run E2E against non-local DATABASE_URL host "${parsed.hostname}". Export ALLOW_NON_LOCAL_DATABASE_URL=true only for an intentional deploy-target check.`,
-    );
-  }
-}
-
 export async function runCommandPlan(
-  plan: E2ECommandStep[],
+  plan: CommandStep[],
   { env = process.env, runCommand = spawnCommand }: RunCommandPlanInput = {},
 ): Promise<void> {
   for (const step of plan) {
@@ -211,11 +90,11 @@ function ownedProcessGroups(rootPid: number): number[] {
 }
 
 export async function spawnCommand(
-  { label, command, args, env }: E2ECommandInvocation,
+  { label, command, args, env }: CommandInvocation,
   signals: ParentSignals = process,
   signalGraceMs = INTERRUPT_GRACE_MS,
 ): Promise<void> {
-  console.log(`[local-e2e] ${label}`);
+  console.log(`[test-lane] ${label}`);
   const childEnv = { ...env } as NodeJS.ProcessEnv;
 
   await new Promise<void>((resolve, reject) => {

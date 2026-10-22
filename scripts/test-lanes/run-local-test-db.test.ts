@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runCommandPlan } from './e2e-local-orchestrator';
+import { runCommandPlan } from '../lib/command-plan';
 import {
   createLocalTestDbCommandPlan,
   runLocalTestDbCommand,
@@ -79,7 +79,7 @@ describe('createLocalTestDbCommandPlan', () => {
 describe('runLocalTestDbCommand', () => {
   it('propagates a failed readiness command without including environment values', async () => {
     const result = runLocalTestDbCommand({
-      argv: ['node', 'scripts/run-local-test-db.ts', 'up'],
+      argv: ['node', 'scripts/test-lanes/run-local-test-db.ts', 'up'],
       env: {
         LOCAL_TEST_INSTANCE: 'readiness',
         PRIVATE_VALUE: 'must-not-appear',
@@ -103,7 +103,7 @@ describe('runLocalTestDbCommand', () => {
     const runPlan = vi.fn(async () => {});
 
     await runLocalTestDbCommand({
-      argv: ['node', 'scripts/run-local-test-db.ts', 'up'],
+      argv: ['node', 'scripts/test-lanes/run-local-test-db.ts', 'up'],
       env: { LOCAL_TEST_INSTANCE: 'dbcli', DB_TEST_PORT: '55438' },
       cwd: '/repo/a',
       runPlan,
@@ -126,7 +126,7 @@ describe('runLocalTestDbCommand', () => {
 
     await expect(
       runLocalTestDbCommand({
-        argv: ['node', 'scripts/run-local-test-db.ts', 'destroy'],
+        argv: ['node', 'scripts/test-lanes/run-local-test-db.ts', 'destroy'],
         env: {},
         cwd: '/repo/a',
         runPlan,

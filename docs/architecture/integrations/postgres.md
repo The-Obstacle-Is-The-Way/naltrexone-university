@@ -138,7 +138,7 @@ target guard. Checked-in CI, Vercel, E2E, and resolver wrappers use the internal
 managed boundary rather than a caller-selectable flag or environment bypass.
 
 For local disposable Postgres, resolve the clone-specific target through
-[`scripts/resolve-local-test-target.ts`](../../../scripts/resolve-local-test-target.ts)
+[`scripts/test-lanes/resolve-local-test-target.ts`](../../../scripts/test-lanes/resolve-local-test-target.ts)
 and follow [Integration Tests](../../guides/testing/integration-tests.md). Never hardcode a
 shared local port. CI pulls Postgres and the transaction-pooler stand-in through
 one bounded registry-failover helper; Compose starts the selected PgBouncer

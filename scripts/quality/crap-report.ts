@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import ts from '@typescript/typescript6';
 import {
   type CoverageMap,
@@ -9,6 +8,7 @@ import {
   type FileCoverageData,
 } from 'istanbul-lib-coverage';
 import { globSync } from 'tinyglobby';
+import { isMain } from '../lib/entry-point.mts';
 
 export type CoverageLane = 'merged' | 'unit' | 'browser' | 'integration';
 
@@ -723,10 +723,8 @@ function escapeTableCell(value: string): string {
   return value.replaceAll('|', '\\|').replaceAll('\n', ' ');
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   process.exitCode = runCrapReportCli();
 }
 /* v8 ignore stop */

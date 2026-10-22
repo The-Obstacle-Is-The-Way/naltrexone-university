@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
-} from '../tests/shared/process-env';
-import { spawnCommand } from './e2e-local-orchestrator';
+} from '../../tests/shared/process-env';
+import { spawnCommand } from './command-plan';
 
 async function withRunningCommand(
   check: (fixture: {

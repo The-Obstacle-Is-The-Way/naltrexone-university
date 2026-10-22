@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { spawnCommand } from './e2e-local-orchestrator';
+import { spawnCommand } from './command-plan';
 
 function alive(pid: number): boolean {
   try {

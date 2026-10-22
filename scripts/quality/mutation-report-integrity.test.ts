@@ -211,7 +211,7 @@ describe('runMutationReportIntegrity', () => {
 
     const stryker = steps.findIndex((step) => step.name === 'Run Stryker');
     expect(steps[stryker + 1]?.run).toBe(
-      'pnpm exec tsx scripts/mutation-report-integrity.ts',
+      'pnpm exec tsx scripts/quality/mutation-report-integrity.ts',
     );
     expect(
       steps.find((step) => step.name === 'Upload mutation report')?.if,

@@ -91,7 +91,7 @@ pnpm content:import:drafts -- --status published
 pnpm db:seed
 
 # Include the placeholder fixtures in this clone's local test database
-DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" pnpm db:seed --include-placeholders
+DATABASE_URL="$(pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts database-url)" pnpm db:seed --include-placeholders
 ```
 
 ## Workflow

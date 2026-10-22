@@ -17,8 +17,8 @@ pnpm install
 cp .env.example .env.local   # fill in the Clerk and Stripe test keys, and DATABASE_URL:
                              # `pnpm local:test:target` prints this clone's local one
 pnpm db:test:up              # a local Postgres in Docker, on this clone's own port
-DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" pnpm db:migrate
-DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" pnpm db:seed
+DATABASE_URL="$(pnpm local:test:target database-url)" pnpm db:migrate
+DATABASE_URL="$(pnpm local:test:target database-url)" pnpm db:seed
 pnpm dev
 ```
 

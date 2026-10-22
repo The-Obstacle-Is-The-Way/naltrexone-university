@@ -48,7 +48,7 @@ jobs:
       # The score never fails the run (ADR-019), but a survivor that ran no
       # test means the report measured nothing, as on 2026-10-14 (DEBT-500).
       - name: Check the report's integrity
-        run: pnpm exec tsx scripts/mutation-report-integrity.ts
+        run: pnpm exec tsx scripts/quality/mutation-report-integrity.ts
 
       - name: Upload mutation report
         if: always()

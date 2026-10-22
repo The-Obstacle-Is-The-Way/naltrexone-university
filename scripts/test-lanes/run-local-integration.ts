@@ -1,30 +1,31 @@
-import { pathToFileURL } from 'node:url';
 import {
-  type E2ECommandEnv,
-  type E2ECommandStep,
+  type CommandEnv,
+  type CommandStep,
   runCommandPlan,
-} from './e2e-local-orchestrator';
+} from '../lib/command-plan';
+import { isMain } from '../lib/entry-point.mts';
 import {
   createLocalTestTargetEnv,
   isTruthyEnvFlag,
   resolveLocalTestTarget,
 } from './resolve-local-test-target';
+import { createLocalTestDbCommandPlan } from './run-local-test-db';
 
 type CreateLocalIntegrationCommandPlanInput = {
-  env?: E2ECommandEnv;
+  env?: CommandEnv;
   cwd?: string;
   vitestArgs?: string[];
 };
 
 type RunLocalIntegrationInput = {
   argv?: string[];
-  env?: E2ECommandEnv;
+  env?: CommandEnv;
   cwd?: string;
   runPlan?: typeof runCommandPlan;
 };
 
 export function shouldUseLocalIntegrationTarget(
-  env: E2ECommandEnv = process.env,
+  env: CommandEnv = process.env,
 ): boolean {
   return !isTruthyEnvFlag(env.INTEGRATION_USE_EXISTING_DATABASE);
 }
@@ -33,7 +34,7 @@ export function createLocalIntegrationCommandPlan({
   env = process.env,
   cwd = process.cwd(),
   vitestArgs = [],
-}: CreateLocalIntegrationCommandPlanInput = {}): E2ECommandStep[] {
+}: CreateLocalIntegrationCommandPlanInput = {}): CommandStep[] {
   const baseStep = {
     command: 'pnpm',
     args: [
@@ -61,11 +62,34 @@ export function createLocalIntegrationCommandPlan({
   }
 
   const target = resolveLocalTestTarget({ env, cwd });
+  const targetEnv = createLocalTestTargetEnv(target);
+  const preparation: CommandStep[] = isTruthyEnvFlag(
+    env.INTEGRATION_SKIP_PREPARE,
+  )
+    ? []
+    : [
+        // Use the same original inputs, never re-resolve an already normalized
+        // LOCAL_TEST_INSTANCE in a child process (BUG-329).
+        ...createLocalTestDbCommandPlan({ action: 'up', env, cwd }),
+        {
+          label: 'Migrate isolated integration database',
+          command: 'pnpm',
+          args: ['db:migrate'],
+          env: targetEnv,
+        },
+        {
+          label: 'Seed isolated integration database',
+          command: 'pnpm',
+          args: ['db:seed', '--include-placeholders'],
+          env: targetEnv,
+        },
+      ];
   return [
+    ...preparation,
     {
       label: 'Run integration tests against isolated local test database',
       ...baseStep,
-      env: createLocalTestTargetEnv(target),
+      env: targetEnv,
     },
   ];
 }
@@ -82,10 +106,8 @@ export async function runLocalIntegration({
   await runPlan(plan, { env });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runLocalIntegration().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error(message);

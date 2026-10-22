@@ -1,43 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import packageJson from '../package.json';
+import packageJson from '../../package.json';
+import { type CommandInvocation, runCommandPlan } from '../lib/command-plan';
 import {
   createE2ECommandPlan,
-  type E2ECommandInvocation,
-  resolveLocalE2EDatabaseUrl,
-  runCommandPlan,
   shouldUseIsolatedLocalE2E,
 } from './e2e-local-orchestrator';
 import { resolveLocalTestTarget } from './resolve-local-test-target';
 import { runLocalE2E } from './run-local-e2e';
-
-describe('resolveLocalE2EDatabaseUrl', () => {
-  it('returns the non-secret resolved Docker Postgres URL by default', () => {
-    const first = resolveLocalE2EDatabaseUrl(
-      {},
-      '/Users/ray/Desktop/github/naltrexone-university',
-    );
-    const again = resolveLocalE2EDatabaseUrl(
-      {},
-      '/Users/ray/Desktop/github/naltrexone-university',
-    );
-
-    expect(again).toBe(first);
-    expect(first).toMatch(
-      /^postgresql:\/\/postgres:postgres@127\.0\.0\.1:\d+\/addiction_boards_test$/,
-    );
-    expect(first).not.toBe(
-      'postgresql://postgres:postgres@127.0.0.1:5434/addiction_boards_test',
-    );
-  });
-
-  it('honors DB_TEST_PORT so the URL matches the isolated Compose port mapping', () => {
-    expect(
-      resolveLocalE2EDatabaseUrl({ DB_TEST_PORT: '5544' }, '/repo/a'),
-    ).toBe(
-      'postgresql://postgres:postgres@127.0.0.1:5544/addiction_boards_test',
-    );
-  });
-});
 
 describe('shouldUseIsolatedLocalE2E', () => {
   it('uses the database-isolated Docker flow for local runs', () => {
@@ -85,7 +54,7 @@ describe('createE2ECommandPlan', () => {
     ]);
     expect(plan[0]).toMatchObject({
       command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/run-local-test-db.ts', 'up'],
+      args: ['exec', 'tsx', 'scripts/test-lanes/run-local-test-db.ts', 'up'],
       env: targetEnv,
     });
     expect(plan[1]).toMatchObject({
@@ -287,8 +256,8 @@ describe('runCommandPlan', () => {
   });
 
   it('omits inherited NO_COLOR only from the Playwright child environment', async () => {
-    const invocations: E2ECommandInvocation[] = [];
-    const runCommand = vi.fn(async (invocation: E2ECommandInvocation) => {
+    const invocations: CommandInvocation[] = [];
+    const runCommand = vi.fn(async (invocation: CommandInvocation) => {
       invocations.push(invocation);
     });
     const baseEnv = {
@@ -376,7 +345,7 @@ describe('runCommandPlan', () => {
       ]),
     ).resolves.toBeUndefined();
 
-    expect(log).toHaveBeenCalledWith('[local-e2e] node success');
+    expect(log).toHaveBeenCalledWith('[test-lane] node success');
     log.mockRestore();
   });
 
@@ -412,7 +381,11 @@ describe('runLocalE2E', () => {
     const env = { CI: 'true' };
 
     await runLocalE2E({
-      argv: ['node', 'scripts/run-local-e2e.ts', '--project=chromium'],
+      argv: [
+        'node',
+        'scripts/test-lanes/run-local-e2e.ts',
+        '--project=chromium',
+      ],
       env,
       createPlan,
       runPlan,
@@ -449,37 +422,37 @@ describe('package scripts', () => {
 
   it('routes both E2E lanes through the database-isolated local orchestrator', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
-      'tsx scripts/run-local-e2e.ts --project=chromium --project=mobile-smoke',
+      'tsx scripts/test-lanes/run-local-e2e.ts --project=chromium --project=mobile-smoke',
     );
     expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
-      'tsx scripts/run-local-e2e.ts --project=stripe-hosted',
+      'tsx scripts/test-lanes/run-local-e2e.ts --project=stripe-hosted',
     );
   });
 
   it('routes local integration and DB lifecycle scripts through the local target resolver', () => {
     expect(packageJson.scripts['test:integration']).toBe(
-      'tsx scripts/run-local-integration.ts',
+      'tsx scripts/test-lanes/run-local-integration.ts',
     );
     expect(packageJson.scripts['test:integration:coverage']).toBe(
-      'tsx scripts/run-local-integration.ts --coverage',
+      'tsx scripts/test-lanes/run-local-integration.ts --coverage',
     );
     expect(packageJson.scripts['db:test:up']).toBe(
-      'tsx scripts/run-local-test-db.ts up',
+      'tsx scripts/test-lanes/run-local-test-db.ts up',
     );
     expect(packageJson.scripts['db:test:down']).toBe(
-      'tsx scripts/run-local-test-db.ts down',
+      'tsx scripts/test-lanes/run-local-test-db.ts down',
     );
     expect(packageJson.scripts['db:test:reset']).toBe(
-      'tsx scripts/run-local-test-db.ts reset',
+      'tsx scripts/test-lanes/run-local-test-db.ts reset',
     );
     expect(packageJson.scripts['local:test:target']).toBe(
-      'tsx scripts/resolve-local-test-target.ts',
+      'tsx scripts/test-lanes/resolve-local-test-target.ts',
     );
   });
 
   it('exposes the fail-closed Stripe provider contracts through the dedicated runner', () => {
     expect(packageJson.scripts['test:stripe-provider']).toBe(
-      'tsx scripts/run-stripe-provider-contracts.ts',
+      'tsx scripts/test-lanes/run-stripe-provider-contracts.ts',
     );
   });
 });

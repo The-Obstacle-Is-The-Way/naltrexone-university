@@ -28,6 +28,15 @@ describe('QuestionAvailability', () => {
     ['draft', false, false, 'retired'],
   ] as const)(
     'derives a %s question with withdrawn=%s and underReview=%s as %s',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/domain/value-objects/question-availability.test.ts',
+          title:
+            'derives a %s question with withdrawn=%s and underReview=%s as %s',
+        },
+      },
+    },
     (status, withdrawn, underReview, expected) => {
       expect(
         deriveQuestionAvailability(status, { withdrawn, underReview }),
