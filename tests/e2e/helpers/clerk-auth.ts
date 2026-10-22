@@ -17,7 +17,10 @@ import {
 } from './clerk-auth-trace';
 import { keepDevBrowserCookiesInPlace } from './clerk-dev-browser-cookies';
 import { dropDevBrowserEchoes } from './clerk-dev-browser-echo';
-import { CLERK_SESSION_DEADLINES } from './clerk-session-deadlines';
+import {
+  CLERK_SESSION_DEADLINES,
+  DIAGNOSIS_TIMEOUT_MS,
+} from './clerk-session-deadlines';
 import {
   installE2ELogRedaction,
   redactSensitiveE2EText,
@@ -227,8 +230,6 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
     frontendApi.stop();
   }
 }
-
-const DIAGNOSIS_TIMEOUT_MS = 5_000;
 
 // A file, not module state: Playwright starts a new worker after a failed
 // test. Global setup clears it, and so does teardown.

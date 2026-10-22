@@ -754,6 +754,38 @@ describe('startSession helper', () => {
     await expect(result).rejects.not.toThrow('private-detail');
   });
 
+  it("reads a redirect target's route words only, and another site's as its host", async () => {
+    const redirectTo = (location: string) =>
+      startSession(
+        createPracticePage({
+          actionFailures: [
+            {
+              actionId: 'first-question-action',
+              errorText: 'net::ERR_FAILED',
+              redirect: { location, status: 307 },
+            },
+          ],
+          availableQuestionCount: 5,
+          firstQuestionAlert: 'Failed to fetch',
+        }),
+        'tutor',
+        2,
+      );
+
+    const unknown = redirectTo('/account/private-detail');
+    await expect(unknown).rejects.toThrow(
+      'first-question-action net::ERR_FAILED after 307 to /…/…',
+    );
+    await expect(unknown).rejects.not.toThrow('private-detail');
+    const elsewhere = redirectTo(
+      'https://checkout.stripe.com/c/pay/cs_test_privatedetail',
+    );
+    await expect(elsewhere).rejects.toThrow(
+      'first-question-action net::ERR_FAILED after 307 to checkout.stripe.com',
+    );
+    await expect(elsewhere).rejects.not.toThrow('privatedetail');
+  });
+
   it('stops listening once the session has started', async () => {
     const page = createPracticePage({
       availableQuestionCount: 5,
