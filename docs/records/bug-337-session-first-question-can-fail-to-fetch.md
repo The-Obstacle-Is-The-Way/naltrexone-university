@@ -151,11 +151,13 @@ Historical captures above are preserved evidence. This audit re-read the current
 
 ## Options
 
-For the recurrences after option 9, all three remain unverified:
+For the recurrences after option 9, the 2026-10-22 trace establishes option 1 for that recurrence: a server action and RSC fetches answered with Clerk's `session-token-but-no-client-uat` handshake redirect, which the browser blocked. The earlier alerts remain unclassified among these three:
 
 1. **A browser-blocked cross-origin redirect.** Identify its originating action or RSC request, Clerk status/reason, redirect host and timing. A `dev-browser-missing` reason would reopen the cookie-gap investigation; it would not by itself identify a third trigger.
 2. **An aborted request.** Correlate the failure with navigation and page teardown. Fix the test helper if it abandons work it needs; fix the client only if it displays an error for work it intentionally abandoned.
 3. **A dropped connection or another cause.** Identify the failing request and transport error, then determine whether production shares the cause.
+
+*Corrected 2026-10-22: this section said all three options remained unverified for every recurrence after option 9; the 2026-10-22 trace establishes option 1 for that one.*
 
 ## Resolution (decided)
 
