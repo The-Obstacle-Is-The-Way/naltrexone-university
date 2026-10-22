@@ -1,6 +1,6 @@
 # BUG-366: The Playwright Install's Mirror Failover Misses the Runner's Mirror List
 
-**Status:** Open — fix in review, then confirm the failover on the next stalled CI install, or that none came; due 2026-11-06
+**Status:** Verifying — promotion to `main`, where the scheduled Checkout smoke runs the script; due 2026-10-26
 **Priority:** P2
 **Date:** 2026-10-22
 
@@ -39,7 +39,8 @@ Option 1, test-first, in this record's pull request. The rewrite replaces the Az
 
 - [x] The test harness models the runner's layout, two stanzas naming one mirror list as `mirror+file:/path`, and fails before the change: the failover must rewrite the Azure host in the list, keep the list's inode and mode, leave the source unchanged, and log the archive retry. A `mirror+file:///path` row and the direct-source layout have their own cases (2026-10-22).
 - [x] A source naming a missing mirror list, or a list the script cannot write, still retries and installs Chromium, and the healthy path leaves both the source and the list unchanged. Mutations that strip only `mirror+file://`, drop the list search, or remove either file guard each fail a test (2026-10-22).
-- [ ] The next stalled install in CI retries through `archive.ubuntu.com` and passes without a re-run, or the due date passes with no stall and that is recorded.
+- [x] A stalled install in CI retries through `archive.ubuntu.com` and passes without a re-run. This record's pull request hit the stall in its own CI on 2026-10-22: at the primary phase's timeout the script rewrote the runner's mirror list (144 bytes to 138, without `azure.`), apt fetched from `archive.ubuntu.com`, a 5.6 MB package that had taken more than two minutes from Azure arrived in about 2 seconds, and the step finished 21 seconds after the switch.
+- [ ] Promoted to `main`, where the daily scheduled Checkout smoke (`stripe-hosted-checkout-smoke.yml`) runs the script.
 
 ## Related
 
