@@ -26,7 +26,8 @@ describe('describeNavigationAnswer', () => {
         status: 307,
         headers: {
           'x-clerk-auth-status': 'handshake',
-          'x-clerk-auth-reason': 'session-token-expired-refresh-non-eligible',
+          'x-clerk-auth-reason':
+            'session-token-expired-refresh-non-eligible-no-refresh-cookie',
           location:
             'https://example-12.clerk.accounts.dev/v1/client/handshake?redirect_url=x&__clerk_hs_reason=session-token-expired&__clerk_db_jwt=dvb_secretvalue123',
           'set-cookie':
@@ -34,7 +35,7 @@ describe('describeNavigationAnswer', () => {
         },
       }),
     ).toBe(
-      'GET 127.0.0.1:3000/app/practice 307 auth=handshake/session-token-expired-refresh-non-eligible → example-12.clerk.accounts.dev/v1/client/handshake hs_reason=session-token-expired params=redirect_url,__clerk_hs_reason,__clerk_db_jwt; cookies: __clerk_redirect_count=1, __session cleared, __client_uat=1791560000',
+      'GET 127.0.0.1:3000/app/practice 307 auth=handshake/session-token-expired-refresh-non-eligible-no-refresh-cookie → example-12.clerk.accounts.dev/v1/client/handshake hs_reason=session-token-expired params=redirect_url,__clerk_hs_reason,__clerk_db_jwt; cookies: __clerk_redirect_count=1, __session cleared, __client_uat=1791560000',
     );
   });
 
@@ -47,6 +48,26 @@ describe('describeNavigationAnswer', () => {
         headers: { 'x-clerk-auth-status': 'signed-in' },
       }),
     ).toBe('GET 127.0.0.1:3000/app/dashboard 200 auth=signed-in');
+  });
+
+  it('reduces a decision Clerk does not define to its length', () => {
+    const description = describeNavigationAnswer({
+      method: 'GET',
+      url: 'http://127.0.0.1:3000/app/practice',
+      status: 307,
+      headers: {
+        'x-clerk-auth-status': 'private-looking-value',
+        'x-clerk-auth-reason': 'another-private-value',
+        location:
+          'https://example.accounts.dev/sign-in?__clerk_hs_reason=shaped-like-a-reason',
+      },
+    });
+    expect(description).toContain('auth length=21');
+    expect(description).toContain('reason length=21');
+    expect(description).toContain('hs_reason length=20');
+    expect(description).not.toContain('private-looking-value');
+    expect(description).not.toContain('another-private-value');
+    expect(description).not.toContain('shaped-like-a-reason');
   });
 
   it('keeps query secrets and malformed handshake reasons out of the trace', () => {

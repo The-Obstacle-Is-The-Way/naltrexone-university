@@ -5,6 +5,7 @@ import {
   decision,
   describeFailedRequest,
   describeFetchAnswer,
+  undecided,
 } from './clerk-fetch-trace';
 import { DIAGNOSIS_TIMEOUT_MS } from './clerk-session-deadlines';
 import { redactSensitiveE2EText } from './e2e-log-redaction';
@@ -115,9 +116,12 @@ export function describeNavigationAnswer(answer: {
 }): string {
   const url = new URL(answer.url);
   let text = `${answer.method} ${place(url)} ${answer.status}`;
-  const status = decision(answer.headers['x-clerk-auth-status']);
-  const reason = decision(answer.headers['x-clerk-auth-reason']);
+  const rawStatus = answer.headers['x-clerk-auth-status'];
+  const rawReason = answer.headers['x-clerk-auth-reason'];
+  const status = decision(rawStatus);
+  const reason = decision(rawReason);
   if (status) text += ` auth=${status}${reason ? `/${reason}` : ''}`;
+  text += undecided('auth', rawStatus) + undecided('reason', rawReason);
   const location = answer.headers.location;
   if (location) {
     const target = new URL(location, url);
@@ -126,7 +130,7 @@ export function describeNavigationAnswer(answer: {
     if (hsReason !== null)
       text += decision(hsReason)
         ? ` hs_reason=${hsReason}`
-        : ` hs_reason length=${hsReason.length}`;
+        : undecided('hs_reason', hsReason);
     const names = [...target.searchParams.keys()];
     if (names.length > 0) text += ` params=${names.join(',')}`;
   }

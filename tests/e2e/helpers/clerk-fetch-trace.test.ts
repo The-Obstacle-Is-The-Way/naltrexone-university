@@ -143,6 +143,57 @@ describe('failed-fetch diagnostics', () => {
     expect(answer).not.toContain('secret');
   });
 
+  it('keeps Chromium error codes that contain digits', () => {
+    expect(
+      describeFailedRequest({
+        ...request,
+        failure: 'net::ERR_HTTP2_PROTOCOL_ERROR',
+      }),
+    ).toContain('failure=net::ERR_HTTP2_PROTOCOL_ERROR');
+  });
+
+  it("names only Clerk's own decisions and reduces any other value to its length", () => {
+    const answer = describeFetchAnswer({
+      ...request,
+      status: 307,
+      responseHeaders: {
+        location: 'https://example.accounts.dev/sign-in',
+        'x-clerk-auth-status': 'handshake',
+        'x-clerk-auth-reason': 'looks-like-a-reason',
+      },
+    });
+    expect(answer).toContain('auth=handshake');
+    expect(answer).toContain('reason length=19');
+    expect(answer).not.toContain('looks-like-a-reason');
+  });
+
+  it('shows the numeric __client_uat a request sent, and only the length of anything else', () => {
+    const answer = describeFetchAnswer({
+      ...request,
+      headers: {
+        'next-action': 'action-secret',
+        cookie:
+          '__client_uat=0; __client_uat_Ab1-Cd_2=1792630704; __session=session-secret',
+      },
+      status: 307,
+      responseHeaders: {
+        'x-clerk-auth-status': 'signed-out',
+        'x-clerk-auth-reason': 'session-token-but-no-client-uat',
+      },
+    });
+    expect(answer).toContain(
+      'reason=session-token-but-no-client-uat; request cookies (response observed): __client_uat=0, __client_uat_Ab1-Cd_2=1792630704, __session length=14',
+    );
+    expect(
+      describeFetchAnswer({
+        ...request,
+        headers: { rsc: '1', cookie: '__client_uat=not-a-time' },
+        status: 200,
+        responseHeaders: {},
+      }),
+    ).toContain('__client_uat length=10');
+  });
+
   it('keeps network error codes but never arbitrary failure text or third-party paths', () => {
     const output = describeFailedRequest({
       ...request,
