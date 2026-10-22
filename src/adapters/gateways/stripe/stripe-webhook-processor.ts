@@ -12,6 +12,7 @@ import {
   subscriptionEventTypes,
 } from '@/src/adapters/gateways/stripe/stripe-webhook-schemas';
 import { isMissingStripeCustomerError } from '@/src/adapters/gateways/stripe-customer-deleter';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -20,7 +21,10 @@ import type { Logger } from '@/src/application/ports/logger';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import type { StripeCallBudget } from './stripe-call-budget';
 import { isValidStripeConsentStateSignature } from './stripe-consent-state';
-import { constructStripeWebhookEvent } from './stripe-webhook-signature';
+import {
+  constructStripeWebhookEvent,
+  webhookSignatureFailureReason,
+} from './stripe-webhook-signature';
 
 function isSetupSessionPayload(payload: unknown): boolean {
   return (
@@ -493,11 +497,14 @@ export async function processStripeWebhookEvent({
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
 
-    // BUG-325: anyone can send a bad signature, so it is a warning. Stripe's
-    // reason (for example a timestamp outside tolerance) helps tell a
-    // misconfigured secret from a forgery.
+    // BUG-325: anyone can send a bad signature, so it is a warning. A fixed
+    // reason tells a misconfigured secret or a stale delivery from a
+    // forgery, without Stripe's raw text.
     logger.warn(
-      { error: errorMessage },
+      {
+        error: projectSafeErrorDiagnostics(error),
+        reason: webhookSignatureFailureReason(error),
+      },
       'Webhook signature verification failed',
     );
 

@@ -1,3 +1,4 @@
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 export function runTransitionedAsyncAction(input: {
   startTransition: (fn: () => void) => void;
   run: () => Promise<void>;
@@ -16,7 +17,7 @@ export function runTransitionedAsyncAction(input: {
         }
         console.error(
           'runTransitionedAsyncAction: unhandled error in run()',
-          error,
+          projectSafeErrorDiagnostics(error),
         );
       } finally {
         resolve();

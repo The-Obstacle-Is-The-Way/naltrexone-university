@@ -7,6 +7,7 @@ import type {
   ApplicationErrorDetails,
 } from '@/src/application/errors';
 import { isApplicationError } from '@/src/application/errors';
+import { errorDiagnosticPolicy } from '@/src/application/errors/error-diagnostic-policy';
 import type { Logger } from '@/src/application/ports/logger';
 
 export type ActionErrorCode = ApplicationErrorCode;
@@ -46,12 +47,13 @@ export function err(
 
 export function handleError(
   error: unknown,
-  options?: { logger?: Logger },
+  options?: { logger?: Logger; action?: string },
 ): ActionResult<never> {
   const errorLogger = options?.logger ?? logger;
 
   if (
-    !isApplicationError(error) &&
+    errorDiagnosticPolicy(isApplicationError(error) ? error.code : undefined)
+      .logLevel !== null &&
     !(error instanceof ZodError) &&
     !(
       typeof error === 'object' &&
@@ -61,7 +63,10 @@ export function handleError(
     )
   ) {
     errorLogger.error(
-      { err: projectSafeErrorDiagnostics(error) },
+      {
+        ...(options?.action ? { action: options.action } : {}),
+        err: projectSafeErrorDiagnostics(error),
+      },
       'Unhandled error in controller',
     );
   }

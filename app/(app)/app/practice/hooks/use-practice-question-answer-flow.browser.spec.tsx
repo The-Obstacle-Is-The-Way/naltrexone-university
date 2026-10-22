@@ -573,7 +573,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     });
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'runTransitionedAsyncAction: unhandled error in run()',
-      unhandledError,
+      { name: 'Error' },
     );
   });
 });

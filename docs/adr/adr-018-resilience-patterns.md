@@ -1,6 +1,6 @@
 # ADR-018: Resilience Patterns (Retry and Backoff)
 
-**Status:** Accepted, as amended 2026-10-18 and 2026-10-19 (shared Stripe transport limits and caller deadlines)
+**Status:** Accepted, as amended 2026-10-18 and 2026-10-19 (shared Stripe transport limits, caller deadlines and safe retry diagnostics)
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-005 (Payment Boundary), ADR-006 (Error Handling Strategy)
@@ -172,3 +172,11 @@ The checkout-success path uses the shared adapter wrapper and circuit breaker. A
 A deadline or lost response does not prove that Stripe refused a write. It remains an unknown outcome, with the same idempotency key and existing recovery path. A later request receives a new caller budget; a write whose idempotency key the caller derives keeps that key.
 
 The reconciliation cron retains its separate policy. Unbudgeted clients retain the shared ten-second attempt limit, one SDK retry, and the existing outer retry classifier. Only a pre-header timeout can use both SDK attempts and the backoff; a body timeout ends after one attempt.
+
+## Amendment — 2026-10-19: Safe retry diagnostics
+
+Section 4's error context no longer includes the raw message. Retry events still retain their operation, attempt, maximum attempts and delay. Error diagnostics use the shared projection, including preserved causes, and omit messages, stacks and response bodies.
+
+The vendor allow-list retains Stripe error types `StripeError`, `StripeAPIError`, `StripeConnectionError`, `StripeAuthenticationError`, `StripePermissionError`, `StripeRateLimitError`, `StripeInvalidRequestError`, `StripeCardError`, `StripeIdempotencyError` and `StripeSignatureVerificationError`. It retains codes `resource_missing`, `rate_limit`, `idempotency_key_in_use`, `parameter_missing`, `parameter_invalid_integer`, `parameter_unknown`, `api_key_expired` and `card_declined`. Other vendor strings are omitted.
+
+Network codes are limited to `ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`, `ENOTFOUND`, `ECONNREFUSED`, `EHOSTUNREACH` and `EPIPE`. Request IDs must start with `req_` followed by 1–128 alphanumeric characters. HTTP failure status is an integer from 400 through 599. These fields are diagnostic metadata; they do not alter retry eligibility, circuit-breaker decisions or idempotent replay.
