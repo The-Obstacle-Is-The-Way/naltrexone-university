@@ -5,6 +5,8 @@ import {
   decision,
   describeFailedRequest,
   describeFetchAnswer,
+  tracePath,
+  tracePlace,
   undecided,
 } from './clerk-fetch-trace';
 import { DIAGNOSIS_TIMEOUT_MS } from './clerk-session-deadlines';
@@ -36,11 +38,7 @@ export function describeFrontendApiAnswer(answer: {
   status: number;
   body: unknown;
 }): string {
-  // A Clerk ID in the path is named by its kind only.
-  const path = new URL(answer.url).pathname.replace(
-    /\/([a-z]+)_[A-Za-z0-9]{8,}/g,
-    '/$1_…',
-  );
+  const path = tracePath(new URL(answer.url).pathname);
   let text = `${answer.method} ${path} ${answer.status}`;
   if (answer.status < 400 || !isRecord(answer.body)) return text;
   const { errors, clerk_trace_id: traceId } = answer.body;
@@ -52,15 +50,6 @@ export function describeFrontendApiAnswer(answer: {
   }
   if (typeof traceId === 'string') text += ` trace ${traceId}`;
   return text;
-}
-
-// The app's and Clerk's paths name the step; another site's path can carry an
-// ID, such as Stripe Checkout's Session, so it is reduced to its host.
-function place(url: URL): string {
-  const known =
-    ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
-    url.hostname.endsWith('.accounts.dev');
-  return known ? `${url.host}${url.pathname}` : url.host;
 }
 
 function numericMetadata(name: string, value: unknown): string {
@@ -115,7 +104,7 @@ export function describeNavigationAnswer(answer: {
   headers: Headers;
 }): string {
   const url = new URL(answer.url);
-  let text = `${answer.method} ${place(url)} ${answer.status}`;
+  let text = `${answer.method} ${tracePlace(url)} ${answer.status}`;
   const rawStatus = answer.headers['x-clerk-auth-status'];
   const rawReason = answer.headers['x-clerk-auth-reason'];
   const status = decision(rawStatus);
@@ -125,7 +114,7 @@ export function describeNavigationAnswer(answer: {
   const location = answer.headers.location;
   if (location) {
     const target = new URL(location, url);
-    text += ` → ${place(target)}`;
+    text += ` → ${tracePlace(target)}`;
     const hsReason = target.searchParams.get('__clerk_hs_reason');
     if (hsReason !== null)
       text += decision(hsReason)

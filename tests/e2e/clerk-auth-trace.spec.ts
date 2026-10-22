@@ -75,11 +75,13 @@ test('records an action redirect and failed fetch without credential values', as
     expect(report).toContain(`redirect-host=127.0.0.1:${targetAddress.port}`);
     expect(report).toContain('reason=dev-browser-missing');
     expect(report).not.toMatch(/location-secret|query-secret|action-secret/);
+    // A path keeps only route words; these fixture segments are not among them.
+    expect(report).not.toMatch(/trace-action|trace-target/);
 
     await page.goto(`${origin}/sign-in/trace`);
     await expect.poll(() => output.length).toBe(2);
     expect(output[1]).toContain('[E2E_CLERK_AUTH_TRACE] sign-in:');
-    expect(output[1]).toContain('/sign-in/trace 200');
+    expect(output[1]).toContain('/sign-in/… 200');
     await reportFailedClerkAuthTrace(page);
     expect(output).toHaveLength(2);
   } finally {

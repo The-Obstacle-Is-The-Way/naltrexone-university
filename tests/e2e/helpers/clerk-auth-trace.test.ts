@@ -110,6 +110,19 @@ describe('describeNavigationAnswer for another site', () => {
       }),
     ).toBe('GET example-12.accounts.dev/sign-in 200');
   });
+
+  it("names a segment outside the app's and Clerk's route words as …", () => {
+    expect(
+      describeNavigationAnswer({
+        method: 'GET',
+        url: 'http://localhost:3000/app/questions/placeholder-01-naltrexone-mechanism',
+        status: 307,
+        headers: {
+          location: 'http://localhost:3000/account/opaque-secret-value',
+        },
+      }),
+    ).toBe('GET localhost:3000/app/questions/… 307 → localhost:3000/…/…');
+  });
 });
 
 describe('describeClerkCookies', () => {

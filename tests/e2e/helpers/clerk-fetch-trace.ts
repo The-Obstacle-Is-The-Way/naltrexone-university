@@ -7,18 +7,80 @@ type RequestDetails = {
   headers: Record<string, string>;
 };
 
-// Project before retaining anything. Arbitrary headers, bodies, query values
-// and action IDs never enter the trace, even if they have no known token shape.
-function requestPlace(url: string): string {
-  const parsed = new URL(url);
+// The words that name a step: the app's page routes, Next.js's asset prefix,
+// Clerk's hosted pages and its Frontend API. A route added later shows as `…`
+// until it is listed here.
+const ROUTE_WORDS = new Set([
+  'app',
+  'billing',
+  'bookmarks',
+  'dashboard',
+  'history',
+  'practice',
+  'quick',
+  'questions',
+  'checkout',
+  'success',
+  'pricing',
+  'privacy',
+  'terms',
+  'sign-in',
+  'sign-up',
+  'api',
+  'health',
+  '_next',
+  'static',
+  'chunks',
+  'v1',
+  'environment',
+  'client',
+  'handshake',
+  'dev_browser',
+  'sessions',
+  'tokens',
+  'touch',
+  'end',
+  'remove',
+  'sign_ins',
+  'sign_ups',
+  'prepare_first_factor',
+  'attempt_first_factor',
+  'prepare_second_factor',
+  'attempt_second_factor',
+  'me',
+]);
+
+/**
+ * A path keeps only route words. A Clerk ID shows only its kind (`sess_…`);
+ * any other segment, such as a session ID or a question slug, shows as `…`.
+ */
+export function tracePath(pathname: string): string {
+  return pathname
+    .split('/')
+    .map((segment) => {
+      if (segment === '' || ROUTE_WORDS.has(segment)) return segment;
+      const kind = /^([a-z]{2,8})_[A-Za-z0-9]{8,}$/.exec(segment)?.[1];
+      return kind === undefined ? '…' : `${kind}_…`;
+    })
+    .join('/');
+}
+
+/**
+ * The app's and Clerk's route words name the step; another site's path can
+ * carry an ID, such as Stripe Checkout's Session, so it is reduced to its host.
+ */
+export function tracePlace(url: URL): string {
   const known =
-    ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname) ||
-    parsed.hostname.endsWith('.accounts.dev');
-  return redactSensitiveE2EText(
-    known
-      ? `${parsed.host}${parsed.pathname.replace(/\/([a-z]+)_[A-Za-z0-9]{8,}/g, '/$1_…')}`
-      : parsed.host,
-  );
+    ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
+    url.hostname.endsWith('.accounts.dev');
+  return known ? `${url.host}${tracePath(url.pathname)}` : url.host;
+}
+
+// Project before retaining anything. Arbitrary headers, bodies, query values,
+// path segments and action IDs never enter the trace, even if they have no
+// known token shape.
+function requestPlace(url: string): string {
+  return redactSensitiveE2EText(tracePlace(new URL(url)));
 }
 
 function flags(request: RequestDetails): string {

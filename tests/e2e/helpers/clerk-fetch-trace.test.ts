@@ -97,12 +97,10 @@ describe('failed-fetch diagnostics', () => {
     const output = trace.report('none')?.join('\n');
 
     expect(output).toContain('+10ms Clerk API: GET /v1/environment 200');
-    expect(output).toContain(
-      '+15ms POST localhost:3000/app/questions/placeholder 307',
-    );
+    expect(output).toContain('+15ms POST localhost:3000/app/questions/… 307');
     expect(output).toContain('reason=dev-browser-missing');
     expect(output).toContain(
-      '+20ms requestfailed POST localhost:3000/app/questions/placeholder',
+      '+20ms requestfailed POST localhost:3000/app/questions/…',
     );
     expect(output).toContain(
       'resource=fetch action=yes rsc=no failure=net::ERR_FAILED',
@@ -192,6 +190,27 @@ describe('failed-fetch diagnostics', () => {
         responseHeaders: {},
       }),
     ).toContain('__client_uat length=10');
+  });
+
+  it("keeps only the app's and Clerk's route words from a request path", () => {
+    const failed = (url: string) =>
+      describeFailedRequest({ ...request, url, failure: 'net::ERR_FAILED' });
+
+    const unknown = failed('http://localhost:3000/account/opaque-secret-value');
+    expect(unknown).toContain('requestfailed POST localhost:3000/…/… ');
+    expect(unknown).not.toContain('opaque-secret-value');
+    expect(
+      failed(
+        'http://localhost:3000/app/practice/7f9c2b1e-4d3a-4f6b-9a8e-1c2d3e4f5a6b',
+      ),
+    ).toContain('requestfailed POST localhost:3000/app/practice/… ');
+    expect(
+      failed(
+        'https://example.accounts.dev/v1/client/sessions/sess_2abcDEF345ghi/tokens',
+      ),
+    ).toContain(
+      'requestfailed POST example.accounts.dev/v1/client/sessions/sess_…/tokens ',
+    );
   });
 
   it('keeps network error codes but never arbitrary failure text or third-party paths', () => {
