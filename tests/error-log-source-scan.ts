@@ -42,6 +42,19 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
           /(^|\/)safe-error-diagnostics$/.test(module.text)
         );
       });
+    // A logging boundary returns nothing: annotated `void`, or unannotated
+    // with no `return <value>`. A helper that logs and returns is not one.
+    const returnsNothing = (decl: ts.FunctionDeclaration) => {
+      if (decl.type) return decl.type.kind === ts.SyntaxKind.VoidKeyword;
+      let returnsValue = false;
+      function visitReturn(child: ts.Node): void {
+        if (ts.isReturnStatement(child) && child.expression)
+          returnsValue = true;
+        else if (!ts.isFunctionLike(child)) ts.forEachChild(child, visitReturn);
+      }
+      if (decl.body) ts.forEachChild(decl.body, visitReturn);
+      return !returnsValue;
+    };
     function isLog(node: ts.Node, seen = new Set<ts.Node>()): boolean {
       if (seen.has(node)) return false;
       seen.add(node);
@@ -64,8 +77,8 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
             return isLog(decl.initializer, seen);
           if (
             ts.isFunctionDeclaration(decl) &&
-            decl.type?.kind === ts.SyntaxKind.VoidKeyword &&
-            decl.body
+            decl.body &&
+            returnsNothing(decl)
           ) {
             let logs = false;
             function visit(child: ts.Node): void {
@@ -111,8 +124,9 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
         )
           return false;
         if (
-          ts.isIdentifier(node.expression) &&
-          node.expression.text === 'String' &&
+          (ts.isIdentifier(node.expression)
+            ? node.expression.text === 'String'
+            : node.expression.getText(file) === 'JSON.stringify') &&
           node.arguments.some((arg) => tainted(arg, seen))
         )
           return true;
