@@ -58,7 +58,7 @@ describe('billing result diagnostics', () => {
   // log is its only record (BUG-348).
   it('logs a checkout refusal the controller leaves unlogged, once', async () => {
     const serialized = createSerializedLogger();
-    const logError = vi.fn();
+    const actionLogger = new FakeLogger();
     await expect(
       runSubscribeAction(
         { plan: 'monthly', idempotencyKey: 'idem_1', renewalOptIn: true },
@@ -70,15 +70,21 @@ describe('billing result diagnostics', () => {
           redirectFn: () => {
             throw new Error('redirect');
           },
-          logError,
+          logError: actionLogger.error.bind(actionLogger),
         },
       ),
     ).rejects.toThrow('redirect');
     expect(serialized.lines).toHaveLength(0);
-    expect(logError).toHaveBeenCalledExactlyOnceWith(
-      { plan: 'monthly', idempotencyKeyLength: 6, errorCode: 'CONFLICT' },
-      'Stripe checkout failed',
-    );
+    expect(actionLogger.errorCalls).toEqual([
+      {
+        context: {
+          plan: 'monthly',
+          idempotencyKeyLength: 6,
+          errorCode: 'CONFLICT',
+        },
+        msg: 'Stripe checkout failed',
+      },
+    ]);
   });
   it('logs an add-card refusal the controller leaves unlogged, once', async () => {
     const log = vi.spyOn(logger, 'error');

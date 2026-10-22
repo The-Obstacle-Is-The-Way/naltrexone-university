@@ -66,7 +66,10 @@ describe('raw error log source scan', () => {
         'components/**/*.{ts,tsx}',
         'lib/**/*.{ts,tsx}',
         'src/**/*.{ts,tsx}',
+        // Root files that run in the app; root tooling and test setup do not.
         'proxy.ts',
+        'instrumentation*.ts',
+        'sentry.*.config.ts',
       ],
       {
         expandDirectories: false,
