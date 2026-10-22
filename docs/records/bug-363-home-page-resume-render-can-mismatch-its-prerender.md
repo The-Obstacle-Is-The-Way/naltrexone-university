@@ -16,7 +16,7 @@ BUG-319 took the same error, seen 12 times from 2026-04-21 to 2026-09-26, for sk
 
 - **Sentry, read 2026-10-21 through its API** (counts and tags only):
   - 3 events, all in issue ADDICTION-BOARDS-SERVER-2, from 09:13:01Z to 15:31:45Z on 2026-10-13. None since, to 2026-10-21T14:50Z. The web project had none from BUG-319's production assignment (2026-10-05T22:24:30Z) to then. The server project exists since 2026-10-08.
-  - All three are production, unhandled, from release `f66056bd`, which promotion #1481 merged at 01:45Z that day. The next promotion, #1485, merged at 16:17Z, after the last event.
+  - All three were unhandled production events from release `f66056bd`, the merge of promotion #1481 at 01:45Z that day. The next promotion, #1485, merged at 16:17Z, after the last event.
   - None had a signed-in user. Each reported Chrome 131, a 2024 version, two on Linux and one on macOS. One old version across two systems suggests an automated client.
   - At the server's 5% trace sample, Sentry kept two `POST /` resumes on that release that succeeded, so roughly 40 resumes ran and most worked. Whatever differs depends on the request.
   - Ingestion was healthy: both projects accepted events every day, and nothing was rate-limited or dropped for quota.

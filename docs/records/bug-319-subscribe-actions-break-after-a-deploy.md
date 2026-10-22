@@ -91,7 +91,13 @@ Criteria to meet before closing.
 - [x] A missing key fails a production build.
 - [x] Engineering, by 2026-10-19: search Sentry through its API for the recorded resume-error message and affected route since the production assignment. The old issue was deleted under BUG-318, so searching only its issue key cannot detect a recurrence. Record query, time range, count and ingestion health, either way.
 
-  *Searched 2026-10-21,* in both Sentry projects, from the production assignment (2026-10-05T22:24:30Z) to 2026-10-21T14:50Z, for three forms of the message and for `POST /`: 3 events, all in the server project's issue ADDICTION-BOARDS-SERVER-2 on 2026-10-13, from 09:13 to 15:31Z, and none since. Ingestion was healthy: both projects accepted events every day, and nothing was rate-limited or dropped for quota. BUG-363 records the events and why skew is unlikely.
+  *Searched 2026-10-21,* in both Sentry projects' errors, from the production assignment (2026-10-05T22:24:30Z) to 2026-10-21T14:50Z, for the resume error and its route:
+  - `message:"*resumable slots*"`;
+  - `message:"*Couldn't find all resumable slots by key/index during replaying*"`;
+  - the free text `"resumable slots"`;
+  - the route, `transaction:"POST /"`, alone and with the first message filter.
+
+  Results: 3 events, all in the server project's issue ADDICTION-BOARDS-SERVER-2 on 2026-10-13, from 09:13 to 15:31Z, and none since. Ingestion was healthy: both projects accepted events every day, and nothing was rate-limited or dropped for quota. BUG-363 records the events and why skew is unlikely.
 - [ ] Engineering, by 2026-10-28: a test through the real Sentry SDK, as BUG-318's privacy test does, proves the error pages send an `UnrecognizedActionError` before they reload; then record the first production event, or none, after two weeks. Without that test, "none" would mean nothing, because the event is sent just before the reload. *Corrected 2026-10-06: a real-SDK test replaces forcing a stale action in production.*
 
   *Tried 2026-10-09 in the quick-wins pull request, and not shipped there.* The browser lane stubs `@sentry/nextjs` in `vitest.browser.setup.ts`, and a spec cannot lift that stub: Vitest's `vi.unmock` fails with "Mock … wasn't registered". So the test first needs the stub moved into the specs that rely on it, or a browser project without it. The open question it answers is whether the event reaches Sentry's transport before `reloadPage` runs. The report and the reload are separate effects in one commit, and the event may still be queued at the reload.

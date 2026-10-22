@@ -1,6 +1,6 @@
 # BUG-333: A Signed-In E2E Test Loses Its Clerk Session When It Navigates During Clerk JS's Cookie Rewrite
 
-**Status:** Verifying — both triggers handled in tests; a week of CI after the merge without a mid-run Clerk session loss; due 2026-10-21
+**Status:** Verifying — both triggers handled in tests; a week of CI after the merge without a mid-run Clerk session loss; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
@@ -121,7 +121,7 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
   - Six jsdom tests: five run the function from its source text as Playwright does, and one checks that the source binds no function to a name. The discard case and a cookie that only shares the prefix were red against the first version. Ten mutations each turn one red, among them a stale task applying a newer batch of removals, and removals applied a task late.
   - In Chromium (2026-10-13), on a local page replaying Clerk JS 6.39's cookie writes, a synchronous request sent between the removals and the write carried both cookies with the script, and neither without it. During a discard, the page saw both gone at once, and they left the jar when the script ended.
   - In a local experiment under load, with the first version, 12 full E2E runs with the script had no loss, against 2 losses in 11 runs without it. One unrelated failure was a slow page.
-- [ ] No mid-run Clerk session loss in CI for a week after the merge, due 2026-10-21. A loss with a trace that names another cause reopens the investigation.
+- [ ] No mid-run Clerk session loss in CI for a week after the merge, due 2026-10-24. A loss with a trace that names another cause reopens the investigation. *Re-dated 2026-10-22 from 2026-10-21:* the check was not recorded by its date. The next records pull request records it, and weighs the 2026-10-22 local loss below.
   - *Reopened 2026-10-12.* Another session's local E2E lost its session at `practice.spec.ts:307` (04:00:38Z), and its trace was kept. The echo had been dropped as designed. The navigation's request carried both dev-browser cookies, unchanged, and both session copies, yet the server answered `dev-browser-missing`, which `@clerk/backend` 3.22 returns only when it finds no dev-browser token. That is the contradiction BUG-337's trace shows for a server action. The rewrite mechanism above does not explain it. BUG-337 owns the next step, which is to log the server's own view of each signed-out request.
   - *Explained the same day:* see the 2026-10-12 correction under Resolution.
   - *2026-10-22, a local loss with an external cause.* #1586's local E2E on d05a2f22 lost the session in `mobile-layout.spec.ts:71` (mobile-smoke) at 00:04Z. The Playwright trace and the server's output show why:
