@@ -11,7 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
 const INSTALL_SCRIPT = 'scripts/ci/install-playwright-chromium.sh';
@@ -26,9 +26,12 @@ async function createHarness(
     // GitHub's Ubuntu runners name their mirrors in a list that the source
     // reaches through `mirror+file:` (BUG-366); a source can also name one.
     layout = 'mirror-list' as 'mirror-list' | 'direct',
+    // The runner writes `mirror+file:/path`; apt also reads a file URI.
+    mirrorUri = 'mirror+file:' as 'mirror+file:' | 'mirror+file://',
   } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), 'playwright-install-'));
+  harnessRoots.push(root);
   const aptRoot = join(root, 'etc', 'apt');
   const sourcesDir = join(aptRoot, 'sources.list.d');
   const binDir = join(root, 'bin');
@@ -44,23 +47,19 @@ async function createHarness(
   await mkdir(sourcesDir, { recursive: true });
   await mkdir(aptConfigDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
+  // In the mirror-list layout, both of the runner's stanzas name one list.
+  const sourceText =
+    layout === 'mirror-list'
+      ? `Types: deb\nURIs: ${mirrorUri}${mirrorList}\nSuites: noble noble-updates\n\n` +
+        `Types: deb\nURIs: ${mirrorUri}${mirrorList}\nSuites: noble-security\n`
+      : 'Types: deb\nURIs: http://azure.archive.ubuntu.com/ubuntu\nSuites: noble\n';
+  await writeFile(ubuntuSource, sourceText);
   if (layout === 'mirror-list') {
-    // Both of the runner's stanzas name one list, here in both URI forms.
-    await writeFile(
-      ubuntuSource,
-      `Types: deb\nURIs: mirror+file:${mirrorList}\nSuites: noble noble-updates\n\n` +
-        `Types: deb\nURIs: mirror+file://${mirrorList}\nSuites: noble-security\n`,
-    );
     await writeFile(
       mirrorList,
       'http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\n' +
         'https://archive.ubuntu.com/ubuntu/\tpriority:2\n' +
         'https://security.ubuntu.com/ubuntu/\tpriority:3\n',
-    );
-  } else {
-    await writeFile(
-      ubuntuSource,
-      'Types: deb\nURIs: http://azure.archive.ubuntu.com/ubuntu\nSuites: noble\n',
     );
   }
   await writeFile(
@@ -126,6 +125,7 @@ kill "$1" "$pid" 2>/dev/null
   return {
     root,
     ubuntuSource,
+    sourceText,
     mirrorList,
     // The file that names the Azure archive in this layout.
     archiveFile: layout === 'mirror-list' ? mirrorList : ubuntuSource,
@@ -154,6 +154,16 @@ kill "$1" "$pid" 2>/dev/null
   };
 }
 
+const harnessRoots: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(
+    harnessRoots
+      .splice(0)
+      .map((root) => rm(root, { recursive: true, force: true })),
+  );
+});
+
 function isRunning(pid: string): boolean {
   try {
     process.kill(Number(pid.trim()), 0);
@@ -169,12 +179,13 @@ function stopIfRunning(pid: string): void {
 
 describe('install-playwright-chromium.sh', () => {
   it.each([
-    ['the mirror list the runner names', 'mirror-list'],
-    ['a source that names the mirror', 'direct'],
+    ['the mirror list the runner names', 'mirror-list', 'mirror+file:', true],
+    ['a mirror list named by file URI', 'mirror-list', 'mirror+file://', true],
+    ['a source that names the mirror', 'direct', 'mirror+file:', false],
   ] as const)(
     'kills a hung apt phase, preserves Ubuntu sources, and fails over to the archive in %s',
-    async (_where, layout) => {
-      const harness = await createHarness(true, { layout });
+    async (_where, layout, mirrorUri, sourceKept) => {
+      const harness = await createHarness(true, { layout, mirrorUri });
       await chmod(harness.archiveFile, 0o640);
       const fileBefore = await stat(harness.archiveFile);
       const startedAt = Date.now();
@@ -198,6 +209,10 @@ describe('install-playwright-chromium.sh', () => {
       const fileAfter = await stat(harness.archiveFile);
       expect(fileAfter.ino).toBe(fileBefore.ino);
       expect(fileAfter.mode & 0o777).toBe(0o640);
+      // A source that names a mirror list keeps naming it.
+      expect(
+        (await readFile(harness.ubuntuSource, 'utf8')) === harness.sourceText,
+      ).toBe(sourceKept);
       await expect(stat(harness.microsoftSource)).rejects.toThrow();
       await expect(stat(harness.unrelatedAptConfig)).resolves.toBeDefined();
     },
@@ -207,12 +222,34 @@ describe('install-playwright-chromium.sh', () => {
     const harness = await createHarness(true);
     await rm(harness.mirrorList);
 
-    const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
+    const { stdout, stderr } = await execFileAsync('bash', [INSTALL_SCRIPT], {
       env: harness.env,
     });
 
     expect(stdout).toContain(
       '[playwright-install] No Azure Ubuntu source was present; retrying the bounded apt phase once.',
+    );
+    expect(stderr).not.toContain('No such file');
+    expect(await readFile(harness.logPath, 'utf8')).toBe(
+      'exec playwright install-deps chromium\n' +
+        'exec playwright install-deps chromium\n' +
+        'exec playwright install chromium\n',
+    );
+  });
+
+  it('leaves a mirror list it cannot rewrite unchanged, and still retries', async () => {
+    const harness = await createHarness(true);
+    await chmod(harness.mirrorList, 0o444);
+
+    const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
+      env: harness.env,
+    });
+
+    expect(stdout).toContain(
+      `[playwright-install] Could not rewrite ${harness.mirrorList}; leaving it unchanged.`,
+    );
+    expect(await readFile(harness.mirrorList, 'utf8')).toContain(
+      'azure.archive.ubuntu.com',
     );
     expect(await readFile(harness.logPath, 'utf8')).toBe(
       'exec playwright install-deps chromium\n' +
@@ -288,6 +325,9 @@ describe('install-playwright-chromium.sh', () => {
     );
     expect(await readFile(harness.archiveFile, 'utf8')).toContain(
       'http://azure.archive.ubuntu.com/ubuntu',
+    );
+    expect(await readFile(harness.ubuntuSource, 'utf8')).toBe(
+      harness.sourceText,
     );
   });
 

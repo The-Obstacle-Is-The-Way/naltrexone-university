@@ -32,9 +32,8 @@ find_apt_mirror_lists() {
   while IFS= read -r -d '' source_file; do
     { grep -oE 'mirror\+file:[^[:space:]]+' "$source_file" || true; } |
       while IFS= read -r mirror_list; do
+        # `mirror+file:///path` leaves `///path`, which names the same file.
         mirror_list="${mirror_list#mirror+file:}"
-        # `mirror+file:///path` and `mirror+file:/path` name the same file.
-        mirror_list="/${mirror_list#"${mirror_list%%[!/]*}"}"
         if [[ -f "$mirror_list" ]]; then
           printf '%s\0' "$mirror_list"
         fi
@@ -66,10 +65,17 @@ fail_over_azure_archive_sources() {
     sed \
       's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' \
       "$source_file" > "$replacement_file"
-    sudo cp "$replacement_file" "$source_file"
+    if ! sudo cp "$replacement_file" "$source_file"; then
+      echo "[playwright-install] Could not rewrite $source_file; leaving it unchanged."
+      rm -f "$replacement_file"
+      continue
+    fi
     rm -f "$replacement_file"
     rewrote_source=true
-  done < <(find_apt_source_files; find_apt_mirror_lists)
+  # Mirror lists first: their search reads every source before any source is
+  # rewritten, and it returns 0 even if `find` fails, so `set -e` cannot end
+  # this list before the lists are read.
+  done < <(find_apt_mirror_lists; find_apt_source_files)
 
   if [[ "$rewrote_source" == true ]]; then
     echo '[playwright-install] Retrying apt dependencies through archive.ubuntu.com.'
