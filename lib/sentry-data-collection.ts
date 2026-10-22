@@ -264,6 +264,9 @@ export const SENTRY_CLIENT_SETTINGS = {
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 0,
   dataCollection: SENTRY_DATA_COLLECTION,
+  // Synchronous on purpose: an error page reports a stale action and then
+  // reloads in the same commit, and an asynchronous hook would hold the event
+  // until after the reload (BUG-319).
   beforeSend: scrubEvent,
   beforeBreadcrumb: scrubBreadcrumb,
 } satisfies Sentry.BrowserOptions;
