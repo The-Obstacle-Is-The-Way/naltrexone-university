@@ -256,8 +256,8 @@ export function scrubBreadcrumb(
 
 /**
  * The browser SDK's settings apart from its key and environment, kept here so
- * the real-SDK tests initialize Sentry with what `sentry.client.config.ts`
- * uses.
+ * the error page's real-SDK test initializes Sentry with what
+ * `sentry.client.config.ts` uses.
  */
 export const SENTRY_CLIENT_SETTINGS = {
   tracesSampleRate: 0,

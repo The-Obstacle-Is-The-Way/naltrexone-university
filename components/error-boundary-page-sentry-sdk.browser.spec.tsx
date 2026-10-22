@@ -7,27 +7,34 @@ import { STALE_ACTION_RELOAD_KEY } from '@/lib/stale-server-action';
 import { ErrorBoundaryPage } from './error-boundary-page';
 
 // BUG-319: an error page reports a stale action's error, then reloads the
-// page. Only a request the transport started before the reload can arrive, so
-// the order is proven through the real browser SDK with the browser's own
-// settings. The transport records each request and sends nothing.
+// page. Only a keepalive request started before the reload can arrive, so the
+// order is proven through the real browser SDK and its fetch transport, with
+// the browser's own settings. The fetch records each request and sends nothing.
 const order: string[] = [];
-const sent: string[] = [];
+const requests: { body: string; keepalive: boolean | undefined }[] = [];
+
+const recordingFetch: typeof fetch = async (_url, init) => {
+  order.push('request');
+  requests.push({
+    body:
+      init?.body instanceof Uint8Array
+        ? new TextDecoder().decode(init.body)
+        : String(init?.body),
+    keepalive: init?.keepalive,
+  });
+  return new Response(null, { status: 200 });
+};
 
 beforeAll(() => {
+  // The boundary logs every caught error; keep test output quiet. Stubbed
+  // before init, so the SDK's console breadcrumb still wraps it.
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
   Sentry.init({
     dsn: 'https://public@sentry.invalid/1',
     environment: 'production',
     ...SENTRY_CLIENT_SETTINGS,
-    transport: (options: Parameters<typeof Sentry.createTransport>[0]) =>
-      Sentry.createTransport(options, async (request) => {
-        order.push('request');
-        sent.push(
-          typeof request.body === 'string'
-            ? request.body
-            : new TextDecoder().decode(request.body),
-        );
-        return { statusCode: 200 };
-      }),
+    transport: (options: Parameters<typeof Sentry.makeFetchTransport>[0]) =>
+      Sentry.makeFetchTransport(options, recordingFetch),
   });
 });
 
@@ -37,8 +44,6 @@ afterAll(async () => {
 
 beforeEach(() => {
   window.sessionStorage.removeItem(STALE_ACTION_RELOAD_KEY);
-  // The boundary logs every caught error; keep test output quiet.
-  vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
 it("starts sending a stale action's error to Sentry before it reloads the page", async () => {
@@ -59,5 +64,6 @@ it("starts sending a stale action's error to Sentry before it reloads the page",
 
   await expect.poll(() => order).toContain('reload');
   expect(order).toEqual(['request', 'reload']);
-  expect(sent[0]).toContain('UnrecognizedActionError');
+  expect(requests[0]).toMatchObject({ keepalive: true });
+  expect(requests[0]?.body).toContain('UnrecognizedActionError');
 });
