@@ -37,10 +37,13 @@ test(
       await expect(
         page.getByRole('heading', { name: 'Billing' }),
       ).toBeVisible();
-      await expect(page.getByText('Cancellation scheduled')).toBeVisible();
+      await expect(
+        page.getByText('Cancellation scheduled', { exact: true }),
+      ).toBeVisible();
       await expect(
         page.getByText(
           `Your subscription will cancel on January 15, ${year} at 3:00 AM UTC (January 14 at 10:00 PM EST, January 14 at 7:00 PM PST). You'll keep access until then.`,
+          { exact: true },
         ),
       ).toBeVisible();
       const width = await page.evaluate(async () => {
