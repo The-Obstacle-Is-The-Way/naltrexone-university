@@ -1,6 +1,6 @@
 # DEBT-508: Concurrent E2E Runs Share One Clerk Rate Budget and One Stripe Customer
 
-**Status:** In Progress — evaluate per-run Clerk users, and show two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -108,8 +108,12 @@ Every CI failure class seen today, and the Stripe hazard found with them, now ha
   - the reset needs no Clerk secret, since it no longer imports a Clerk call;
   - the seed calls Clerk only when no ID is passed in.
 - [x] Sweep tests prove it deletes only stale per-run CI customers, never another owner's, at most 10 per setup attempt, and that cleanup stops at its deadline. A CI run's log shows teardown deleting its own customer.
-- [ ] By 2026-10-22, record the per-run Clerk-user evaluation, instance-budget impact and non-overlap session-loss controls before deciding whether to change coordination.
-- [ ] Two overlapping CI runs both pass. DEBT-503 item 1, which this depends on, was released on 2026-10-08. Not yet observed.
+- [x] By 2026-10-22, record the per-run Clerk-user evaluation, instance-budget impact and non-overlap session-loss controls before deciding whether to change coordination. *Recorded 2026-10-23, a day late:*
+  - **The controls.** From 2026-10-08 to 2026-10-23 09:17Z, CI ran 454 E2E steps that passed or failed, reading each run's latest attempt; two runs' job lists could not be read. Eight failed, all in windows no other CI E2E overlapped. On 2026-10-23, #1592's run 39932700884 lost its session alone in its window, with BUG-337's signature: both `__client_uat` cookies read `0` mid-run. The session losses this record suspected come without overlap.
+  - **The instance budget.** Clerk's Backend API limit is per instance: 100 requests per 10 seconds for a development instance, with user creation and deletion under that general limit (Clerk's rate-limits page, read 2026-10-23). Separate users add no allowance.
+  - **The user cap.** Clerk caps a development instance at 100 users (Clerk's environments guide, read 2026-10-23). A cancelled CI run never reaches teardown, so per-run users would need a sweep like the Stripe customers' sweep, and a leak that reached the cap would stop every signed-in test.
+  - **Decided:** keep the shared Clerk user and the one-run-at-a-time rule. Per-run users would not address the observed losses, which happen without overlap, and they add a cap the shared user does not have. Waiting holds the trigger to revisit.
+- [x] Two overlapping CI runs both pass. DEBT-503 item 1, which this depends on, was released on 2026-10-08. *Observed 2026-10-18:* runs 39154630849 and 39154613372 overlapped their E2E steps for 198 seconds and both passed. It is the only overlap among the 454 steps above, because the sessions on this machine run one E2E at a time, CI's included.
 
   *Added 2026-10-08:*
   - **The failure.** A local `pnpm test:e2e` ran inside another pull request's CI E2E window. One test lost its Clerk session and was redirected to sign-in, at `helpers/session.ts`'s `startSession` check; the other 62 passed.

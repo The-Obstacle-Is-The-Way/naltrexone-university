@@ -1,6 +1,6 @@
 # DEBT-509: Pending Next.js Security Fixes Have No Watcher
 
-**Status:** Open — the two Next.js fixes ship in 16.4.1 under exact-version exceptions; remove them after 2026-10-21; waiting for the watcher's first close after GitHub's review; due 2026-10-22
+**Status:** Verifying — the exceptions are removed, the watcher's first close moves to Waiting, and the record closes; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -117,9 +117,9 @@ Close when the watcher has a successful scheduled run that reads the indirect de
 - [x] Indirect dependencies watched, implemented test-first, with a local dry run that read 464 of 465 repositories (2026-10-08).
 - [x] Issues that GitHub's review rules out close themselves, implemented test-first and checked against the 95 advisories of 2026-06-14 to 2026-10-08 with no wrong closure (2026-10-08).
 - [x] A scheduled run on `main` succeeds after the indirect change, within the 15-minute timeout and the token's 1,000 requests an hour: run 38089084777, 392 repositories in 1m54s, not refused (2026-10-10).
-- [ ] The first issue closed after GitHub's review carries correct evidence.
+- [ ] The first issue closed after GitHub's review carries correct evidence. *2026-10-23: not yet observed.* No issue carries the watcher's closing text, "Closed automatically, since Dependabot reads the same review". Every advisory issue closed so far was assessed and closed by hand. A trigger cannot be checked on a date, so this moves to Waiting when the record closes.
 - [x] The first critical or high issue confirms the owner receives the assignment notification: GitHub's notification inbox holds #1509 and #1510 with reason `assign` (2026-10-15).
 - [x] `vite` 8.3.4 landed in #1522 and was promoted in #1523 after the release-age deadline (2026-10-15).
 - [x] Both pending advisories are published and assessed: GHSA-673q-mjm6-r5xr and GHSA-p3m5-59mp-jv5r, fixed in 16.4.1 (2026-10-14).
 - [x] The fix is in production: promotion #1513, served since 2026-10-15T02:18Z (2026-10-15).
-- [ ] The age-gate exceptions for 16.4.1 are removed after 2026-10-21.
+- [x] The age-gate exceptions for 16.4.1 are removed after 2026-10-21. *2026-10-23:* the ten exact-version entries are deleted from `pnpm-workspace.yaml`, and `pnpm install --frozen-lockfile` passes without them, with no lockfile change. 16.4.1 was published on 2026-10-14 at 17:43:55Z, so it cleared the 7-day gate on 2026-10-21.

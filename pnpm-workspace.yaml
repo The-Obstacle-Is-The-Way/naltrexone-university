@@ -1,21 +1,6 @@
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true # v11-only: fail when no version satisfies the 7-day age threshold.
 minimumReleaseAgeIgnoreMissingTime: false # v11-only: fail when registry metadata lacks package publish time.
-# Urgent advisories GHSA-673q-mjm6-r5xr (critical) and GHSA-p3m5-59mp-jv5r
-# (high) are fixed in next 16.4.1, published 2026-10-14 (DEBT-509). Exact
-# versions only: next and the companions it pins, published with it. Remove
-# after 2026-10-21, once all are older than 7 days.
-minimumReleaseAgeExclude:
-  - next@16.4.1 # remove after 2026-10-21
-  - '@next/env@16.4.1' # remove after 2026-10-21
-  - '@next/swc-darwin-arm64@16.4.1' # remove after 2026-10-21
-  - '@next/swc-darwin-x64@16.4.1' # remove after 2026-10-21
-  - '@next/swc-linux-arm64-gnu@16.4.1' # remove after 2026-10-21
-  - '@next/swc-linux-arm64-musl@16.4.1' # remove after 2026-10-21
-  - '@next/swc-linux-x64-gnu@16.4.1' # remove after 2026-10-21
-  - '@next/swc-linux-x64-musl@16.4.1' # remove after 2026-10-21
-  - '@next/swc-win32-arm64-msvc@16.4.1' # remove after 2026-10-21
-  - '@next/swc-win32-x64-msvc@16.4.1' # remove after 2026-10-21
 blockExoticSubdeps: true
 overrides:
   # Security: GHSA-r28c-9q8g-f849 + GHSA-fxqj-rqcc-2cmp — crafted
