@@ -1,6 +1,6 @@
 # BUG-343: A Second Checkout Can Leave a Hidden Second Subscription
 
-**Status:** Blocked — the owner's refund decision for option 4, and the owner's check of the Dashboard's one-subscription setting; follow-up due 2026-10-21
+**Status:** Blocked — the owner's refund decision for option 4, and the owner's check of the Dashboard's one-subscription setting; follow-up due 2026-10-30
 **Priority:** P2
 **Date:** 2026-10-13
 
@@ -189,6 +189,8 @@ Stripe test mode, one disposable test customer per scenario, deleted afterwards;
 ## Resolution (decided)
 
 Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for the case the one before cannot close, shipped in steps. The owner delegated engineering calls; the refund in option 4 stays the owner's decision.
+
+*Re-dated 2026-10-23 from 2026-10-21:* by the follow-up date the owner had decided neither the refund nor checked the Dashboard setting. The owner was asked again on 2026-10-23, and the next follow-up is 2026-10-30.
 
 1. **The first pull request: options 6 and 2.**
    - The fake refuses to expire a Session that is not open, as Stripe does. The contract's twelfth scenario proves this against TEST mode for an expired Session; the reproduction observed the same refusal for a completed one.

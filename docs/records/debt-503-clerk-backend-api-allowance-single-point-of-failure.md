@@ -1,6 +1,6 @@
 # DEBT-503: Clerk's Shared Backend API Allowance Is a Single Point of Failure
 
-**Status:** In Progress — items 1, 3 and 5 released, item 5's key set in production 2026-10-11 and its deploy check corrected the same day; item 4 due 2026-10-21; item 2 waits for its trigger
+**Status:** In Progress — items 1, 3 and 5 released, item 5's key set in production 2026-10-11 and its deploy check corrected the same day; item 4 due 2026-11-06; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -54,7 +54,7 @@ This record holds the structural fixes, so that the allowance stops being the on
   - `tests/shared/session-identity-contract.ts` runs the five scenarios over the fakes and over real Postgres. Clerk's 404 in them is the real SDK's error, the one the Backend API throws; its other answers are built by hand.
   - BUG-320: six concurrent first requests, each on its own connection, provision one row in each of 100 rounds. With BUG-320's retry removed, the test failed in each of five runs.
   - BUG-332: that test then found a deadlock among the same inserts, in about one run in three. The gateway now retries provisioning after a `40P01`.
-  - After release: `main`'s E2E passes, and DEBT-508's overlap check shows overlapping runs meet no Clerk 429. Released through promotion #1427 (aliased 2026-10-08T12:15:56Z); `main`'s CI, E2E included, passed. The overlap check remains.
+  - After release: `main`'s E2E passes, and DEBT-508's overlap check shows overlapping runs meet no Clerk 429. Released through promotion #1427 (aliased 2026-10-08T12:15:56Z); `main`'s CI, E2E included, passed. DEBT-508's overlap check found one overlapping pair of CI runs, on 2026-10-18, and both passed.
 
 ### 2. Let only forged requests fill the site-wide cap (P3)
 
@@ -114,7 +114,9 @@ This record holds the structural fixes, so that the allowance stops being the on
     1. **Measure, before the first live sale.** The limiter's own window rows already hold each address's, session's and the site's per-minute count for about a day, and they keep counting past the limit. A daily step in the renewal job rolls the last 24 hours into one row with no address or session in it: the busiest minute site-wide, the number of address and session windows over their limits, how far over the worst went, and the requests refused. It adds no write per request.
     2. **With item 5's key, verify a refresh's session token in the proxy, before counting it.** A token whose signature fails costs Clerk nothing, so it does not count against any limit. A genuine one counts per session, site-wide, and per address in a bucket of its own, sized from step 1 for a shared network. A handshake nonce, which only Clerk can check, keeps today's per-address limit.
     3. **Alert when that signed-in bucket refuses,** as its own kind. Then real people were refused, which a bot cannot cause without real accounts, and the response is raising that limit.
-  - **Due 2026-10-21,** after item 5, which step 2 needs, and before the first live sale in any case.
+  - **Due 2026-11-06,** after item 5, which step 2 needs, and before the first live sale in any case.
+
+    *Re-dated 2026-10-23 from 2026-10-21:* no session held this item, and none of it was built by its date. Production has no live sale yet, so the pre-sale bound still holds. The next action is step 1, the daily roll-up, by 2026-11-06.
 
 ### 5. Verify session tokens without Clerk's network (P2)
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import { getTags } from '@/app/(app)/app/shared/client-actions';
 import { reportClientError } from '@/lib/report-client-error';
-import { getTags } from '@/src/adapters/controllers/tag-actions';
 import type { TagRow } from '@/src/adapters/controllers/tag-controller';
 import { createTagsEffect } from '../practice-page-tags';
 

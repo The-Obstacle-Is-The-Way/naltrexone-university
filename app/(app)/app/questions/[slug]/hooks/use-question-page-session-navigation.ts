@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { getPracticeSessionReview } from '@/app/(app)/app/shared/client-actions';
 import {
   reportClientError,
   shouldReportClientError,
 } from '@/lib/report-client-error';
 import type { QuestionOrigin } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
-import { getPracticeSessionReview } from '@/src/adapters/controllers/practice-actions';
 import { STANDARD_READ_TIMEOUT_MS } from '../../../shared/timeout-tiers';
 import {
   type SessionNavigation,

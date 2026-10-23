@@ -19,12 +19,6 @@ browserGlobal.process = {
   },
 };
 
-// Mock the external Sentry SDK so client-safe wrappers can import without
-// pulling Next router internals into the browser test runtime.
-vi.mock('@sentry/nextjs', () => ({
-  captureException: vi.fn(),
-}));
-
 vi.mock('next/link', () => ({
   __esModule: true,
   default: ({
