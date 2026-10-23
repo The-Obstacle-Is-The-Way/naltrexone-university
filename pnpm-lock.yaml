@@ -8,6 +8,7 @@ overrides:
   postcss: 8.5.23
   qs: 6.16.0
   esbuild: '>=0.28.1'
+  undici: 7.29.1
   brace-expansion@5: 5.0.12
   fast-uri: 3.1.8
   nanoid@3: 3.3.18
@@ -28,7 +29,7 @@ importers:
         version: 3.0.0
       '@clerk/nextjs':
         specifier: ^7.9.10
-        version: 7.9.16(next@16.4.2(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 7.9.17(next@16.4.2(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@clerk/ui':
         specifier: ^1.38.1
         version: 1.40.2(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -61,7 +62,7 @@ importers:
         version: 0.45.4(@opentelemetry/api@1.9.1)(postgres@3.4.9)
       lucide-react:
         specifier: ^1.43.0
-        version: 1.57.0(@types/react@19.3.0)(react@19.3.1)
+        version: 1.58.0(@types/react@19.3.0)(react@19.3.1)
       next:
         specifier: 16.4.2
         version: 16.4.2(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -93,8 +94,8 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       resend:
-        specifier: 6.33.0
-        version: 6.33.0
+        specifier: 6.34.1
+        version: 6.34.1
       server-only:
         specifier: ^0.0.1
         version: 0.0.1
@@ -125,13 +126,13 @@ importers:
         version: 2.5.15
       '@clerk/testing':
         specifier: ^2.2.42
-        version: 2.2.46(@playwright/test@1.64.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 2.2.47(@playwright/test@1.64.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@playwright/test':
         specifier: ^1.64.1
         version: 1.64.1
       '@stripe/cli':
-        specifier: 1.53.1
-        version: 1.53.1
+        specifier: 1.54.0
+        version: 1.54.0
       '@stryker-mutator/core':
         specifier: 9.6.1
         version: 9.6.1(@types/node@24.19.2)
@@ -197,8 +198,8 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@asamuzakjp/css-color@7.1.5':
-    resolution: {integrity: sha512-jCpAvj8apa7SKHZYogk0rbXB3Kb0hLFrpkWF+Ap+vBA5rirItnpv9NKyAyEuDuFizvl0qwnj6JWR70RGJ0rOlw==}
+  '@asamuzakjp/css-color@7.1.6':
+    resolution: {integrity: sha512-jZJUZX0mR6JqnjQGb79yTYbR5WXmACmcLoFSgZk+7W+0qMJ8jWGRp9ncYvE1ihwL3dwbmfeCe6/O0rRwWTko4g==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
 
   '@asamuzakjp/dom-selector@10.0.3':
@@ -439,16 +440,16 @@ packages:
     resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
     hasBin: true
 
-  '@clerk/backend@3.24.0':
-    resolution: {integrity: sha512-ak5U2IabnBvYzhTrPl7de0ywiLmrBqfA4aonjhC5Kmt9IUEwXIPf294zgfXfFeDy3JGTSTvgWAy7p+15OagirA==}
+  '@clerk/backend@3.25.0':
+    resolution: {integrity: sha512-hmJS0a61FO08PDaV2MtZ/hj6pE+cQBRmpxR8oUFGQTXewOQLLOAbcgob0rmFAnMNuHgXfsYf3NVxcQCUOWE+QA==}
     engines: {node: '>=20.9.0'}
 
   '@clerk/localizations@4.23.0':
     resolution: {integrity: sha512-6DiPH+qscEZroIPIm/fYOA4ToBI3kmfgiCn75XgqzU2vR8mFl033bA3PvdmTmvmwNOtdlKWtWKdoe66HXyYD1w==}
     engines: {node: '>=20.9.0'}
 
-  '@clerk/nextjs@7.9.16':
-    resolution: {integrity: sha512-CeQhiRBmYz+qSOCnxtatKcOmo2aC/iqGiZ7XU6YpPKCnCBZBw+VgKX4X3GAzoltioJPrkLak+//zXAbKqB7SBA==}
+  '@clerk/nextjs@7.9.17':
+    resolution: {integrity: sha512-QA1CO6YZedpX0s04jx/rOg8AbptmPKxAhwd3xjYqufA3HF1IyR0DyBj+t53Btubpm5oCd1MhsFxOOwFlQmvahQ==}
     engines: {node: '>=20.9.0'}
     peerDependencies:
       next: ^15.2.8 || ^15.3.8 || ^15.4.10 || ^15.5.9 || ^15.6.0-0 || ^16.0.10 || ^16.1.0-0
@@ -474,8 +475,8 @@ packages:
       react-dom:
         optional: true
 
-  '@clerk/testing@2.2.46':
-    resolution: {integrity: sha512-EOLire8+RqUIapcpzSqvcDMQ6/3rQ4NGhbNBr3K9UT1xftUsYRvx6obP4yYvGIdJgS60vit/9xZVuaxo/i2Ttw==}
+  '@clerk/testing@2.2.47':
+    resolution: {integrity: sha512-jhww7pZ05CcHOhWnq7sodQ/Ydj+g6JOrFemJIpulambAcXVpKbqbInuYTM6wdUx1sKGZOJOH20qK/e7U3FvsMQ==}
     engines: {node: '>=20.9.0'}
     peerDependencies:
       '@playwright/test': ^1
@@ -2348,33 +2349,33 @@ packages:
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
-  '@stripe/cli-darwin-arm64@1.53.1':
-    resolution: {integrity: sha512-GomiX6WKR7v14h5G2FLDMRicd/U8/YygN+e0LA0Aq3p9iIKAi4Wmqx5nuIgyPMTwXCf5mP7zmrgGjd41E9XzLA==}
+  '@stripe/cli-darwin-arm64@1.54.0':
+    resolution: {integrity: sha512-v19Psh0y8e1Elu8Xgcl0U0Ws3AdLePXRi9fT9Hzdc9SXf02Mq8XeDAUJUOgI43kRrAG9a3fXzOlSD/ZNuu2ovA==}
     cpu: [arm64]
     os: [darwin]
 
-  '@stripe/cli-darwin-x64@1.53.1':
-    resolution: {integrity: sha512-42EUFLH369fgqrs0OcfLgNAn6rRqR997nfKDzLKdoDnhFcaNTHavHjWB+t7Iyypkaom750BUSFgLw2PmT7cDEg==}
+  '@stripe/cli-darwin-x64@1.54.0':
+    resolution: {integrity: sha512-n9rNMyVfncWsa03YnblYL5w/HxeDEuWkeoSqU27MESn1AzCabc44E37HDkOblG/jsRrAWrUyjE34WP8DaSI/kg==}
     cpu: [x64]
     os: [darwin]
 
-  '@stripe/cli-linux-arm64@1.53.1':
-    resolution: {integrity: sha512-Iw07T1FE3l/W//5MylvTY8rJXC8CcpwWkE6Vq1k71oZIJTbzEx+2Z6FAOUhwAi1jHIB1bKONVSzYl/Ontm5muw==}
+  '@stripe/cli-linux-arm64@1.54.0':
+    resolution: {integrity: sha512-uhmYC+0DofkP5PO0IM6WlSzk5vxeoMegIU7SL8+s76lySrAPW0+AySZoniadyTp/yVD4PY9kS6iWFIMF7KDpLg==}
     cpu: [arm64]
     os: [linux]
 
-  '@stripe/cli-linux-x64@1.53.1':
-    resolution: {integrity: sha512-YZilk+US6ccvXZFtpbs7aCtFMXjkyx5vBOY5uGPUFxxbEtDMRNjtGRimc0OGhFA0mcb0lU2IGwgGNIHFMAY6EA==}
+  '@stripe/cli-linux-x64@1.54.0':
+    resolution: {integrity: sha512-gp6rJTpJmHmtF5A7sVxAtJbLL11gNbhpvvgz81NLV8v9gJIBmhRG3yRCeBRwwXbzHziqefe7GuVD6R2C9/KmQA==}
     cpu: [x64]
     os: [linux]
 
-  '@stripe/cli-win32-x64@1.53.1':
-    resolution: {integrity: sha512-VyL/ncPGwDvgtqaPVlLHlKIAhWBaqV6KSjcQ3I8Qb83OQ4tXxWL20lbkxuCsNABm3Emir/12IxETTtEW6BvohA==}
+  '@stripe/cli-win32-x64@1.54.0':
+    resolution: {integrity: sha512-nTIUTTyfBulb6ItF8QNb7prRtaYeXMGbI+3x1KWAJvydohnubXOFAP0MbHos7v6gU/beKGC21psiwOKRrXHIbg==}
     cpu: [x64]
     os: [win32]
 
-  '@stripe/cli@1.53.1':
-    resolution: {integrity: sha512-0EKd8o1cc7pPNgVUeTVnYFob13TTjbZ/5bdbO+0FSVUre+cvuppEabf84JGz9JfxGnK80qdgDLCnqt/qmYK98Q==}
+  '@stripe/cli@1.54.0':
+    resolution: {integrity: sha512-Uq9p/n9PhN0LYNvbu7AL51vux5dqGHkhjIEUQxa3300YBzey3g//ggIVYTeC1ctLWbHU3PswW1+uRSQlgie9BQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -3568,8 +3569,8 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-react@1.57.0:
-    resolution: {integrity: sha512-bXFZEucYhAzLD62Jse76AbTR6LiSLTn3Tqir2f1n8rZrWAdLodYy7jnRZSPIT89dRLk/IseMOUWG82wJtTyTTw==}
+  lucide-react@1.58.0:
+    resolution: {integrity: sha512-hXaFNm6mk6QVtBnDGBn1YAs8j2tGUk0A4s/CpclIcczfxeXiW1rdOLVo6zCsoIih9XXsGvDODQerl749a2n7bA==}
     peerDependencies:
       '@types/react': '*'
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -4011,8 +4012,8 @@ packages:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
-  resend@6.33.0:
-    resolution: {integrity: sha512-sbpWLrwlaIDZuGHRYNX6101CWtXLqRNcT1S9c8BB357Ab2+IUJ7dNpYffVmGh2C11/4AfcFvM4ltURH8NJlPGw==}
+  resend@6.34.1:
+    resolution: {integrity: sha512-3jo/j1WAW7CBkE6pzK4qLjZCfHRLIhY3ph3x/wzU+MN51cSw3EtReGce8S1cA1R0ipNDOdFYU5Lmt5r563lvYw==}
     engines: {node: '>=20'}
     peerDependencies:
       '@react-email/render': '*'
@@ -4323,9 +4324,9 @@ packages:
   undici-types@7.24.6:
     resolution: {integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==}
 
-  undici@8.12.2:
-    resolution: {integrity: sha512-XtuDWVdqTLr3NAxm2ly9/hU6kUsJOgGh1RASzMBbsw6aWCOaQzHdW+QQDfdERjfJ2V5vL5pRPa4RetO9UfivDg==}
-    engines: {node: '>=22.19.0'}
+  undici@7.29.1:
+    resolution: {integrity: sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==}
+    engines: {node: '>=20.18.1'}
 
   unicorn-magic@0.3.0:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
@@ -4561,7 +4562,7 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@asamuzakjp/css-color@7.1.5':
+  '@asamuzakjp/css-color@7.1.6':
     dependencies:
       '@csstools/css-calc': 3.4.3(@csstools/css-parser-algorithms@4.0.2(@csstools/css-tokenizer@4.0.2))(@csstools/css-tokenizer@4.0.2)
       '@csstools/css-color-parser': 4.2.6(@csstools/css-parser-algorithms@4.0.2(@csstools/css-tokenizer@4.0.2))(@csstools/css-tokenizer@4.0.2)
@@ -4853,7 +4854,7 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
-  '@clerk/backend@3.24.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@clerk/backend@3.25.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@clerk/shared': 4.40.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       standardwebhooks: 1.1.1
@@ -4869,9 +4870,9 @@ snapshots:
       - react
       - react-dom
 
-  '@clerk/nextjs@7.9.16(next@16.4.2(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@clerk/nextjs@7.9.17(next@16.4.2(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@clerk/backend': 3.24.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@clerk/backend': 3.25.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@clerk/react': 6.17.8(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@clerk/shared': 4.40.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       next: 16.4.2(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -4897,9 +4898,9 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@clerk/testing@2.2.46(@playwright/test@1.64.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@clerk/testing@2.2.47(@playwright/test@1.64.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@clerk/backend': 3.24.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@clerk/backend': 3.25.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@clerk/shared': 4.40.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       dotenv: 17.2.2
     optionalDependencies:
@@ -6523,28 +6524,28 @@ snapshots:
 
   '@stablelib/base64@1.0.1': {}
 
-  '@stripe/cli-darwin-arm64@1.53.1':
+  '@stripe/cli-darwin-arm64@1.54.0':
     optional: true
 
-  '@stripe/cli-darwin-x64@1.53.1':
+  '@stripe/cli-darwin-x64@1.54.0':
     optional: true
 
-  '@stripe/cli-linux-arm64@1.53.1':
+  '@stripe/cli-linux-arm64@1.54.0':
     optional: true
 
-  '@stripe/cli-linux-x64@1.53.1':
+  '@stripe/cli-linux-x64@1.54.0':
     optional: true
 
-  '@stripe/cli-win32-x64@1.53.1':
+  '@stripe/cli-win32-x64@1.54.0':
     optional: true
 
-  '@stripe/cli@1.53.1':
+  '@stripe/cli@1.54.0':
     optionalDependencies:
-      '@stripe/cli-darwin-arm64': 1.53.1
-      '@stripe/cli-darwin-x64': 1.53.1
-      '@stripe/cli-linux-arm64': 1.53.1
-      '@stripe/cli-linux-x64': 1.53.1
-      '@stripe/cli-win32-x64': 1.53.1
+      '@stripe/cli-darwin-arm64': 1.54.0
+      '@stripe/cli-darwin-x64': 1.54.0
+      '@stripe/cli-linux-arm64': 1.54.0
+      '@stripe/cli-linux-x64': 1.54.0
+      '@stripe/cli-win32-x64': 1.54.0
 
   '@stryker-mutator/api@9.6.1':
     dependencies:
@@ -7406,7 +7407,7 @@ snapshots:
 
   jsdom@30.1.3(@noble/hashes@2.4.0):
     dependencies:
-      '@asamuzakjp/css-color': 7.1.5
+      '@asamuzakjp/css-color': 7.1.6
       '@asamuzakjp/dom-selector': 10.0.3
       '@bramus/specificity': 2.4.3
       '@csstools/css-syntax-patches-for-csstree': 1.1.15(css-tree@3.2.1)
@@ -7420,7 +7421,7 @@ snapshots:
       parse5: 8.0.1
       saxes: 6.0.0
       tough-cookie: 6.0.2
-      undici: 8.12.2
+      undici: 7.29.1
       w3c-xmlserializer: 6.0.0
       webidl-conversions: 8.0.1
       whatwg-mimetype: 5.0.0
@@ -7559,7 +7560,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@1.57.0(@types/react@19.3.0)(react@19.3.1):
+  lucide-react@1.58.0(@types/react@19.3.0)(react@19.3.1):
     dependencies:
       react: 19.3.1
     optionalDependencies:
@@ -8293,7 +8294,7 @@ snapshots:
 
   require-from-string@2.0.2: {}
 
-  resend@6.33.0:
+  resend@6.34.1:
     dependencies:
       postal-mime: 2.7.6
       standardwebhooks: 1.1.1
@@ -8635,7 +8636,7 @@ snapshots:
 
   undici-types@7.24.6: {}
 
-  undici@8.12.2: {}
+  undici@7.29.1: {}
 
   unicorn-magic@0.3.0: {}
 
