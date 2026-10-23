@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import { afterAll, describe, expect, it } from 'vitest';
+import { isLoopbackHostname } from '../../scripts/lib/loopback-hostname';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -10,7 +11,7 @@ if (!databaseUrl) {
 
 const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
 const host = new URL(databaseUrl).hostname;
-if (!allowNonLocal && host !== 'localhost' && host !== '127.0.0.1') {
+if (!allowNonLocal && !isLoopbackHostname(host)) {
   throw new Error(
     `Refusing to run integration tests against non-local DATABASE_URL host "${host}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
   );

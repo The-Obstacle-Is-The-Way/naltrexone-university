@@ -303,6 +303,15 @@ describe('app/(app)/app/billing/page', () => {
       },
     ])(
       'states the $name cancellation cutoff with UTC, Eastern and Pacific times',
+      {
+        meta: {
+          ruleProof: {
+            file: 'app/(app)/app/billing/page.test.tsx',
+            title:
+              'states the $name cancellation cutoff with UTC, Eastern and Pacific times',
+          },
+        },
+      },
       ({ cutoff, expected }) => {
         const subscription = createSubscription({
           cancelAtPeriodEnd: true,

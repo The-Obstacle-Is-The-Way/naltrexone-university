@@ -1,13 +1,10 @@
-import { pathToFileURL } from 'node:url';
-import {
-  createE2ECommandPlan,
-  type E2ECommandEnv,
-  runCommandPlan,
-} from './e2e-local-orchestrator';
+import { type CommandEnv, runCommandPlan } from '../lib/command-plan';
+import { isMain } from '../lib/entry-point.mts';
+import { createE2ECommandPlan } from './e2e-local-orchestrator';
 
 type RunLocalE2EInput = {
   argv?: string[];
-  env?: E2ECommandEnv;
+  env?: CommandEnv;
   createPlan?: typeof createE2ECommandPlan;
   runPlan?: typeof runCommandPlan;
 };
@@ -29,10 +26,8 @@ export async function runLocalE2E({
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runLocalE2E().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error(message);

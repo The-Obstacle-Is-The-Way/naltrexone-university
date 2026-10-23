@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { basename, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isMain } from '../lib/entry-point.mts';
 
 export type LocalTestTargetEnv = Readonly<Record<string, string | undefined>>;
 
@@ -202,12 +202,10 @@ export function parseOutputFormat(
   throw new Error(`Unknown local test target output format "${value}".`);
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   try {
-    const format = parseOutputFormat(process.argv[2]);
+    const format = parseOutputFormat(process.argv.slice(2)[0]);
     console.log(formatLocalTestTargetOutput(resolveLocalTestTarget(), format));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

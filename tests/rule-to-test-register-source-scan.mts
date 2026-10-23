@@ -2,9 +2,10 @@ import ts from '@typescript/typescript6';
 
 // DEBT-465 Part 3 (ADR-019 amendment): the rule-to-test register states each
 // business rule in plain language and names the tests that prove it. This
-// check fails when a named file is gone or no longer declares a running test
+// source check fails when a named file is gone or no longer declares a candidate test
 // with the named title, so a rename, deletion, skip or commented-out test
-// cannot silently orphan a rule. A malformed register line is reported too,
+// receives immediate feedback. rule-proof-reporter.mts verifies execution.
+// A malformed register line is reported too,
 // so a rule cannot drop out of the check unseen.
 
 export const RULE_REGISTER_PATH = 'docs/product/business-rules.md';
@@ -109,8 +110,8 @@ function skippedByOptions(options: ts.Expression | undefined): boolean {
 
 // Whether a child runs only under a condition: an `if` or ternary branch, the
 // right side of `&&`, `||` or `??`, a `switch` case, or a `catch` block. A
-// loop body, a `try` block and a `finally` block run, so a test declared there
-// counts.
+// loop body, a function, a `try` block or a `finally` block remains a
+// syntactic candidate here; this reader does not prove reachability.
 function isConditionalChild(parent: ts.Node, child: ts.Node): boolean {
   if (ts.isIfStatement(parent)) {
     return child === parent.thenStatement || child === parent.elseStatement;
@@ -132,7 +133,7 @@ function isConditionalChild(parent: ts.Node, child: ts.Node): boolean {
   return ts.isCaseClause(parent) || ts.isDefaultClause(parent);
 }
 
-/** The titles of the tests a file declares and would run unconditionally. */
+/** Candidate literal titles after the supported skip/conditional exclusions. */
 export function declaredTestTitles(
   source: string,
   fileName: string,
@@ -175,7 +176,7 @@ export function declaredTestTitles(
 
 /**
  * Each problem as one line; none when every rule names at least one test and
- * every named file still declares a running test with its named title.
+ * every named file still declares a syntactic candidate with its named title.
  */
 export function findRuleRegisterProblems(
   rules: readonly RegisteredRule[],

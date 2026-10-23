@@ -13,8 +13,8 @@ It intentionally avoids hard-coding private dashboard values that the repo canno
 | Production | `https://addictionboards.com` | `main` | Clerk live + Stripe live | Isolated production database | Vercel Production deployment |
 | Preview | `https://*.vercel.app` on non-`main` branches | Any non-`main` branch | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
 | Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Whatever `DATABASE_URL` in `.env.local` points to | Should mirror Preview semantics, not Production |
-| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; `.env.local` database requires both existing-target and non-local opt-ins |
-| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
+| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/test-lanes/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; `.env.local` database requires both existing-target and non-local opt-ins |
+| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/test-lanes/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
 
 ### Core isolation rule
 
@@ -215,7 +215,7 @@ DATABASE_URL="<preview-or-dev-connection-string>" DB_TARGET_ACK='<from the refus
 DATABASE_URL="<production-connection-string>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 ```
 
-For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
+For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/test-lanes/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
 
 Only use `.env.local`'s `DATABASE_URL` for an intentional deploy-target E2E check with both explicit opt-ins. Confirm that it is a non-production Neon branch first, then run migrations against that explicit target:
 

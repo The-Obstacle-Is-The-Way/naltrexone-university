@@ -16,7 +16,7 @@ where `comp` is the function's cyclomatic complexity and `cov` its test coverage
 
 ---
 
-## 1. Implementation: `scripts/crap-report.ts`
+## 1. Implementation: `scripts/quality/crap-report.ts`
 
 The implementation builds a small repo-owned reporter, in the repo's established custom-script style, so its lane merge, source filters, and observational CLI contract stay explicit. The inputs and dependency topology below were execution-audited on 2026-08-22 against `dev` at `51114a76`:
 
@@ -76,7 +76,7 @@ pnpm test:browser:coverage
 pnpm quality:crap --top 25
 ```
 
-The three coverage commands must come from the same working tree before recording a baseline. Use an explicit diagnostic such as `pnpm quality:crap --lane unit --top 25` only when investigating lane ownership; never record it as the merged baseline. Add `"quality:crap": "tsx scripts/crap-report.ts"` to `package.json` in the implementing PR.
+The three coverage commands must come from the same working tree before recording a baseline. Use an explicit diagnostic such as `pnpm quality:crap --lane unit --top 25` only when investigating lane ownership; never record it as the merged baseline. Add `"quality:crap": "tsx scripts/quality/crap-report.ts"` to `package.json` in the implementing PR.
 
 ## 2. Interpretation policy
 
@@ -131,7 +131,7 @@ The installed Biome 2.5.7 ships `noExcessiveCognitiveComplexity` (not enabled in
 
 ## 5. Adoption sequence (DEBT-465 Part 1)
 
-1. TDD `scripts/crap-report.ts` (fixture source + fixture coverage JSON → known scores; formula boundaries, nested functions, all six logical decision operators, lane merge, and infrastructure exits are unit contracts).
+1. TDD `scripts/quality/crap-report.ts` (fixture source + fixture coverage JSON → known scores; formula boundaries, nested functions, all six logical decision operators, lane merge, and infrastructure exits are unit contracts).
 2. Add the `quality:crap` script plus direct `istanbul-lib-coverage` and `@types/istanbul-lib-coverage` devDependencies; `.gitignore` already covers `coverage/`.
 3. Produce the baseline: run all three coverage lanes, then the merged report; record the top-25 in DEBT-465.
 4. Compare against the table above; correct this doc where the measured ranking disagrees with the manual sweep.

@@ -460,6 +460,15 @@ describe('reconcile Stripe subscriptions cron route drain wiring', () => {
 describe('send renewal notices cron route', () => {
   it.each(['annual', 'monthly'] as const)(
     'selects %s reminders from 30 through 39 days and does not resend them',
+    {
+      meta: {
+        ruleProof: {
+          file: 'tests/integration/cron-routes.integration.test.ts',
+          title:
+            'selects %s reminders from 30 through 39 days and does not resend them',
+        },
+      },
+    },
     async (plan) => {
       const idsByDays = new Map<number, string>();
       for (const days of [29, 30, 39, 40]) {

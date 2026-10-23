@@ -1,9 +1,9 @@
-import { pathToFileURL } from 'node:url';
 import {
-  type E2ECommandEnv,
-  type E2ECommandStep,
+  type CommandEnv,
+  type CommandStep,
   runCommandPlan,
-} from './e2e-local-orchestrator';
+} from '../lib/command-plan';
+import { isMain } from '../lib/entry-point.mts';
 import {
   createLocalTestTargetEnv,
   resolveLocalTestTarget,
@@ -14,13 +14,13 @@ const DATABASE_READY_TIMEOUT_SECONDS = 60;
 
 type CreateLocalTestDbCommandPlanInput = {
   action: LocalTestDbAction;
-  env?: E2ECommandEnv;
+  env?: CommandEnv;
   cwd?: string;
 };
 
 type RunLocalTestDbCommandInput = {
   argv?: string[];
-  env?: E2ECommandEnv;
+  env?: CommandEnv;
   cwd?: string;
   runPlan?: typeof runCommandPlan;
 };
@@ -29,7 +29,7 @@ export function createLocalTestDbCommandPlan({
   action,
   env = process.env,
   cwd = process.cwd(),
-}: CreateLocalTestDbCommandPlanInput): E2ECommandStep[] {
+}: CreateLocalTestDbCommandPlanInput): CommandStep[] {
   const target = resolveLocalTestTarget({ env, cwd });
   const targetEnv = createLocalTestTargetEnv(target);
   const projectArgs = ['compose', '-p', target.composeProjectName];
@@ -109,10 +109,8 @@ function parseLocalTestDbAction(value: string | undefined): LocalTestDbAction {
   throw new Error(`Unknown local test DB action "${value}".`);
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runLocalTestDbCommand().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error(message);
