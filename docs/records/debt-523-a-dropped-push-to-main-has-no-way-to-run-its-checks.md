@@ -1,6 +1,6 @@
 # DEBT-523: A Push to Main That GitHub Drops Has No Way to Run Its Checks
 
-**Status:** Verifying — the release watch's first week of scheduled gaps stays under a day, with no `scheduled_checks_stopped` for either watch; due 2026-10-23
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-23
 **Priority:** P2
 **Date:** 2026-10-15
 
@@ -111,7 +111,11 @@ Options 2, 3 and 4:
   - The boundary cases pass against either version: just under a day, a new watch's first day, and a watch counted once.
   - A later case pins the alert's count, three for two stopped watches and a stale watcher. It fails if the count becomes one for any number of stopped watches.
 - [x] Before merge, read live through the gateway on 2026-10-16: the advisory watch's last successful scheduled run was that morning. The release watch had none yet, still within its first day, so the check read `running`.
-- [ ] On 2026-10-23: the release watch's first week of gaps between scheduled runs stays under 24 hours, and the renewal job raised no `scheduled_checks_stopped` for either watch. Option 7 is reconsidered with those gaps.
+- [x] On 2026-10-23: the release watch's first week of gaps between scheduled runs stays under 24 hours, and the renewal job raised no `scheduled_checks_stopped` for either watch. Option 7 is reconsidered with those gaps. *Read 2026-10-23 at 15:25Z, for 2026-10-16T15:24Z to 2026-10-23T15:24Z:*
+  - **The gaps.** GitHub started 40 scheduled runs of the release watch, all successful, against an hourly schedule. The longest gap between two successes was 7.2 hours, from 06:18Z to 13:32Z on 2026-10-19.
+  - **No stop.** Sentry holds no event tagged `alert.kind:scheduled_checks_stopped` in the week; the same query finds the month's alert drill. The renewal job's cron monitor, `send-renewal-notices`, reads ok, with its last check-in at 09:54Z on 2026-10-23.
+  - **The manual path in use.** On 2026-10-21 GitHub dropped promotion #1590's push. The release went out by this record's manual run and promote: CI run 39618939580 on `main`'s head, a deployment from GitHub's copy held by the Deployment Check, then the promote (#1590's release receipt).
+  - **Option 7, decided:** not adopted. GitHub ran fewer than a quarter of the hourly slots, but its longest gap stayed under a third of option 6's 24-hour window, and option 6 reports a stop within a day. Option 7 would put a workflow-starting credential in Vercel to save at most that day. Waiting holds the trigger to reconsider it.
 
 ## Related
 
