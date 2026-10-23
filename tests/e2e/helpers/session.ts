@@ -4,6 +4,7 @@ import {
   SESSION_COUNT_MIN,
 } from '@/app/(app)/app/practice/practice-page-session-start';
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
+import { tracePath, tracePlace } from './clerk-fetch-trace';
 import { redactSensitiveE2EText } from './e2e-log-redaction';
 import { parseQuestionProgressCount } from './question-progress';
 import { readServerActionNames } from './server-actions';
@@ -222,10 +223,11 @@ function describeRedirectTarget(location: string | undefined): string {
   if (!location) return 'no location';
   try {
     const url = new URL(location, 'http://app.invalid');
-    // The query can carry Clerk handshake tokens; the path names the target.
+    // The query can carry Clerk handshake tokens; the path's route words name
+    // the target.
     return url.host === 'app.invalid'
-      ? url.pathname
-      : `${url.host}${url.pathname}`;
+      ? tracePath(url.pathname)
+      : tracePlace(url);
   } catch {
     return 'an unreadable location';
   }
