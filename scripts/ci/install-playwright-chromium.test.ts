@@ -3,13 +3,14 @@ import {
   chmod,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   stat,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -177,6 +178,13 @@ function stopIfRunning(pid: string): void {
   if (isRunning(pid)) process.kill(Number(pid.trim()), 'SIGKILL');
 }
 
+// The script stages each rewrite beside its file as `<name>.XXXXXX`.
+async function stagedCopies(file: string): Promise<string[]> {
+  return (await readdir(dirname(file))).filter((name) =>
+    name.startsWith(`${basename(file)}.`),
+  );
+}
+
 describe('install-playwright-chromium.sh', () => {
   it.each([
     ['the mirror list the runner names', 'mirror-list', 'mirror+file:', true],
@@ -187,7 +195,6 @@ describe('install-playwright-chromium.sh', () => {
     async (_where, layout, mirrorUri, sourceKept) => {
       const harness = await createHarness(true, { layout, mirrorUri });
       await chmod(harness.archiveFile, 0o640);
-      const fileBefore = await stat(harness.archiveFile);
       const startedAt = Date.now();
 
       const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
@@ -206,9 +213,9 @@ describe('install-playwright-chromium.sh', () => {
       const archive = await readFile(harness.archiveFile, 'utf8');
       expect(archive).toContain('http://archive.ubuntu.com/ubuntu');
       expect(archive).not.toContain('azure.archive.ubuntu.com');
-      const fileAfter = await stat(harness.archiveFile);
-      expect(fileAfter.ino).toBe(fileBefore.ino);
-      expect(fileAfter.mode & 0o777).toBe(0o640);
+      // The staged copy takes the file's mode, and none is left behind.
+      expect((await stat(harness.archiveFile)).mode & 0o777).toBe(0o640);
+      expect(await stagedCopies(harness.archiveFile)).toEqual([]);
       // A source that names a mirror list keeps naming it.
       expect(
         (await readFile(harness.ubuntuSource, 'utf8')) === harness.sourceText,
@@ -237,9 +244,25 @@ describe('install-playwright-chromium.sh', () => {
     );
   });
 
-  it('leaves a mirror list it cannot rewrite unchanged, and still retries', async () => {
+  it('keeps a mirror list whole when its rewrite fails partway, and still retries', async () => {
     const harness = await createHarness(true);
-    await chmod(harness.mirrorList, 0o444);
+    const listBefore = await readFile(harness.mirrorList, 'utf8');
+    // A copy that fails partway, as on a full disk: from a file outside apt's
+    // directory it writes only the first line, then fails.
+    const partialCopy = join(harness.root, 'bin', 'cp');
+    await writeFile(
+      partialCopy,
+      `#!/bin/sh
+eval "src=\\\${$(($# - 1))}"
+eval "dst=\\\${$#}"
+case "$src" in
+  "$PLAYWRIGHT_APT_ROOT"/*) exec /bin/cp "$@" ;;
+esac
+head -n 1 "$src" > "$dst"
+exit 1
+`,
+    );
+    await chmod(partialCopy, 0o755);
 
     const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
       env: harness.env,
@@ -248,14 +271,40 @@ describe('install-playwright-chromium.sh', () => {
     expect(stdout).toContain(
       `[playwright-install] Could not rewrite ${harness.mirrorList}; leaving it unchanged.`,
     );
-    expect(await readFile(harness.mirrorList, 'utf8')).toContain(
-      'azure.archive.ubuntu.com',
-    );
+    expect(await readFile(harness.mirrorList, 'utf8')).toBe(listBefore);
+    expect(await stagedCopies(harness.mirrorList)).toEqual([]);
     expect(await readFile(harness.logPath, 'utf8')).toBe(
       'exec playwright install-deps chromium\n' +
         'exec playwright install-deps chromium\n' +
         'exec playwright install chromium\n',
     );
+  });
+
+  it('leaves a mirror list it cannot rewrite unchanged, and still retries', async () => {
+    const harness = await createHarness(true);
+    // The rewrite is staged beside the list, so a read-only directory stops it.
+    const listDirectory = dirname(harness.mirrorList);
+    await chmod(listDirectory, 0o555);
+    try {
+      const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
+        env: harness.env,
+      });
+
+      expect(stdout).toContain(
+        `[playwright-install] Could not rewrite ${harness.mirrorList}; leaving it unchanged.`,
+      );
+      expect(await readFile(harness.mirrorList, 'utf8')).toContain(
+        'azure.archive.ubuntu.com',
+      );
+      expect(await readFile(harness.logPath, 'utf8')).toBe(
+        'exec playwright install-deps chromium\n' +
+          'exec playwright install-deps chromium\n' +
+          'exec playwright install chromium\n',
+      );
+    } finally {
+      // Let the cleanup remove the harness.
+      await chmod(listDirectory, 0o755);
+    }
   });
 
   // BUG-311: `timeout` runs as the runner user and cannot stop the root

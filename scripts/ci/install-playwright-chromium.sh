@@ -56,6 +56,7 @@ remove_microsoft_sources() {
 fail_over_azure_archive_sources() {
   local rewrote_source=false
   local replacement_file
+  local staged_file
   while IFS= read -r -d '' source_file; do
     if ! grep -q 'azure\.archive\.ubuntu\.com' "$source_file"; then
       continue
@@ -65,13 +66,23 @@ fail_over_azure_archive_sources() {
     sed \
       's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' \
       "$source_file" > "$replacement_file"
-    if ! sudo cp "$replacement_file" "$source_file"; then
+    # Stage the rewrite beside the file, with the file's mode and owner, and
+    # rename it into place only once it is complete: a copy that fails partway,
+    # as on a full disk, then leaves the file whole. The staged name ends in
+    # neither `.list` nor `.sources`, so neither apt nor this search reads it.
+    staged_file=''
+    if staged_file="$(sudo mktemp "$source_file.XXXXXX")" &&
+      sudo cp -p "$source_file" "$staged_file" &&
+      sudo cp "$replacement_file" "$staged_file" &&
+      sudo mv -f "$staged_file" "$source_file"; then
+      rewrote_source=true
+    else
       echo "[playwright-install] Could not rewrite $source_file; leaving it unchanged."
-      rm -f "$replacement_file"
-      continue
+      if [[ -n "$staged_file" ]]; then
+        sudo rm -f "$staged_file"
+      fi
     fi
     rm -f "$replacement_file"
-    rewrote_source=true
   # Mirror lists first: their search reads every source before any source is
   # rewritten, and it returns 0 even if `find` fails, so `set -e` cannot end
   # this list before the lists are read.

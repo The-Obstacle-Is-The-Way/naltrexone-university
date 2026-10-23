@@ -12,6 +12,8 @@ When CI's Playwright dependency install stalls, `scripts/ci/install-playwright-c
 
 *Corrected 2026-10-22: after the challenge and a pre-review pass, the runner layout is verified from its image source, apt's own fallback is described below, `Ign:` lines are read as failed fetches, not late ones, and the mirror list dates from November 2024.*
 
+*Corrected 2026-10-23: after review, the rewrite stages a copy and renames it into place, rather than copying over the file, so a failed copy cannot leave a half-written file.*
+
 ## Evidence
 
 - **Failures on 2026-10-22.** "Install Playwright browsers" failed with exit 124 after both bounded apt phases timed out. On #1591 the step started at 11:13Z and 20:04Z, and its owner sessions report the same failure on #1593 in the afternoon and on #1595 in the evening. Each failed run on #1591 and #1593 passed when re-run; #1595's re-run was cancelled because a new head replaced it.
@@ -33,12 +35,13 @@ CI only, degraded with a workaround. A stalled mirror fails the required `test` 
 
 ## Resolution (decided)
 
-Option 1, test-first, in this record's pull request. The rewrite replaces the Azure host with `archive.ubuntu.com` in place, as for source files, rather than deleting the Azure line. The list then names `archive.ubuntu.com` at priorities 1 and 2, which apt accepts. Mirror lists are read before any source is rewritten, and a file the script cannot rewrite is left unchanged while the retry goes ahead.
+Option 1, test-first, in this record's pull request. The rewrite replaces the Azure host with `archive.ubuntu.com`, as for source files, rather than deleting the Azure line. It stages the rewritten file beside the original, with the original's mode and owner, and renames it into place only once the copy is complete, so a copy that fails partway, as on a full disk, leaves the file whole. The list then names `archive.ubuntu.com` at priorities 1 and 2, which apt accepts. Mirror lists are read before any source is rewritten, and a file the script cannot rewrite is left unchanged while the retry goes ahead.
 
 ## Verification
 
-- [x] The test harness models the runner's layout, two stanzas naming one mirror list as `mirror+file:/path`, and fails before the change: the failover must rewrite the Azure host in the list, keep the list's inode and mode, leave the source unchanged, and log the archive retry. A `mirror+file:///path` row and the direct-source layout have their own cases (2026-10-22).
+- [x] The test harness models the runner's layout, two stanzas naming one mirror list as `mirror+file:/path`, and fails before the change: the failover must rewrite the Azure host in the list, keep the list's mode, leave no staged copy behind, leave the source unchanged, and log the archive retry. A `mirror+file:///path` row and the direct-source layout have their own cases (2026-10-22).
 - [x] A source naming a missing mirror list, or a list the script cannot write, still retries and installs Chromium, and the healthy path leaves both the source and the list unchanged. Mutations that strip only `mirror+file://`, drop the list search, or remove either file guard each fail a test (2026-10-22).
+- [x] A copy that fails partway leaves the list whole, with no staged copy behind, and the retry goes ahead. The test fails against the earlier in-place copy, and dropping the staged copy's metadata or its cleanup each fails a test (2026-10-23).
 - [x] A stalled install in CI retries through `archive.ubuntu.com` and passes without a re-run. This record's pull request hit the stall in its own CI on 2026-10-22: at the primary phase's timeout the script rewrote the runner's mirror list (144 bytes to 138, without `azure.`), apt fetched from `archive.ubuntu.com`, a 5.6 MB package that had taken more than two minutes from Azure arrived in about 2 seconds, and the step finished 21 seconds after the switch.
 - [ ] Promoted to `main`, where the daily scheduled Checkout smoke (`stripe-hosted-checkout-smoke.yml`) runs the script.
 
