@@ -30,7 +30,7 @@ These triggers go unread each week. Each guards a cost, abuse or growth signal, 
 2. **Give the review a read path,** such as a Neon key limited to metrics, Observability Plus, or the censuses as scheduled read-only jobs. Each costs access or money, which only the owner can grant.
 3. **Rewrite the triggers** to evidence the review can read, such as Sentry's request spans for invocations, and keep the owner-only sources as a monthly owner check.
 
-## Resolution (decided)
+## Resolution (proposed)
 
 No option is decided yet. The choice is the owner's, since each option needs the owner's time, access or money. Until then, each weekly review lists these triggers as not checked.
 
