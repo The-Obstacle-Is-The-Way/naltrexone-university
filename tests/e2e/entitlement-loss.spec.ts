@@ -99,18 +99,18 @@ test.describe('entitlement loss', () => {
       }
     };
 
+    // The route stays until the page closes; after its one capture it falls
+    // back for every request. BUG-365: the refused action replaces the page
+    // with Pricing, and in CI run 39873346857 an unroute after that navigation
+    // never returned, so the test timed out.
     await page.route(matchesActionPage, captureActionBody);
-    try {
-      await page.getByRole('button', { name: 'Start session' }).click();
-      expect(
-        await withTimeout(actionBody.promise, ACTION_BODY_TIMEOUT_MS),
-      ).toContain('UNSUBSCRIBED');
-      // BUG-365: the refused action leaves the app frame for Pricing.
-      await expect(page).toHaveURL(pricingUrl);
-      await expect(trialOffer).toBeVisible();
-    } finally {
-      await page.unroute(matchesActionPage, captureActionBody);
-    }
+    await page.getByRole('button', { name: 'Start session' }).click();
+    expect(
+      await withTimeout(actionBody.promise, ACTION_BODY_TIMEOUT_MS),
+    ).toContain('UNSUBSCRIBED');
+    // BUG-365: the refused action leaves the app frame for Pricing.
+    await expect(page).toHaveURL(pricingUrl);
+    await expect(trialOffer).toBeVisible();
 
     await page.goto('/app/dashboard');
     await expect(page).toHaveURL(pricingUrl);
