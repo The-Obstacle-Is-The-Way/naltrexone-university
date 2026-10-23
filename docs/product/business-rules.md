@@ -198,9 +198,11 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/application/use-cases/create-checkout-session.test.ts`: `does not pass a trial to the gateway for a user with an existing subscription row`
 - `src/application/use-cases/create-checkout-session.test.ts`: `returns ALREADY_SUBSCRIBED when a subscription is still current`
 
-### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices.
+### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices. Billing and email state the cutoff in UTC, Eastern and Pacific time, naming a different local date or year.
 
 - `src/domain/services/entitlement.test.ts`: `keeps access until the period ends when cancellation is scheduled`
+- `app/(app)/app/billing/page.test.tsx`: `states the $name cancellation cutoff with UTC, Eastern and Pacific times`
+- `src/application/shared/renewal-notice-email-format.test.ts`: `distinguishes both occurrences of the repeated fall-back hour`
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `selects only active, renewing annual subscriptions in the supplied window`
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `lists active, renewing monthly subscriptions in id order, after a cursor`
 - `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: `a paid subscriber cancels without obstruction; renewal stops and access continues to the period end`

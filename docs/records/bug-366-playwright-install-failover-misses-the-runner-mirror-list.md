@@ -1,6 +1,6 @@
 # BUG-366: The Playwright Install's Mirror Failover Misses the Runner's Mirror List
 
-**Status:** Verifying — promotion to `main`, where the scheduled Checkout smoke runs the script; due 2026-10-26
+**Status:** Open — set Verifying once Now has room, then promotion to `main`, where the scheduled Checkout smoke runs the script; due 2026-10-26
 **Priority:** P2
 **Date:** 2026-10-22
 
