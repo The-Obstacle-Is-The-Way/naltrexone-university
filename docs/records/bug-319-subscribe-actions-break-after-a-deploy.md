@@ -1,6 +1,6 @@
 # BUG-319: Subscribe and Add-Card Fail for a Page Loaded Before a Deploy
 
-**Status:** In Progress — the fix is in production; a real-SDK test that the error pages' stale-action event reaches Sentry remains; due 2026-10-28
+**Status:** Verifying — every check is recorded; the next pull request that touches the records closes it, keeping Skew Protection as the owner's decision; due 2026-10-28
 **Priority:** P2 (filed as P1; lowered 2026-10-05, see the correction under Evidence)
 **Date:** 2026-10-05
 **Resolved:** —
@@ -76,6 +76,17 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 
 **Released 2026-10-05.** #1379 was merged and promoted through #1380 (`048ca43f`). Production was assigned at 22:24:30.518 UTC, and that build passed the new key requirement. *Corrected 2026-10-06: Vercel created the deployment at 22:10:00.274 UTC; creation is not production assignment.*
 
+**2026-10-22 — the real-SDK test.**
+- **The test.** `components/error-boundary-page-sentry-sdk.browser.spec.tsx` initializes the real browser SDK in Chromium with the browser's own settings, `SENTRY_CLIENT_SETTINGS`, which `sentry.client.config.ts` now spreads. It uses Sentry's real fetch transport over a fetch that records each request. The error page's request starts, with `keepalive`, before `reloadPage` runs, so it outlives the reload.
+- **The stub.** The browser lane no longer stubs `@sentry/nextjs` globally. Every spec passed without the stub, and the one spec that needs it has its own.
+- **Mutants.** Four each fail the test: the two effects swapped, the report deferred to a microtask, the report dropped, and an asynchronous `beforeSend`. The last shows that the order holds only while `beforeSend` stays synchronous, so a comment beside the setting says so.
+- **Independent review.** A second agent checked the test against the Sentry 11.5.0 and Next sources and judged that it proves what this record asks:
+  - the browser bundle is production's;
+  - both runs get the same integrations;
+  - the path from capture to the request is synchronous.
+
+  Its three smaller points are fixed: the real fetch transport with `keepalive` asserted, the console stub installed before init, and a comment's wording.
+
 **2026-10-06, a first observation.**
 - **The event.** Sentry recorded one `UnrecognizedActionError` at 22:27 UTC on 2026-10-05, from a practice page. That was about 2½ minutes after this fix's production assignment, which changed every action ID when the key took effect.
 - **Its path.** It came from a hook's error report, not from an error page, which is this record's accepted scope.
@@ -98,11 +109,19 @@ Criteria to meet before closing.
   - the route, `transaction:"POST /"`, alone and with the first message filter.
 
   Results: 3 events, all in the server project's issue ADDICTION-BOARDS-SERVER-2 on 2026-10-13, from 09:13 to 15:31Z, and none since. Ingestion was healthy: both projects accepted events every day, and nothing was rate-limited or dropped for quota. BUG-363 records the events and the open question of whether skew explains them.
-- [ ] Engineering, by 2026-10-28: a test through the real Sentry SDK, as BUG-318's privacy test does, proves the error pages send an `UnrecognizedActionError` before they reload; then record the first production event, or none, after two weeks. Without that test, "none" would mean nothing, because the event is sent just before the reload. *Corrected 2026-10-06: a real-SDK test replaces forcing a stale action in production.*
+- [x] Engineering, by 2026-10-28: a test through the real Sentry SDK, as BUG-318's privacy test does, proves the error pages send an `UnrecognizedActionError` before they reload; then record the first production event, or none, after two weeks. Without that test, "none" would mean nothing, because the event is sent just before the reload. *Corrected 2026-10-06: a real-SDK test replaces forcing a stale action in production.*
 
   *Tried 2026-10-09 in the quick-wins pull request, and not shipped there.* The browser lane stubs `@sentry/nextjs` in `vitest.browser.setup.ts`, and a spec cannot lift that stub: Vitest's `vi.unmock` fails with "Mock … wasn't registered". So the test first needs the stub moved into the specs that rely on it, or a browser project without it. The open question it answers is whether the event reaches Sentry's transport before `reloadPage` runs. The report and the reload are separate effects in one commit, and the event may still be queued at the reload.
 
   *Re-dated 2026-10-21 from 2026-10-19:* not started by then; the browser lane's Sentry stub has to move first.
+
+  *Done 2026-10-22.* Progress above describes the test. The stub now lives only in the spec that relies on it.
+
+  *Searched 2026-10-22,* in the web project, from the production assignment (2026-10-05T22:24:30Z) to 2026-10-22T09:20Z:
+  - **Window.** About 16½ days, all on Sentry 11.
+  - **Query.** `error.type:UnrecognizedActionError` and the message "was not found on the server".
+  - **Result.** One event, the practice page's hook report at 22:27:39Z on 2026-10-05, recorded under Progress, and none from an error page. The server project had none.
+  - **Ingestion.** 707 events accepted, 3,587 filtered as localhost, 14 discarded by the client (13 by an event processor, 1 network error), and nothing rate-limited.
 
 ## Related
 

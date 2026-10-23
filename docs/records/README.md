@@ -3,9 +3,9 @@
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
 **Now** — 2026-10-23.
-- **Verifying, by due date.** DEBT-523 10-23; BUG-323 and BUG-333 10-24; BUG-353 10-25; BUG-336, BUG-338 and BUG-350 10-26; BUG-367 10-30; DEBT-505 11-05.
+- **Verifying, by due date.** DEBT-523 10-23; BUG-323 and BUG-333 10-24; BUG-353 10-25; BUG-336, BUG-338 and BUG-350 10-26; BUG-319 10-28; BUG-367 10-30; DEBT-505 11-05.
 - **In progress.** DEBT-518, the documentation revamp: records, agent instructions, layout and archive removal are done; the four splits and the pilot follow.
-- **Next.** DEBT-503 item 4, due 11-06. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-319's real-SDK test, due 10-28. BUG-321's provider-contract test. DEBT-519, then DEBT-520. BUG-363's investigation, due 11-04. DEBT-525 sets a performance baseline before choosing optimizations.
+- **Next.** DEBT-503 item 4, due 11-06. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520. BUG-363's investigation, due 11-04. DEBT-525 sets a performance baseline before choosing optimizations.
 - **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund, its receipt checked as Massachusetts' monthly notice (DEBT-501 item 7, DEBT-414 F19c), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription's correction (BUG-343: the re-check, sweep and alerts ship; its option 4 needs the owner's refund decision, follow-up due 10-30). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 39 days before the first live renewal: the identity resolver (DEBT-502), DEBT-511 on it, and Massachusetts' annual notice if it applies (DEBT-414 F19a).
 - **Held.** DEBT-514 holds lint-staged at 17.5.1.
 - **Owner decisions pending.** Skew Protection (BUG-319); the server's 5% trace sample (BUG-331); a production check for E592 (BUG-334); reporting Clerk JS's cookie race (BUG-333); pinning Clerk JS (DEBT-521, by 10-26); Clerk's verified-email setting (DEBT-502); DEBT-414's open items; BUG-351's live-key check (by 10-24); bootstrap timing (DEBT-483); the queue review's unread triggers (DEBT-533, by 10-30).
@@ -16,7 +16,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | In Progress — the fix is in production; a real-SDK test that the error pages' stale-action event reaches Sentry remains; due 2026-10-28 |
+| [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | Verifying — every check is recorded; the next pull request that touches the records closes it, keeping Skew Protection as the owner's decision; due 2026-10-28 |
 | [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | In Progress — the fix is in production; a provider-contract test of the refused checkout's Stripe list and sync remains |
 | [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Anonymous requests can spend Clerk's shared Backend API limit | P1 | Verifying — owner confirms the production limiter writes its rows, with BUG-351's production check; due 2026-10-24 |
 | [BUG-329](./bug-329-local-test-target-changes-in-child-commands.md) | Long clone names change the local test target in child commands | P4 | Open — canonicalize generated instance names before passing them to child commands |
