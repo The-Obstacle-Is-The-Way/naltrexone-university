@@ -1,6 +1,6 @@
 # BUG-333: A Signed-In E2E Test Loses Its Clerk Session When It Navigates During Clerk JS's Cookie Rewrite
 
-**Status:** Verifying — both triggers handled in tests; a week of CI after the merge without a mid-run Clerk session loss from the cookie-rewrite race; due 2026-10-24
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
@@ -14,7 +14,7 @@ Since 2026-10-08, a signed-in E2E test has sometimes been sent to Clerk's sign-i
 - **Two captures, 2026-10-10.** One came through BUG-330's trace, one through a kept Playwright trace. Both show the cause: the test navigated while Clerk JS was rewriting its dev-browser cookies.
 - **Three earlier losses**, twice in CI and once locally, left no trace. They fit the same race, but are not shown to be it.
 - **The fix.** E2E contexts drop Clerk's echo of the dev-browser token (2026-10-10). They also keep both dev-browser cookies in place while Clerk JS rewrites them after every environment fetch (2026-10-12): a page script holds each removal until the current script ends, and drops it if a write of the same cookie comes first, so each write replaces the cookie in place.
-- **Remaining.** A week of CI without a mid-run loss.
+- **The CI week.** In the week after the fix, and through 2026-10-23, CI had no loss from this race. Its losses had BUG-337's signature instead.
 
 ## Evidence
 
@@ -121,7 +121,7 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
   - Six jsdom tests: five run the function from its source text as Playwright does, and one checks that the source binds no function to a name. The discard case and a cookie that only shares the prefix were red against the first version. Ten mutations each turn one red, among them a stale task applying a newer batch of removals, and removals applied a task late.
   - In Chromium (2026-10-13), on a local page replaying Clerk JS 6.39's cookie writes, a synchronous request sent between the removals and the write carried both cookies with the script, and neither without it. During a discard, the page saw both gone at once, and they left the jar when the script ended.
   - In a local experiment under load, with the first version, 12 full E2E runs with the script had no loss, against 2 losses in 11 runs without it. One unrelated failure was a slow page.
-- [ ] No mid-run Clerk session loss from the cookie-rewrite race in CI for a week after the merge, due 2026-10-24. A loss whose trace names another cause in the app or in Clerk JS's cookie handling reopens the investigation, unless an open record already holds that cause. *Re-dated 2026-10-22 from 2026-10-21:* the check was not recorded by its date. The next records pull request records it, and weighs the 2026-10-22 local loss below.
+- [x] No mid-run Clerk session loss from the cookie-rewrite race in CI for a week after the merge, due 2026-10-24. A loss whose trace names another cause in the app or in Clerk JS's cookie handling reopens the investigation, unless an open record already holds that cause. *Re-dated 2026-10-22 from 2026-10-21:* the check was not recorded by its date. The next records pull request records it, and weighs the 2026-10-22 local loss below.
   - *Reopened 2026-10-12.* Another session's local E2E lost its session at `practice.spec.ts:307` (04:00:38Z), and its trace was kept. The echo had been dropped as designed. The navigation's request carried both dev-browser cookies, unchanged, and both session copies, yet the server answered `dev-browser-missing`, which `@clerk/backend` 3.22 returns only when it finds no dev-browser token. That is the contradiction BUG-337's trace shows for a server action. The rewrite mechanism above does not explain it. BUG-337 owns the next step, which is to log the server's own view of each signed-out request.
   - *Explained the same day:* see the 2026-10-12 correction under Resolution.
   - *2026-10-22, a local loss with an external cause.* #1586's local E2E on d05a2f22 lost the session in `mobile-layout.spec.ts:71` (mobile-smoke) at 00:04Z. The Playwright trace and the server's output show why:
@@ -136,3 +136,8 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
     - The next server action and the RSC fetches after it carried both `__client_uat` cookies as `0`, while both session copies and both dev-browser cookies were still present. The server answered each with 307 to Clerk's development host: `auth=signed-out`, `reason=session-token-but-no-client-uat`.
     - The dev-browser cookies were present throughout, so the cookie rewrite this record fixed was not involved. The re-run on the same head passed.
     - *Decided 2026-10-23, in this pull request:* the loss does not count against the CI-week check, which covers this record's race. What writes `__client_uat` as `0` is BUG-337's open question, and this trace goes there as evidence; it reopens nothing here, since an open record already holds that cause.
+  - *Recorded 2026-10-23: no loss from this race.* #1480 merged on 2026-10-13 at 07:45Z. In the week after, CI's E2E ran 207 times and failed 6 times. Through 2026-10-23 it ran 318 times and failed 16 times. The count covers every attempt, re-runs included.
+    - This race ends at sign-in after a `dev-browser-missing` answer. Since 2026-10-09, a signed-in test that reaches sign-in prints the `sign-in` trace with Clerk's reason for each answer. No failed job printed one.
+    - Seven failures, three of them in the week, had BUG-337's signature instead: the signed-in page showed "Failed to fetch" and never reached sign-in. The three on or after 2026-10-22 also traced `session-token-but-no-client-uat`. As decided for the 2026-10-23 loss above, they belong to BUG-337, which holds that cause.
+    - The other nine were eight exam-timing failures (BUG-347) and one entitlement-loss test that failed because its page had already closed.
+  - **The record closes on options 8 and 9, not on this week.** As the decision says, a quiet period alone would not show the cause gone. Both were built test-first against their trigger, as recorded above; the week shows that CI's losses no longer take this path.
