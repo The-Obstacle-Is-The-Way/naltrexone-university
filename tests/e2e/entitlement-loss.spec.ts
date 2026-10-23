@@ -1,4 +1,4 @@
-import { expect, type Page, type Route } from '@playwright/test';
+import { expect, type Page, type Request, type Route } from '@playwright/test';
 import { withTimeout } from '@/lib/with-timeout';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
@@ -26,10 +26,31 @@ async function enableStartSession(page: Page): Promise<void> {
   for (const status of ['Unanswered', 'Incorrect', 'Bookmarked'] as const) {
     await page.getByRole('button', { name: status, exact: true }).click();
     await page.getByLabel('Questions').fill('1');
+    // The page counts the matching questions 200 ms after load or a filter
+    // change, and Start session stays enabled while it counts.
+    await expect(page.getByText('Counting questions…')).toBeHidden();
     if (await startSessionButton.isEnabled()) return;
   }
 
   await expect(startSessionButton).toBeEnabled({ timeout: 10_000 });
+}
+
+function countServerActionsInFlight(page: Page): () => number {
+  const inFlight = new Set<Request>();
+  page.on('request', (request) => {
+    if (
+      request.method() === 'POST' &&
+      request.headers()['next-action'] !== undefined
+    ) {
+      inFlight.add(request);
+    }
+  });
+  const settle = (request: Request) => {
+    inFlight.delete(request);
+  };
+  page.on('requestfinished', settle);
+  page.on('requestfailed', settle);
+  return () => inFlight.size;
 }
 
 test.describe('entitlement loss', () => {
@@ -60,9 +81,14 @@ test.describe('entitlement loss', () => {
 
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
+    const actionsInFlight = countServerActionsInFlight(page);
     await page.goto('/app/practice');
     await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
     await enableStartSession(page);
+    // BUG-365: any refused action replaces the page with Pricing. In CI run
+    // 40001450731 the page's own count was refused before the click, so the
+    // entitlement goes only once no action is in flight.
+    await expect.poll(actionsInFlight).toBe(0);
 
     entitlementSnapshot = await removeE2EUserEntitlement();
 
