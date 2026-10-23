@@ -68,6 +68,14 @@ const cases = [
 describe('canonical answer keys on the production read paths', () => {
   it.each(cases)(
     '$name agrees between question reads and aggregate scores',
+    {
+      meta: {
+        ruleProof: {
+          file: 'tests/integration/answer-key-normalization.integration.test.ts',
+          title: '$name agrees between question reads and aggregate scores',
+        },
+      },
+    },
     async ({ raw, canonical, corrected }) => {
       const user = await createUser(db, cleanup);
       const question = await createQuestion(db, cleanup, {

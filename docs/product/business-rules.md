@@ -3,14 +3,18 @@
 Each rule below states, in plain language, something the system guarantees a learner or a subscriber. The lines under it name the tests that prove it. A clinician or the owner can read what the product promises without reading code, and a developer can see where each promise is pinned.
 
 `tests/rule-to-test-register.test.ts` checks the register on every `pnpm test`.
-- Every named file must exist and still declare a test with the named title that runs unconditionally. The file is parsed, and these do not count:
+- Every named file must exist and still contain a test declaration with the named title that is not excluded by the static checks below. The file is parsed, and these do not count:
   - a test that is commented out, skipped, todo or skipped by its options;
   - a conditional test (`runIf`, `skipIf`);
   - a test declared under a condition: an `if` or ternary branch, after `&&`, `||` or `??`, in a `switch` case or in a `catch` block.
 
-  A test in a loop, a `try` block or a `finally` block counts. Titles built at run time, and tests reached through renamed aliases of `it`, are outside what the check reads; write proofs as plain `it`, `test` or `.each` declarations.
+  This is a declaration check, not proof of execution (BUG-361). A test in a loop, a `try` block or a `finally` block currently counts, even when that code does not execute. Titles built at run time, and tests reached through renamed aliases of `it`, are outside what the check reads; write proofs as plain `it`, `test` or `.each` declarations.
 - Every rule must name at least one test.
 - A malformed heading or proof line, or a repeated rule number, is reported rather than skipped. Renaming or deleting a test that proves a rule fails the check until the register is updated in the same change.
+
+`tests/rule-proof-reporter.mts` also checks actual results at the end of each unfiltered unit, browser and integration run. Each lane independently requires its assigned proofs to have run and passed; the full gate requires all three lanes. Ordinary titles must be unique in their named source file and bind to that declaration's runtime location. Parameterized proofs carry literal `meta.ruleProof` file/title options; at least one generated result and every case must pass. The two shared factories explicitly require both their fake and Postgres consumers. Shared proofs also require that metadata. A repository JS/TS source scan validates annotation ownership, including imported helpers; dependency, build and vendored-skill outputs are excluded.
+
+An explicit focused, watch or sharded run, or a run started through Vitest's API that covers only part of a lane, prints `SKIPPED` for this audit and is not a full-lane receipt; Stryker's partial mutation runs use `vitest.stryker.config.mts`, which leaves the reporter out. Hidden configuration filters on an otherwise unfiltered command fail. End-to-end proof lines run under Playwright, outside these lanes, so only the declaration check covers them. The required configurations prohibit `.only`, register the reporter and collect declaration locations; the package and CI command checks keep their full runs unfiltered. No saved result is reused. This proves execution and passing results for the registered identities, not the quality of assertions inside a test.
 
 This register replaces the Gherkin acceptance-test harness this file once proposed. That harness was considered and not adopted ([ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03), DEBT-465's decision). Its design is in this file's history up to commit `91a24f3e`.
 
@@ -22,6 +26,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
   - real Postgres (`tests/integration/`) for a rule that lives in storage or SQL;
   - end-to-end only for what nothing lower reaches.
 - **Renaming a test that proves a rule** means updating its line here.
+- **Parameterized or shared tests** also use `{ meta: { ruleProof: { file: 'path', title: 'exact test title' } } }` as literal declaration options. Update both fields with the register when moving or renaming the proof.
 - **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
 - **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343, and R31 with BUG-351.
 
@@ -81,7 +86,7 @@ The server owns expiry. The browser counts down from server remaining time, usin
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `refuses a mark %i ms after expiry without finalizing the exam`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `flushes the on-screen answer when the server refuses a mark after its deadline`
 
-### R16. A learner always sees a question's choices in the same order, seeded by both the learner and the question.
+### R16. With unchanged input choices, a learner sees a question's choices in a stable order, seeded by both the learner and the question.
 
 - `src/application/shared/shuffled-choice-views.test.ts`: `returns deterministic output for the same user and question`
 - `src/application/shared/shuffled-choice-views.test.ts`: `uses the userId in the shuffle seed`
@@ -182,8 +187,12 @@ The first sourced stage names that verified baseline and initializes the waterma
 ### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed, and a page whose data is refused sends the learner to Pricing.
 
 - `src/adapters/controllers/require-entitled-user-id.test.ts`: `throws UNSUBSCRIBED when the user is not entitled`
-- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED when not entitled`
-- `src/adapters/controllers/bookmark-controller.test.ts`: `returns UNSUBSCRIBED when not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED from startPracticeSession when not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED from endPracticeSession when not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED from discardPracticeSession when not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED from finalizeExamAnswers when not entitled`
+- `src/adapters/controllers/bookmark-controller.test.ts`: `returns UNSUBSCRIBED from setBookmark when not entitled`
+- `src/adapters/controllers/bookmark-controller.test.ts`: `returns UNSUBSCRIBED from getBookmarks when not entitled`
 - `src/adapters/controllers/stats-controller.test.ts`: `returns UNSUBSCRIBED when not entitled`
 - `app/(app)/app/shared/redirect-if-unsubscribed.test.ts`: `sends a learner whose data check found no subscription to Pricing`
 - `app/(app)/app/dashboard/page.test.tsx`: `sends a learner without a subscription to Pricing instead of a bare refusal`

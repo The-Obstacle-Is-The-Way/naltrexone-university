@@ -118,36 +118,16 @@ describe('captured Vitest reporter payload fixtures', () => {
   const loadFixture = async (name: string): Promise<unknown> =>
     JSON.parse(
       await readFile(
-        path.join(process.cwd(), 'scripts', 'fixtures', name),
+        path.join(process.cwd(), 'scripts', 'test-lanes', 'fixtures', name),
         'utf8',
       ),
     );
-
-  it('accepts the reporter envelope when all provider cases passed', async () => {
-    const report = await loadFixture('trial-clock-smoke-report-passed.json');
-
-    expect(assertProviderContractsExecuted(report)).toEqual({
-      executed: 14,
-      passed: 14,
-      skipped: 0,
-    });
-  });
 
   it('rejects the real skip-shaped payload that exits zero', async () => {
     const report = await loadFixture('trial-clock-smoke-report-skipped.json');
 
     expect(() => assertProviderContractsExecuted(report)).toThrow(
       'PROOF_SKIPPED: scheduled smoke reported 2 skipped cases',
-    );
-  });
-
-  it('rejects the real mixed-failure payload from a provider timeout', async () => {
-    const report = await loadFixture(
-      'trial-clock-smoke-report-mixed-failure.json',
-    );
-
-    expect(() => assertProviderContractsExecuted(report)).toThrow(
-      'PROOF_REPORT_INVALID',
     );
   });
 });

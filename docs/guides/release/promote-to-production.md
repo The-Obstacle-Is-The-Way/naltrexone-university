@@ -267,10 +267,10 @@ For authoring rules before a migration PR merges — pre-flight data proof, clea
 | Environment | How to Connect | DATABASE_URL Source |
 |-------------|---------------|---------------------|
 | **Local app runtime** | Direct (already in `.env.local`) | `.env.local`, expected to match Vercel Development and the Neon `dev` branch |
-| **Local authenticated E2E** | Resolver-scoped Docker Postgres via `pnpm test:e2e` | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL`; an external `.env.local` target requires both explicit opt-ins |
+| **Local authenticated E2E** | Resolver-scoped Docker Postgres via `pnpm test:e2e` | `scripts/test-lanes/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL`; an external `.env.local` target requires both explicit opt-ins |
 | **Preview / shared non-production** | Use your provider CLI/dashboard to fetch the non-production connection string | Vercel Preview/Development env vars, currently the Neon `dev` branch |
 | **Production** | Use your provider CLI/dashboard to fetch the production connection string | Vercel Production env vars, currently the Neon `main` branch |
-| **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
+| **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/test-lanes/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
 
 Example for preview/production. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass:
 

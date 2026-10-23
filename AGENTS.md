@@ -27,7 +27,7 @@ Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle 
 5. **Never touch a remote database by accident.**
    - Database commands need an explicit `DATABASE_URL`; remote targets also need `DB_TARGET_ACK`.
    - Never `drizzle-kit push`.
-   - Local tests resolve a per-clone target: `pnpm exec tsx scripts/resolve-local-test-target.ts env`. Never hardcode its port, and never blanket-kill `:3000`; another clone may own it.
+   - Local tests resolve a per-clone target: `pnpm local:test:target env`. Never hardcode its port, and never blanket-kill `:3000`; another clone may own it.
 6. **Never bypass review or protection.** No `--admin`, ruleset bypass, Force Promote, or direct push to `dev` or `main`.
 
 ## Before Writing Code
@@ -66,7 +66,7 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 - **Integration database:**
 
   ```bash
-  TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders && pnpm test:integration
+  pnpm test:integration # starts this clone’s database, migrates, seeds, then tests
   ```
 
 - **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](./docs/guides/testing/e2e-tests.md).

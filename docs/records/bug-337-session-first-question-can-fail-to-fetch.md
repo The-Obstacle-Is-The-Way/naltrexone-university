@@ -34,7 +34,7 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - **A heavy run.** One local run (gate on e4982676) aborted nine actions, both timing reads among them, and an unrelated test (`content-change-notices`) failed in the same run.
   - **A hanging request.** A starter-page `countAvailableQuestions` was still unsettled more than 5 s after the session page loaded (gate on 85e19bca).
   - **The symptom, in CI.** #1579's first CI attempt (run 39404734095) failed `review-mode-audit.spec.ts` with "startSession failed loading the first question: Failed to fetch | Bookmarks unavailable".
-  
+
   `startSession`'s error now names each server action that failed while the first question loaded, with any redirect's status, Clerk reason and target path, so the next occurrence shows which request failed.
 - **#1467's CI, 2026-10-11 22:25:49Z.** `review-mode-audit.spec.ts` › "session breakdown links open questions in review mode" failed in 3.1 s. `startSession` reported `Failed to fetch` | `Bookmarks unavailable.` The server output between 22:25:40Z and 22:25:52Z holds only normal request logs: no error and no E592 (BUG-334).
 - **#1467's earlier CI run, first attempt, 21:00:34Z.** The same spec, another test. A question page loaded without its answer choices, and the helper waited 30 s for radio D. This may be the same failure, but it is not shown.

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { isMain } from '../lib/entry-point.mts';
 
 // A mutant "survives" when the tests Stryker ran against it all passed. One
 // that ran no test was never tested, so a report holding such survivors
@@ -107,9 +107,8 @@ export function runMutationReportIntegrity(
   return 1;
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   process.exitCode = runMutationReportIntegrity(() =>
     readFileSync(REPORT_PATH, 'utf8'),
   );

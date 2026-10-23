@@ -2,10 +2,10 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { config } from 'dotenv';
 import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from '@/tests/shared/stripe-checkout-client-contract-cases';
 import { resolveStripeProviderGate } from '@/tests/shared/stripe-provider-gate';
+import { isMain } from '../lib/entry-point.mts';
 
 export const TRIAL_CLOCK_SMOKE_FILE =
   'tests/integration/stripe-trial-clock-smoke.integration.test.ts';
@@ -454,10 +454,8 @@ export async function runStripeProviderContracts({
   return assertProviderContractsExecuted(report);
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start -- direct CLI entrypoint; behavior is covered through runStripeProviderContracts */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   loadStripeProviderEnvironment();
   runStripeProviderContracts()
     .then((result) => {
