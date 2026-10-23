@@ -1,6 +1,6 @@
 # DEBT-531: Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently
 
-**Status:** Verifying — promotion to main; due 2026-10-21
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-21
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -95,7 +95,7 @@ Feedback without attempt/session context cannot identify the reported revision, 
 - [x] A read-only census counts noncanonical fields without changing stored bytes or hashes. Approved content changes append revisions; historical rows are never rewritten to satisfy canonical comparison.
 - [x] ADR-021/022 explicitly define hold scope across activation, availability and scoring; a named old hold can be lifted directly, with retirement/rollback cases tested.
 
-- [ ] Promote the fix to main.
+- [x] Promoted to `main` by #1580 (`f1401984`) on 2026-10-20, which carries #1575 (`f1cc5250`). Recorded 2026-10-23, two days late.
 
 ## Related
 

@@ -1,6 +1,6 @@
 # BUG-347: An Exam's Timing Is Judged on Several Clocks, and Each Reader Decides Whether It Is Over
 
-**Status:** Verifying — promotion of the server countdown and expiry guards to main; due 2026-10-21
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-21
 **Priority:** P2
 **Date:** 2026-10-17
 
@@ -98,7 +98,7 @@ BUG-251's Abandon decision and DEBT-437's accepted clock residual stand. Record 
 - [x] Before the server's deadline, a failed draft save never leads to timer finalization that drops the on-screen answer.
 - [x] A mark refused after the server's deadline flushes the on-screen answer as a refused draft save does, without an error screen.
 - [x] A finalization the server refuses as early retries after a fresh server sample, or after five seconds without one, never on every tick.
-- [ ] Owner promotes the fix to main; due 2026-10-21.
+- [x] Promoted to `main` by #1580 (`f1401984`) on 2026-10-20, which carries #1561 (`06b867f0`). Recorded 2026-10-23, two days late.
 
 ## Related
 

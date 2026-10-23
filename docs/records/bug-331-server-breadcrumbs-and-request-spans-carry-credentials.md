@@ -1,6 +1,6 @@
 # BUG-331: Server Breadcrumbs and Request Spans Carry Credentials the Scrubbers Miss
 
-**Status:** Verifying — a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered; due 2026-10-22
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-08
 **Resolved:** —
@@ -89,8 +89,8 @@ Two independent reviews found the gaps closed after the first fix: the span gap 
 ## Verification
 
 - [x] The real-SDK tests above fail before the fix and pass after it (2026-10-08; see Implemented).
-- [ ] A production server error, raised on a deployment, shows no breadcrumbs in Sentry.
-- [ ] One production request with `?nonce=check&code=check` and a sampled `sentry-trace` header, so the trace is kept, shows both parameters as `[Filtered]` in its request span.
+- [x] A production server error, raised on a deployment, shows no breadcrumbs in Sentry. The server project's three production errors since the fix, on 2026-10-13 from release `f66056bd`, which contains #1430 (`8a163b40`), carry an exception and a request entry and no breadcrumbs. Read through Sentry's API on 2026-10-23, entry types only.
+- [x] One production request with `?nonce=check&code=check` and a sampled `sentry-trace` header, so the trace is kept, shows both parameters as `[Filtered]` in its request span. Trace `a07b726b2d759ae7bc4caa2ed79cc5d6` on 2026-10-22 at 00:48Z, release `4c84405e`. The middleware span (`GET`) records the target as `/`. The request span `bc7d75649384c6f4` is `POST /`, the prerender's resume, and records `/?nonce=[Filtered]&code=[Filtered]`. Over the 14 days to 2026-10-23, no span target carries an unfiltered `nonce`, `code` or `token` parameter.
 
 ## Related
 

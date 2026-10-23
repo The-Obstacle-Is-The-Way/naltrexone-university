@@ -1,6 +1,6 @@
 # DEBT-510: Codecov Sometimes Drops the Patch Notification After a Successful Upload
 
-**Status:** Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P3
 **Date:** 2026-10-07
 **Resolved:** —
@@ -61,6 +61,6 @@ A code PR that is approved, with CI green, stops at the merge guard until a pers
 ## Verification
 
 - [x] The step runs on this record's PR and on `main` after promotion, and `codecov/patch` posts (#1423 and its promotion #1424; it also posted on #1426, #1428 and #1430).
-- [ ] Over two weeks of PR heads, no merge is blocked by a dropped Codecov notification.
+- [x] Over two weeks of PR heads, no merge is blocked by a dropped Codecov notification. From 2026-10-08 to 2026-10-22, one pull request waited on `codecov/patch`: promotion #1590 on 2026-10-21. Its upload was queued at 13:02:16Z but never processed, so no report existed to notify on, and a second notification cannot cure that. One re-run, recorded on #1590, posted the check. The comments of the window's other pull requests that mention `codecov/patch` show no re-run for it (2026-10-23).
 
   *Corrected 2026-10-08: the 1.3% baseline came from two misses, too few to compare a rate against; a blocked merge is the failure that matters (AUDIT-015).*

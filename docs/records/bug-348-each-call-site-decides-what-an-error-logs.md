@@ -1,6 +1,6 @@
 # BUG-348: Each Call Site Decides What an Error Logs, So a Billing Failure Goes Unlogged and Raw Error Text Reaches the Logs
 
-**Status:** Verifying — promotion to main; due 2026-10-23
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-23
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -92,7 +92,7 @@ The portal tests exercise the real gateway's missing-URL and open-circuit paths 
 - [x] A failed portal session (circuit open, missing URL) produces one log with projected diagnostics and any preserved cause.
 - [x] No log field carries an error's raw message; a scan enforces it.
 - [x] Diagnostic defaults and projection are shared, ADR-006 and ADR-018 are amended, and DEBT-529's action-aware replay policy is preserved.
-- [ ] Promote the fix to main; due 2026-10-23.
+- [x] Promoted to `main` by #1594 (`5dbff9f5`) on 2026-10-22, which carries #1586 (`28f4407d`) (2026-10-23).
 
 ## Related
 

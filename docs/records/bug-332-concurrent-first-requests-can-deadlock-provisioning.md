@@ -1,6 +1,6 @@
 # BUG-332: A New User's Concurrent First Requests Can Deadlock Provisioning
 
-**Status:** Verifying — no "Failed to ensure user row" event in Sentry for two weeks after the deploy; due 2026-10-22
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-08
 **Resolved:** —
@@ -45,7 +45,7 @@ BUG-320 fixed the two-request case, where the loser trips the email index and re
 
 - [x] The unit tests above fail before the fix and pass after it (2026-10-08: the retry test failed without the retry; the other-failure test passes either way, so a broad retry would fail it).
 - [x] The six-request contract test passes 30 consecutive runs locally (2026-10-08, with the fix in #1426; before it, the test failed in 7 of 20).
-- [ ] No "Failed to ensure user row" event in Sentry for two weeks after the deploy.
+- [x] No "Failed to ensure user row" event in Sentry for two weeks after the deploy. Sentry's errors in all projects, 2026-10-08T12:01:56Z to 2026-10-23T08:40Z: the message wildcard and the free-text search each count 0, against a control count of 3 for `event.type:error`. The window cannot show much, since the 30 days before the fix also had none and traffic is light. The closure rests on the red-first unit tests and the six-request contract test (7 of 20 failed before the fix, 30 of 30 pass after), which CI runs on every pull request. If the error recurs, reopen it.
 
 ## Related
 

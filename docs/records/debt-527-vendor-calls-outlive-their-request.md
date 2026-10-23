@@ -1,6 +1,6 @@
 # DEBT-527: Vendor Calls on Request Paths Have No Time Budget, So a Hung Call Outlives Its Request
 
-**Status:** Verifying — promotion to main; due 2026-10-24
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -95,7 +95,7 @@ The caller-budget suite proves silence, trickling bodies, retries, connection cl
 - [x] ADR-018 records the combined deadline/retry rules; the success page uses the shared wrapper and breaker.
 - [x] Timeouts the caller's deadline caused neither open nor close the shared Stripe circuit, while timeouts whose first attempt had the full limit still open it (`stripe-call-budget.integration.test.ts`, on loopback with the real SDK).
 
-- [ ] Promote the fix to main.
+- [x] Promoted to `main` by #1594 (`5dbff9f5`) on 2026-10-22, which carries #1587 (`a627e991`) (2026-10-23).
 
 ## Related
 
