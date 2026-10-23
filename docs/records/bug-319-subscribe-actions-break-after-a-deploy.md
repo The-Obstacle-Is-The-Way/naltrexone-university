@@ -1,6 +1,6 @@
 # BUG-319: Subscribe and Add-Card Fail for a Page Loaded Before a Deploy
 
-**Status:** Verifying — every check is recorded; the next pull request that touches the records closes it, keeping Skew Protection as the owner's decision; due 2026-10-28
+**Status:** Verifying — every check is recorded, and the record closes, keeping Skew Protection as the owner's decision; due 2026-10-28
 **Priority:** P2 (filed as P1; lowered 2026-10-05, see the correction under Evidence)
 **Date:** 2026-10-05
 **Resolved:** —
