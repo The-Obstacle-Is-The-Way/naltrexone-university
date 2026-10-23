@@ -113,6 +113,38 @@ describe('app/(app)/app/history/page', () => {
     },
   );
 
+  // Either refused result alone redirects, so neither can drop out of the check.
+  it.each(['attempted questions', 'tags'] as const)(
+    'sends a learner to Pricing from the questions tab when only the %s are refused',
+    async (refused) => {
+      const unsubscribed = {
+        ok: false,
+        error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
+      } as const;
+      const HistoryPage = createHistoryPage({
+        getAttemptedQuestionsFn: async (_input: unknown) =>
+          refused === 'attempted questions'
+            ? unsubscribed
+            : ok<GetAttemptedQuestionsOutput>({
+                rows: [],
+                totalCount: 0,
+                limit: 20,
+                offset: 0,
+              }),
+        getTagsFn: async (_input: unknown) =>
+          refused === 'tags' ? unsubscribed : ok({ rows: [] }),
+      });
+
+      await HistoryPage({
+        searchParams: Promise.resolve({ tab: 'questions' }),
+      });
+
+      expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+        '/pricing?reason=subscription_required',
+      );
+    },
+  );
+
   it('passes sessions mode filter to session history fetch when mode is provided', async () => {
     const output: GetSessionHistoryOutput = {
       rows: [],

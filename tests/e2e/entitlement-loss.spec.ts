@@ -22,17 +22,13 @@ async function enableStartSession(page: Page): Promise<void> {
     name: 'Start session',
   });
   await expect(startSessionButton).toBeVisible({ timeout: 15_000 });
-
-  for (const status of ['Unanswered', 'Incorrect', 'Bookmarked'] as const) {
-    await page.getByRole('button', { name: status, exact: true }).click();
-    await page.getByLabel('Questions').fill('1');
-    // The page counts the matching questions 200 ms after load or a filter
-    // change, and Start session stays enabled while it counts.
-    await expect(page.getByText('Counting questions…')).toBeHidden();
-    if (await startSessionButton.isEnabled()) return;
-  }
-
-  await expect(startSessionButton).toBeEnabled({ timeout: 10_000 });
+  await page.getByLabel('Questions').fill('1');
+  // The reset leaves unanswered questions, and Unanswered is the default
+  // filter, so no filter changes. The page then shows this from its first
+  // render until its one count returns, 200 ms after load, and Start session
+  // stays enabled while it counts.
+  await expect(page.getByText('Counting questions…')).toBeHidden();
+  await expect(startSessionButton).toBeEnabled();
 }
 
 function countServerActionsInFlight(page: Page): () => number {
