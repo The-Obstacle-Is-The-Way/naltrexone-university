@@ -1,6 +1,6 @@
 # BUG-364: The Trial Says It Renews After Cancellation Is Scheduled
 
-**Status:** Verifying — promotion to main and the dev-preview check; due 2026-10-30
+**Status:** Verifying — the dev-preview check, then promotion to main and the production check; due 2026-10-30
 **Priority:** P3
 **Date:** 2026-10-22
 
