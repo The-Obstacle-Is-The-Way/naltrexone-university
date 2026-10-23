@@ -86,7 +86,7 @@ jobs:
       - name: Pull PgBouncer
         timeout-minutes: 7
         env:
-          PGBOUNCER_IMAGE_DIGEST: sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340 # v1.25.2-p0
+          PGBOUNCER_IMAGE_DIGEST: sha256:488422e38cff912895d0d65d8963fcd306e6ac589a724398b6eb8e294e94d624 # v1.26.1-p0, PgBouncer 1.26.1
         run: bash scripts/ci/pull-image.sh --env PGBOUNCER_IMAGE_REPOSITORY PgBouncer "$PGBOUNCER_IMAGE_DIGEST" docker.io/edoburu/pgbouncer mirror.gcr.io/edoburu/pgbouncer
 
       - name: Setup pnpm
