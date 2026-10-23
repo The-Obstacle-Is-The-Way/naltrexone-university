@@ -1,6 +1,6 @@
 # BUG-364: The Trial Says It Renews After Cancellation Is Scheduled
 
-**Status:** Open — implement DEBT-414 F22's decided fix after #1570 (BUG-350) lands
+**Status:** Verifying — promotion to main and the dev-preview check; due 2026-10-30
 **Priority:** P3
 **Date:** 2026-10-22
 
@@ -61,13 +61,22 @@ DEBT-414 F22's decision, unchanged. When cancellation is scheduled:
 
 The access-end date uses #1570's cutoff formatter, so this lands after #1570. The comment in `check-trial-saved-card.ts` is corrected in the same change.
 
+**As built**, on option 2:
+- **One classification.** `classifyTrialEnding` (`src/domain/services/trial-ending.ts`) answers `cancellationScheduled`, `renewsOnSavedCard` or `needsCard`. A scheduled cancellation wins whether or not a card is saved.
+- **The layout** gets `cancelAtPeriodEnd` from `CheckEntitlementUseCase`, which F22's option 1 also needed, and passes one `trialEnding` to the banner in place of `trialCardSaved`.
+- **The banner**, when cancellation is scheduled, says "Cancellation scheduled. Your access ends …" with the cutoff formatter, and links to Billing. It has no add-card dialog to open.
+- **The Billing line** says "Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe, or email support@addictionboards.com." Its amber notice already states the scheduled end. While the trial lasts it still blocks Checkout, so the page offers no new subscription; once the trial ends, the layout sends the learner to Pricing.
+- **Creation** refuses with `CONFLICT` before Stripe is contacted.
+- **Completion** of a setup Session that finds the cancellation scheduled detaches the card and ends the operation as `trial_cancellation_scheduled`, the way it handles an ownership mismatch: no default card, no consent, no acknowledgment. Keeping the card without consent would let an undone cancellation renew on a card the learner never consented to. Undoing the cancellation brings back the add-card offer.
+- **What the check reads.** Completion reads the subscription row the cancellation webhook writes, so it is ordered by our own processing. A Stripe cancellation whose webhook arrives after the setup completion is processed counts as later than it; nothing is charged either way.
+
 ## Verification
 
-- [ ] Red-first render tests for the banner and the Billing line: with cancellation scheduled, in both the saved-card and no-card cases, no renewal or add-card copy, and the access end is shown.
-- [ ] The add-card use case refuses with `CONFLICT` when cancellation is scheduled (unit test).
-- [ ] Completion after a cancellation records no renewal consent and sends no acknowledgment (use case test and persistence integration case).
-- [ ] `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: the trial case also asserts that no renewal or add-card copy remains after cancelling. Today it checks only the amber notice.
-- [ ] Business rule R11 is reworded to cover in-app renewal statements, not only renewal notices, and names the new proving tests.
+- [x] Red-first render tests for the banner and the Billing line: with cancellation scheduled, in both the saved-card and no-card cases, no renewal or add-card copy, and the access end is shown. The layout test covers both card cases for the classification, and the Billing test renders both.
+- [x] The add-card use case refuses with `CONFLICT` when cancellation is scheduled (unit test).
+- [x] Completion after a cancellation records no renewal consent and sends no acknowledgment: the webhook controller test, and the persistence integration case for the new terminal reason, which the row mapper rejected before.
+- [x] `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: the trial case also asserts that no renewal or add-card copy remains after cancelling. It runs in the observational hosted-Stripe lane.
+- [x] Business rule R11 is reworded to cover in-app renewal statements, not only renewal notices, and names the new proving tests.
 - [ ] Dev preview: cancel a trial in the portal, with and without a card; undo restores the renewal or add-card copy.
 - [ ] Production after promotion.
 

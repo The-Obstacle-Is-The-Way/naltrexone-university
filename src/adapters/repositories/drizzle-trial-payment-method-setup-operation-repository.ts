@@ -13,18 +13,30 @@ import type {
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationInput,
   TrialPaymentMethodSetupOperationRepository,
+  TrialPaymentMethodSetupTerminalReason,
   TrialSubscriptionDefaultQuery,
 } from '@/src/application/ports/repositories';
 
 type OperationRow = typeof trialPaymentMethodSetupOperations.$inferSelect;
+
+// Keyed by every reason, so a new reason fails to compile until it is read back.
+const TERMINAL_REASONS: Record<TrialPaymentMethodSetupTerminalReason, true> = {
+  billing_ownership_mismatch: true,
+  trial_cancellation_scheduled: true,
+};
+
+function isTerminalReason(
+  value: string,
+): value is TrialPaymentMethodSetupTerminalReason {
+  return Object.hasOwn(TERMINAL_REASONS, value);
+}
 
 function toOperation(row: OperationRow): TrialPaymentMethodSetupOperation {
   if (
     (row.plan !== 'monthly' && row.plan !== 'annual') ||
     row.currency !== 'usd' ||
     (row.frequency !== 'month' && row.frequency !== 'year') ||
-    (row.terminalReason !== null &&
-      row.terminalReason !== 'billing_ownership_mismatch')
+    (row.terminalReason !== null && !isTerminalReason(row.terminalReason))
   ) {
     throw new ApplicationError(
       'INTERNAL_ERROR',

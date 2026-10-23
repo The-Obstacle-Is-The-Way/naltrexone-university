@@ -12,6 +12,7 @@ import type { SubscriptionRepository } from '@/src/application/ports/repositorie
 import type { CheckTrialSavedCardUseCase } from '@/src/application/ports/use-cases';
 import { formatRenewalNoticeCutoff } from '@/src/application/shared/renewal-notice-email-format';
 import type { Subscription } from '@/src/domain/entities';
+import { classifyTrialEnding, type TrialEnding } from '@/src/domain/services';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 export const maxDuration = 30;
@@ -80,6 +81,23 @@ export type BillingContentProps =
       trialCardSaved?: never;
     };
 
+function trialRenewalCopy(
+  subscription: Subscription,
+  ending: TrialEnding,
+): string {
+  const pricing = PRICING_DATA[subscription.plan];
+  switch (ending) {
+    // BUG-364: the trial ends as scheduled; while it lasts it still blocks
+    // Checkout, so the way back is undoing the cancellation or support.
+    case 'cancellationScheduled':
+      return 'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe, or email support@addictionboards.com.';
+    case 'renewsOnSavedCard':
+      return `Renews at ${pricing.price} per ${pricing.frequency} on your saved card when your trial ends, until you cancel.`;
+    case 'needsCard':
+      return 'No card on file. Your trial ends without a charge unless you add a card from the trial banner.';
+  }
+}
+
 function TrialRenewalLine({
   subscription,
   cardSaved,
@@ -87,12 +105,13 @@ function TrialRenewalLine({
   subscription: Subscription;
   cardSaved: boolean;
 }) {
-  const pricing = PRICING_DATA[subscription.plan];
+  const ending = classifyTrialEnding({
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    cardSaved,
+  });
   return (
     <div className="text-sm text-muted-foreground">
-      {cardSaved
-        ? `Renews at ${pricing.price} per ${pricing.frequency} on your saved card when your trial ends, until you cancel.`
-        : 'No card on file. Your trial ends without a charge unless you add a card from the trial banner.'}
+      {trialRenewalCopy(subscription, ending)}
     </div>
   );
 }

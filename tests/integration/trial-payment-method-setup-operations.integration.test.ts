@@ -295,28 +295,38 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     );
   });
 
-  it('persists the terminal reason and time for the holding claim', async () => {
-    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
-      db,
-    );
-    const input = await claimedOperation(repository);
-    const terminalAt = new Date('2026-08-06T12:05:00Z');
+  // BUG-364 (DEBT-414 F22): a completion after a scheduled cancellation ends
+  // terminal with its own reason, which must read back.
+  it.each([
+    'billing_ownership_mismatch',
+    'trial_cancellation_scheduled',
+  ] as const)(
+    'persists the %s terminal reason and time for the holding claim',
+    async (reason) => {
+      const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+        db,
+      );
+      const input = await claimedOperation(repository);
+      const terminalAt = new Date('2026-08-06T12:05:00Z');
 
-    await repository.markTerminal({
-      sessionId: input.sessionId,
-      claimId: 'claim_terminal',
-      reason: 'billing_ownership_mismatch',
-      terminalAt,
-    });
-
-    await expect(repository.findBySessionId(input.sessionId)).resolves.toEqual(
-      expect.objectContaining({
-        status: 'terminal',
-        terminalReason: 'billing_ownership_mismatch',
+      await repository.markTerminal({
+        sessionId: input.sessionId,
+        claimId: 'claim_terminal',
+        reason,
         terminalAt,
-      }),
-    );
-  });
+      });
+
+      await expect(
+        repository.findBySessionId(input.sessionId),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          status: 'terminal',
+          terminalReason: reason,
+          terminalAt,
+        }),
+      );
+    },
+  );
 
   it('prunes expired operations oldest first, up to the limit', async () => {
     const user = await createUser(db, cleanup);

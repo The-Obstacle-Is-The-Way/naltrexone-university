@@ -25,6 +25,7 @@ import type {
   SubscriptionRepository,
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationRepository,
+  TrialPaymentMethodSetupTerminalReason,
   UserRepository,
 } from '@/src/application/ports/repositories';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
@@ -209,6 +210,35 @@ async function processTrialPaymentMethodSetupExpiration(
   );
 }
 
+// Detaches the card before recording the terminal outcome, so a failed detach
+// leaves the event unprocessed for Stripe to retry.
+async function endTrialPaymentMethodSetup(
+  deps: StripeWebhookDeps,
+  input: {
+    event: StripeWebhookEvent;
+    completion: TrialPaymentMethodSetupCompletion;
+    claimId: string;
+    reason: TrialPaymentMethodSetupTerminalReason;
+  },
+): Promise<void> {
+  await deps.paymentGateway.detachTrialPaymentMethod({
+    sessionId: input.completion.sessionId,
+    externalPaymentMethodId: input.completion.stripePaymentMethodId,
+    externalCustomerId: input.completion.externalCustomerId,
+  });
+  await deps.transaction(
+    async ({ stripeEvents, trialPaymentMethodSetupOperations }) => {
+      await trialPaymentMethodSetupOperations.markTerminal({
+        sessionId: input.completion.sessionId,
+        claimId: input.claimId,
+        reason: input.reason,
+        terminalAt: deps.now(),
+      });
+      await stripeEvents.markProcessed(input.event.eventId);
+    },
+  );
+}
+
 async function processTrialPaymentMethodSetupWebhook(
   deps: StripeWebhookDeps,
   event: StripeWebhookEvent,
@@ -289,22 +319,24 @@ async function processTrialPaymentMethodSetupWebhook(
   const { claimed, subscription, ownershipMatches } = claimResult;
 
   if (!ownershipMatches || !subscription) {
-    await deps.paymentGateway.detachTrialPaymentMethod({
-      sessionId: completion.sessionId,
-      externalPaymentMethodId: completion.stripePaymentMethodId,
-      externalCustomerId: completion.externalCustomerId,
+    await endTrialPaymentMethodSetup(deps, {
+      event,
+      completion,
+      claimId,
+      reason: 'billing_ownership_mismatch',
     });
-    await deps.transaction(
-      async ({ stripeEvents, trialPaymentMethodSetupOperations }) => {
-        await trialPaymentMethodSetupOperations.markTerminal({
-          sessionId: completion.sessionId,
-          claimId,
-          reason: 'billing_ownership_mismatch',
-          terminalAt: deps.now(),
-        });
-        await stripeEvents.markProcessed(event.eventId);
-      },
-    );
+    return;
+  }
+  // BUG-364 (DEBT-414 F22): a Session opened before a portal cancellation can
+  // complete after it. Its consent describes a renewal that will not happen,
+  // so no card stays on the trial and nothing is recorded.
+  if (subscription.cancelAtPeriodEnd) {
+    await endTrialPaymentMethodSetup(deps, {
+      event,
+      completion,
+      claimId,
+      reason: 'trial_cancellation_scheduled',
+    });
     return;
   }
 

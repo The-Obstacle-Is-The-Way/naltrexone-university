@@ -25,6 +25,7 @@ describe('Billing for a trial learner', () => {
 
   async function renderBillingPage(input: {
     cardSaved: boolean;
+    cancelAtPeriodEnd?: boolean;
     trialPaymentMethod?: string;
   }) {
     const subscriptions = new FakeSubscriptionRepository([
@@ -32,6 +33,7 @@ describe('Billing for a trial learner', () => {
         subscription: createSubscription({
           userId: user.id,
           status: 'inTrial',
+          cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
         }),
         externalSubscriptionId: 'sub_trial',
       },
@@ -95,6 +97,26 @@ describe('Billing for a trial learner', () => {
       'No card on file. Your trial ends without a charge unless you add a card from the trial banner.',
     );
   });
+
+  // BUG-364 (DEBT-414 F22): a scheduled cancellation ends the trial without
+  // a charge, saved card or not, so the line promises no renewal or card.
+  it.each([true, false])(
+    'states that a trial with cancellation scheduled ends without a charge (saved card=%s)',
+    async (cardSaved) => {
+      const doc = await renderBillingPage({
+        cardSaved,
+        cancelAtPeriodEnd: true,
+      });
+      const text = doc.body.textContent;
+
+      expect(text).toContain(
+        'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe, or email support@addictionboards.com.',
+      );
+      expect(text).toContain('Cancellation scheduled');
+      expect(text).not.toContain('Renews at');
+      expect(text).not.toContain('add a card');
+    },
+  );
 
   it.each([
     ['success', true, 'Your card is saved.'],
