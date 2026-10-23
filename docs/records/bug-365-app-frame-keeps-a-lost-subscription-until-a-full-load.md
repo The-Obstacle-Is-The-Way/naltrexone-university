@@ -1,6 +1,6 @@
 # BUG-365: The App Frame Keeps a Lost Subscription Until a Full Load
 
-**Status:** Verifying — promotion to main and the dev-preview check; due 2026-10-29
+**Status:** Verifying — the dev-preview check, then promotion to main and the production check; due 2026-10-29
 **Priority:** P3
 **Date:** 2026-10-22
 
