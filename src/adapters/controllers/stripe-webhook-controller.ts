@@ -378,65 +378,79 @@ async function processTrialPaymentMethodSetupWebhook(
     });
   }
 
-  const acknowledgmentDeliveryId = await deps.transaction(
-    async (transaction) => {
-      const {
-        stripeEvents,
-        trialPaymentMethodSetupOperations,
-        renewalConsentRecords,
-      } = transaction;
-      const consent = await new RecordRenewalConsentUseCase(
-        renewalConsentRecords,
-      ).execute({
-        userId: claimed.userId,
-        consumerReference: toConsumerReference(claimed.stripeCustomerId),
-        externalCustomerId: claimed.stripeCustomerId,
-        externalSubscriptionId: claimed.stripeSubscriptionId,
-        checkoutSessionId: null,
-        setupSessionId: claimed.sessionId,
-        applicationSourceId: null,
-        plan: claimed.plan,
-        amountCents: claimed.amountCents,
-        currency: claimed.currency,
-        frequency: claimed.frequency,
-        // setupSnapshotMatches holds the terms to the signed snapshot, but
-        // the trial end and deadline come from the live subscription, since
-        // the snapshot's dates can drift (DEBT-414).
-        trialEndsAt:
-          subscription.status === 'inTrial'
-            ? subscription.currentPeriodEnd
-            : null,
-        cancellationDeadline: subscription.currentPeriodEnd,
-        cancellationMethod: claimed.cancellationMethod,
-        disclosureSnapshot: claimed.disclosureSnapshot,
-        disclosureVersion: claimed.disclosureVersion,
-        termsVersion: claimed.termsVersion,
-        termsHash: claimed.termsHash,
-        consentSource: 'stripe_setup',
-        acceptedAt: completion.acceptedAt,
-        consentKind: 'initial_offer',
-        priorAmountCents: null,
-        proposedAmountCents: null,
-        effectiveRenewalAt: null,
-      });
-      const deliveryId = await queueRenewalAcknowledgment({
-        deps,
-        transaction,
-        consent,
-      });
-      await trialPaymentMethodSetupOperations.markCompleted({
-        sessionId: completion.sessionId,
-        claimId,
-        completedAt: deps.now(),
-      });
-      await stripeEvents.markProcessed(event.eventId);
-      return deliveryId;
-    },
-  );
+  const consentOutcome = await deps.transaction(async (transaction) => {
+    const {
+      stripeEvents,
+      subscriptions,
+      trialPaymentMethodSetupOperations,
+      renewalConsentRecords,
+    } = transaction;
+    // BUG-364: the cancellation can be recorded while Stripe is called
+    // above, so the transaction that records consent checks it again.
+    const current = await subscriptions.findByUserId(claimed.userId);
+    if (current?.cancelAtPeriodEnd) {
+      return { cancellationScheduled: true } as const;
+    }
+    const consent = await new RecordRenewalConsentUseCase(
+      renewalConsentRecords,
+    ).execute({
+      userId: claimed.userId,
+      consumerReference: toConsumerReference(claimed.stripeCustomerId),
+      externalCustomerId: claimed.stripeCustomerId,
+      externalSubscriptionId: claimed.stripeSubscriptionId,
+      checkoutSessionId: null,
+      setupSessionId: claimed.sessionId,
+      applicationSourceId: null,
+      plan: claimed.plan,
+      amountCents: claimed.amountCents,
+      currency: claimed.currency,
+      frequency: claimed.frequency,
+      // setupSnapshotMatches holds the terms to the signed snapshot, but
+      // the trial end and deadline come from the live subscription, since
+      // the snapshot's dates can drift (DEBT-414).
+      trialEndsAt:
+        subscription.status === 'inTrial'
+          ? subscription.currentPeriodEnd
+          : null,
+      cancellationDeadline: subscription.currentPeriodEnd,
+      cancellationMethod: claimed.cancellationMethod,
+      disclosureSnapshot: claimed.disclosureSnapshot,
+      disclosureVersion: claimed.disclosureVersion,
+      termsVersion: claimed.termsVersion,
+      termsHash: claimed.termsHash,
+      consentSource: 'stripe_setup',
+      acceptedAt: completion.acceptedAt,
+      consentKind: 'initial_offer',
+      priorAmountCents: null,
+      proposedAmountCents: null,
+      effectiveRenewalAt: null,
+    });
+    const deliveryId = await queueRenewalAcknowledgment({
+      deps,
+      transaction,
+      consent,
+    });
+    await trialPaymentMethodSetupOperations.markCompleted({
+      sessionId: completion.sessionId,
+      claimId,
+      completedAt: deps.now(),
+    });
+    await stripeEvents.markProcessed(event.eventId);
+    return { cancellationScheduled: false, deliveryId } as const;
+  });
+  if (consentOutcome.cancellationScheduled) {
+    await endTrialPaymentMethodSetup(deps, {
+      event,
+      completion,
+      claimId,
+      reason: 'trial_cancellation_scheduled',
+    });
+    return;
+  }
   await dispatchRenewalAcknowledgment(
     deps,
     event.eventId,
-    acknowledgmentDeliveryId,
+    consentOutcome.deliveryId,
   );
 }
 

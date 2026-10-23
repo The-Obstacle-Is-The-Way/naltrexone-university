@@ -27,6 +27,7 @@ describe('Billing for a trial learner', () => {
     cardSaved: boolean;
     cancelAtPeriodEnd?: boolean;
     trialPaymentMethod?: string;
+    error?: string;
   }) {
     const subscriptions = new FakeSubscriptionRepository([
       {
@@ -55,11 +56,12 @@ describe('Billing for a trial learner', () => {
           operations,
         ),
       },
-      searchParams: Promise.resolve(
-        input.trialPaymentMethod
+      searchParams: Promise.resolve({
+        ...(input.trialPaymentMethod
           ? { trial_payment_method: input.trialPaymentMethod }
-          : {},
-      ),
+          : {}),
+        ...(input.error ? { error: input.error } : {}),
+      }),
     });
     return parseHtml(renderToStaticMarkup(element));
   }
@@ -99,24 +101,46 @@ describe('Billing for a trial learner', () => {
   });
 
   // BUG-364 (DEBT-414 F22): a scheduled cancellation ends the trial without
-  // a charge, saved card or not, so the line promises no renewal or card.
-  it.each([true, false])(
+  // a charge, saved card or not, so the line promises no renewal. Without a
+  // card, undoing the cancellation alone still ends the trial.
+  it.each([
+    [
+      true,
+      'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe, or email support@addictionboards.com.',
+    ],
+    [
+      false,
+      'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe and then add a card, or email support@addictionboards.com.',
+    ],
+  ])(
     'states that a trial with cancellation scheduled ends without a charge (saved card=%s)',
-    async (cardSaved) => {
+    async (cardSaved, line) => {
       const doc = await renderBillingPage({
         cardSaved,
         cancelAtPeriodEnd: true,
       });
       const text = doc.body.textContent;
 
-      expect(text).toContain(
-        'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe, or email support@addictionboards.com.',
-      );
+      expect(text).toContain(line);
       expect(text).toContain('Cancellation scheduled');
       expect(text).not.toContain('Renews at');
-      expect(text).not.toContain('add a card');
+      expect(text).not.toContain('from the trial banner');
     },
   );
+
+  // BUG-364: a page loaded before the cancellation can still send the
+  // add-card form, which is refused; the trial banner no longer offers terms.
+  it('names the scheduled cancellation when the add-card flow is refused', async () => {
+    const doc = await renderBillingPage({
+      cardSaved: false,
+      cancelAtPeriodEnd: true,
+      error: 'trial_payment_method_failed',
+    });
+
+    expect(doc.querySelector('[role="alert"]')?.textContent).toBe(
+      "We couldn't add your card because your trial's cancellation is scheduled.",
+    );
+  });
 
   it.each([
     ['success', true, 'Your card is saved.'],
@@ -130,6 +154,28 @@ describe('Billing for a trial learner', () => {
     'acknowledges trial_payment_method=%s with a saved card=%s',
     async (trialPaymentMethod, cardSaved, message) => {
       const doc = await renderBillingPage({ cardSaved, trialPaymentMethod });
+
+      expect(doc.querySelector('[role="status"]')?.textContent).toBe(message);
+    },
+  );
+
+  // BUG-364: completion after the cancellation keeps no card, so waiting for
+  // Stripe would never end.
+  it.each([
+    ['success', true, 'Your card is saved.'],
+    [
+      'success',
+      false,
+      "Your trial's cancellation is scheduled, so the card was not saved.",
+    ],
+  ] as const)(
+    'acknowledges trial_payment_method=%s with a saved card=%s once cancellation is scheduled',
+    async (trialPaymentMethod, cardSaved, message) => {
+      const doc = await renderBillingPage({
+        cardSaved,
+        cancelAtPeriodEnd: true,
+        trialPaymentMethod,
+      });
 
       expect(doc.querySelector('[role="status"]')?.textContent).toBe(message);
     },

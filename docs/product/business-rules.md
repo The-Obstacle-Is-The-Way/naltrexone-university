@@ -212,6 +212,7 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/application/use-cases/create-trial-payment-method-setup-session.test.ts`: `refuses before Stripe when the trial has a scheduled cancellation`
 - `src/adapters/controllers/stripe-webhook-controller-trial-setup.test.ts`: `detaches the card and records no renewal consent once the trial has a scheduled cancellation`
 - `tests/integration/trial-payment-method-setup-operations.integration.test.ts`: `persists the %s terminal reason and time for the holding claim`
+- `tests/integration/stripe-webhook-trial-setup-cancellation.integration.test.ts`: `records no consent and detaches the card when the cancellation lands while Stripe is called`
 
 ### R12. A repeated or out-of-order billing event never applies twice and never moves a subscription back to an older state.
 

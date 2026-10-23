@@ -199,7 +199,7 @@ test.describe
       ).toBeVisible();
       await expect(
         page.getByText(
-          'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe, or email support@addictionboards.com.',
+          'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe and then add a card, or email support@addictionboards.com.',
         ),
       ).toBeVisible();
       await expect(

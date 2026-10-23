@@ -335,6 +335,84 @@ describe('processStripeWebhook trial payment-method setup', () => {
     expect(harness.renewalNoticeDeliveries.snapshot()).toEqual([]);
   });
 
+  // BUG-364: the cancellation can also be recorded while completion is
+  // calling Stripe, after its first check. The consent transaction rechecks,
+  // so the card it already set as the default is detached instead.
+  it('rechecks the cancellation before recording consent, and detaches a card it already set as the default', async () => {
+    const completion = createTestWebhookTrialSetupCompletion({
+      sessionId: 'cs_setup_cancelled_midway',
+      userId: crypto.randomUUID(),
+    });
+    let cancelInPortal = async () => undefined;
+    class CancellingDuringDefaultGateway extends FakePaymentGateway {
+      override async setTrialSubscriptionDefaultPaymentMethod(
+        input: Parameters<
+          FakePaymentGateway['setTrialSubscriptionDefaultPaymentMethod']
+        >[0],
+      ): Promise<void> {
+        await super.setTrialSubscriptionDefaultPaymentMethod(input);
+        await cancelInPortal();
+      }
+    }
+    const paymentGateway = new CancellingDuringDefaultGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_setup_cancelled_midway',
+        type: 'checkout.session.completed',
+        trialPaymentMethodSetupCompletion: completion,
+      },
+    });
+    const harness = createStripeWebhookTestHarness({ paymentGateway });
+    await seedTrialOwnership(harness, completion);
+    await seedPendingTrialSetupOperation(harness.setupOperations, completion);
+    cancelInPortal = async () => {
+      await harness.subscriptions.upsert({
+        userId: completion.userId,
+        externalSubscriptionId: completion.externalSubscriptionId,
+        plan: completion.plan,
+        status: 'inTrial',
+        currentPeriodEnd: completion.trialEndsAt,
+        cancelAtPeriodEnd: true,
+        startedAt: new Date('2026-01-22T00:00:00.000Z'),
+        billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
+        expectedVersion:
+          await harness.subscriptions.findObservationVersionByUserId(
+            completion.userId,
+          ),
+      });
+    };
+
+    await processStripeWebhook(harness.deps, {
+      rawBody: 'raw',
+      signature: 'sig',
+    });
+
+    expect(paymentGateway.trialSubscriptionDefaultInputs).toHaveLength(1);
+    expect(paymentGateway.trialPaymentMethodDetachInputs).toEqual([
+      {
+        sessionId: 'cs_setup_cancelled_midway',
+        externalPaymentMethodId: completion.stripePaymentMethodId,
+        externalCustomerId: completion.externalCustomerId,
+      },
+    ]);
+    await expect(
+      harness.setupOperations.findBySessionId('cs_setup_cancelled_midway'),
+    ).resolves.toMatchObject({
+      status: 'terminal',
+      terminalReason: 'trial_cancellation_scheduled',
+    });
+    await expect(
+      harness.setupOperations.hasSubscriptionDefaultSet({
+        userId: completion.userId,
+        stripeSubscriptionId: completion.externalSubscriptionId,
+      }),
+    ).resolves.toBe(false);
+    expect(harness.renewalConsents.snapshot()).toEqual([]);
+    expect(harness.renewalNoticeDeliveries.snapshot()).toEqual([]);
+  });
+
   it('allows only one of two concurrent deliveries for the same Session to perform provider writes', async () => {
     const completion = createTestWebhookTrialSetupCompletion({
       sessionId: 'cs_setup_concurrent',

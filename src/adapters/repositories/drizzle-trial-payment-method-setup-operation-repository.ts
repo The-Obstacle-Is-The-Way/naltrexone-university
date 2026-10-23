@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, lt, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, lt, ne, or } from 'drizzle-orm';
 import { trialPaymentMethodSetupOperations } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -155,6 +155,9 @@ export class DrizzleTrialPaymentMethodSetupOperationRepository
             stripeSubscriptionId,
           ),
           isNotNull(trialPaymentMethodSetupOperations.subscriptionDefaultSetAt),
+          // BUG-364: a terminal outcome detached the card, even one that an
+          // earlier attempt had set as the default.
+          ne(trialPaymentMethodSetupOperations.status, 'terminal'),
         ),
       },
     );
