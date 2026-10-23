@@ -306,6 +306,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-316 · Content Release Test Failures Leak or Block Resources · Resolved · 2026-10-02 · docs/_archive/bugs/bug-316-content-release-test-resource-cleanup.md
 - BUG-317 · Content Release Guidance Overstates Isolation and Clinical Behaviour · Resolved · 2026-10-02 · docs/_archive/bugs/bug-317-content-release-documentation-overclaims.md
 - BUG-318 · Sentry Receives Credentials on Every Server Error Event · Resolved · 2026-10-05 · docs/_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md
+- BUG-319 · Subscribe and Add-Card Fail for a Page Loaded Before a Deploy · Resolved · 2026-10-23 · docs/records/bug-319-subscribe-actions-break-after-a-deploy.md · #PRNUM · d3647ae4170968e95caac45890e2baa03d137795
 - BUG-320 · A New User's First Visit Can Fail When Two Requests Create Their Row at Once · Resolved · 2026-10-21 · docs/records/bug-320-first-pricing-render-user-upsert-race.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
 - BUG-322 · A Checkout Error Is Hidden Behind the Consent Dialog That Reopens · Resolved · 2026-10-06 · docs/_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md
 - BUG-324 · Exported Server Actions Accept Caller-Supplied Dependencies · Resolved · 2026-10-06 · docs/_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md
