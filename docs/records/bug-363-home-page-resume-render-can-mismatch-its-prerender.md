@@ -8,7 +8,7 @@
 
 ## Summary
 
-Sentry's server project recorded three unhandled errors on `POST /` on 2026-10-13: "Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering". With `cacheComponents` on, the home page is a partial prerender, and `POST /` is the resume request that renders its dynamic parts. React raises this error when the tree it renders on resume does not match the prerendered shell. It then renders that part in the browser instead, so the page still works.
+Sentry's server project recorded three unhandled errors on `POST /` on 2026-10-13: "Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering". With `cacheComponents` on, the home page is a partial prerender, and `POST /` is the resume request that renders its dynamic parts. React raises this error only while it replays a postponed render, so each of these requests was a resume. React raises this error when the tree it renders on resume does not match the prerendered shell. It then renders that part in the browser instead, so the page still works.
 
 BUG-319 took the same error, seen 12 times from 2026-04-21 to 2026-09-26, for skew between builds, and expected it to stop once the server-action key was stable. It came back from a release that had been live for hours. Whether skew can still explain that is open, since nothing records which build the resumed shell came from or how long it was cached. The cause is unknown.
 
@@ -40,9 +40,9 @@ For each request affected, React renders the home page's dynamic part in the bro
 2. **Filter the error in the server's `beforeSend`.** Only once the cause is known: if explanation 1 holds, a filter would hide a real rendering difference.
 3. **Accept it,** with a trigger such as a rise in volume.
 
-## Resolution (proposed)
+## Resolution (decided)
 
-Option 1, by 2026-11-04. Then choose between fixing the render, accepting an upstream defect that 16.4 removed, or accepting the error with a trigger.
+No fix is decided yet. The decided next step is option 1, by 2026-11-04. Then choose between fixing the render, accepting an upstream defect that 16.4 removed, or accepting the error with a trigger.
 
 ## Verification
 
