@@ -10,14 +10,14 @@
 
 Sentry's server project recorded three unhandled errors on `POST /` on 2026-10-13: "Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering". With `cacheComponents` on, the home page is a partial prerender, and `POST /` is the resume request that renders its dynamic parts. React raises this error when the tree it renders on resume does not match the prerendered shell. It then renders that part in the browser instead, so the page still works.
 
-BUG-319 took the same error, seen 12 times from 2026-04-21 to 2026-09-26, for skew between builds, and expected it to stop once the server-action key was stable. It came back from a release that had been live for hours, which makes skew unlikely. The cause is unknown.
+BUG-319 took the same error, seen 12 times from 2026-04-21 to 2026-09-26, for skew between builds, and expected it to stop once the server-action key was stable. It came back from a release that had been live for hours. Whether skew can still explain that is open, since nothing records which build the resumed shell came from or how long it was cached. The cause is unknown.
 
 ## Evidence
 
 - **Sentry, read 2026-10-21 through its API** (counts and tags only):
   - 3 events, all in issue ADDICTION-BOARDS-SERVER-2, from 09:13:01Z to 15:31:45Z on 2026-10-13. None since, to 2026-10-21T14:50Z. The web project had none from BUG-319's production assignment (2026-10-05T22:24:30Z) to then. The server project exists since 2026-10-08.
   - All three were unhandled production events from release `f66056bd`, the merge of promotion #1481 at 01:45Z that day. The next promotion, #1485, merged at 16:17Z, after the last event.
-  - None had a signed-in user. Each reported Chrome 131, a 2024 version, two on Linux and one on macOS. One old version across two systems suggests an automated client.
+  - None of the three had a signed-in user. Each reported Chrome 131, a 2024 version, two on Linux and one on macOS. One old version across two systems suggests an automated client.
   - At the server's 5% trace sample, Sentry kept two successful `POST /` resume transactions on that release. Two samples suggest on the order of 40 successful resumes, a rough estimate with a wide range. Sentry records every error event, so the three failures are a full count. Failures were then a small share of resumes, so whatever differs likely depends on the request.
   - Ingestion was healthy: both projects accepted events every day, and nothing was rate-limited or dropped for quota.
 - **The earlier issue,** ADDICTION-BOARDS-WEB-T (12 events, four releases, all on `POST /`), was deleted under BUG-318. Only the facts BUG-319 kept remain.
@@ -27,7 +27,7 @@ BUG-319 took the same error, seen 12 times from 2026-04-21 to 2026-09-26, for sk
 - **The request-time parts.** `app/page.tsx` renders `MarketingHomeShell` (`components/marketing/marketing-home.tsx`). Its request-time parts are the get-started call to action and the header's sign-in navigation (`components/marketing/marketing-layout.tsx`), each inside a `Suspense` boundary. The root layout reads the request's CSP nonce from `headers()` (`app/layout.tsx`), also behind `Suspense`.
 - **Unverified explanations:**
   1. For some requests, something in the shell renders differently at request time than at build time: a value read from the environment, the clock or the request outside a dynamic boundary, or a difference in what a particular client is sent.
-  2. The resume carried saved state from another build, for example a shell cached from an earlier deployment. Seven to fourteen hours after the deploy makes this unlikely.
+  2. The resume carried saved state from another build, for example a shell cached from an earlier deployment. The events came seven to fourteen hours after the deploy, but nothing records the resumed shell's build or cache lifetime, so this is not ruled out.
   3. A defect in Next.js 16.3.8's resume that 16.4 changed.
 
 ## Impact

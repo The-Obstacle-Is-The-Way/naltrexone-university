@@ -114,3 +114,5 @@ A test that runs git in a fixture repository first removes every inherited `GIT_
 
 - `vi.stubEnv(name, undefined)` for each variable, which `vi.unstubAllEnvs()` restores: `tests/documentation-records.test.ts`.
 - A cleaned environment passed to the child process: `isolatedGitEnv` in `scripts/lockfile-union-git.test.ts`.
+
+Both then set `GIT_CONFIG_GLOBAL` to an empty or fixture file and `GIT_CONFIG_NOSYSTEM=1`, so the user's and the system's Git configuration cannot change what the fixture sees.

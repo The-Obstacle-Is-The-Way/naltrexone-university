@@ -219,7 +219,7 @@ which would copy the scope's user past `scrubEvent`.
 - Structured logs and Sentry complement each other. Use logs for request-local diagnosis; use Sentry for exception aggregation and client/server telemetry.
 - Do not log the caller's text. Log its length or a fixed reason instead. A refusal a request could forge is a warning or a quiet failure, not an error. A `VALIDATION_ERROR` your own server raises, such as a changed offer, is logged at warn: never silenced, and not an error. Other failures stay errors (BUG-325).
 - Log a failed webhook signature check at warn: anyone can send one. An invalid payload behind a valid signature stays an error.
-- Next.js refuses some malformed server-action posts by throwing, and those errors can reach Sentry through `onRequestError`. They are not filtered: none reached production Sentry in the 14 days to 2026-10-06, nor from then to 2026-10-21. If they appear and add noise, filter them in the server's `beforeSend` by Next's error code (BUG-325).
+- Next.js refuses some malformed server-action posts by throwing, and those errors can reach Sentry through `onRequestError`. Nothing filters them by Next's error code yet: none reached production Sentry in the 14 days to 2026-10-06, nor from then to 2026-10-21. If they appear and add noise, filter them in the server's `beforeSend` by Next's error code (BUG-325).
 
 ## Sentry flood or quota exhaustion
 
