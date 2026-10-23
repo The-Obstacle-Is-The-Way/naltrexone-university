@@ -1,10 +1,17 @@
 import path from 'node:path';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
+import { RuleProofReporter } from './tests/rule-proof-reporter.mts';
 
 (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
 
 export default defineConfig({
   test: {
+    reporters: [
+      ...configDefaults.reporters,
+      new RuleProofReporter('integration'),
+    ],
+    allowOnly: false,
+    includeTaskLocation: true,
     globals: true,
     environment: 'node',
     // Integration suites share a single mutable Postgres database.

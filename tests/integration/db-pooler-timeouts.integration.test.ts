@@ -11,7 +11,7 @@ import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import migrationJournal from '@/db/migrations/meta/_journal.json';
 import { POSTGRES_CONNECTION_PARAMETERS } from '@/lib/db-connection-options';
-import { resolveLocalTestTarget } from '@/scripts/resolve-local-test-target';
+import { resolveLocalTestTarget } from '@/scripts/test-lanes/resolve-local-test-target';
 import { resolveIntegrationDatabaseUrl } from '@/tests/shared/resolve-integration-database-url';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
