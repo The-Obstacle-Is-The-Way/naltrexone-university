@@ -114,6 +114,15 @@ describe('Billing for a trial learner', () => {
     ],
   ])(
     'states that a trial with cancellation scheduled ends without a charge (saved card=%s)',
+    {
+      meta: {
+        ruleProof: {
+          file: 'app/(app)/app/billing/billing-trial-card.test.tsx',
+          title:
+            'states that a trial with cancellation scheduled ends without a charge (saved card=%s)',
+        },
+      },
+    },
     async (cardSaved, line) => {
       const doc = await renderBillingPage({
         cardSaved,

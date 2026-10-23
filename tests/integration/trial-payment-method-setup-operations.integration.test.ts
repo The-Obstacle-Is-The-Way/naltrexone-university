@@ -302,6 +302,15 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     'trial_cancellation_scheduled',
   ] as const)(
     'persists the %s terminal reason and time for the holding claim',
+    {
+      meta: {
+        ruleProof: {
+          file: 'tests/integration/trial-payment-method-setup-operations.integration.test.ts',
+          title:
+            'persists the %s terminal reason and time for the holding claim',
+        },
+      },
+    },
     async (reason) => {
       const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
         db,
