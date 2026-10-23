@@ -179,12 +179,17 @@ The first sourced stage names that verified baseline and initializes the waterma
 
 ## Subscription and billing
 
-### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed.
+### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed, and a page whose data is refused sends the learner to Pricing.
 
 - `src/adapters/controllers/require-entitled-user-id.test.ts`: `throws UNSUBSCRIBED when the user is not entitled`
 - `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED when not entitled`
 - `src/adapters/controllers/bookmark-controller.test.ts`: `returns UNSUBSCRIBED when not entitled`
 - `src/adapters/controllers/stats-controller.test.ts`: `returns UNSUBSCRIBED when not entitled`
+- `app/(app)/app/shared/redirect-if-unsubscribed.test.ts`: `sends a learner whose data check found no subscription to Pricing`
+- `app/(app)/app/dashboard/page.test.tsx`: `sends a learner without a subscription to Pricing instead of a bare refusal`
+- `app/(app)/app/bookmarks/page.test.tsx`: `sends a learner without a subscription to Pricing instead of a bare refusal`
+- `app/(app)/app/shared/redirect-on-unsubscribed.test.ts`: `starts a full navigation to Pricing when the action finds no subscription, and still returns the result`
+- `tests/app-client-action-imports.test.ts`: `wraps every controller action in the Pricing redirect`
 
 ### R3. Access ends the instant the paid period ends, whatever the subscription's status says.
 
