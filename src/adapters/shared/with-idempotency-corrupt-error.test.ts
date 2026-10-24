@@ -28,6 +28,7 @@ describe('withIdempotency corrupt cached errors', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'question:submitAnswer',
@@ -61,6 +62,7 @@ describe('withIdempotency corrupt cached errors', () => {
     });
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'question:submitAnswer',

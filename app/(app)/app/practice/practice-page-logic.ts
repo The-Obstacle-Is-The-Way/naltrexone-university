@@ -87,8 +87,8 @@ export async function loadNextQuestion(input: {
   setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
-  createRequestSequenceId?: (() => number) | undefined;
-  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
   isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   const serverFilters = {
@@ -126,8 +126,8 @@ export function createLoadNextQuestionAction(input: {
   setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
-  createRequestSequenceId?: (() => number) | undefined;
-  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
   isMounted?: (() => boolean) | undefined;
 }): () => void {
   return createTransitionedLoadAction({
@@ -148,8 +148,8 @@ export async function submitAnswerForQuestion(input: {
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
-  createRequestSequenceId?: (() => number) | undefined;
-  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
   isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   if (!input.question || !input.selectedChoiceId) return;

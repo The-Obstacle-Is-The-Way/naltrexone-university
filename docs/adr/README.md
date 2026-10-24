@@ -28,7 +28,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-012](./adr-012-directory-structure.md) | Directory Structure | Accepted (amended 2026-10-06, 2026-10-12) | 2026-01-31 |
 | [ADR-013](./adr-013-repository-organization.md) | Repository Organization by Aggregate | Accepted | 2026-02-01 |
 | [ADR-014](./adr-014-stripe-eager-sync.md) | Stripe Eager Sync on Checkout Success | Accepted | 2026-02-02 |
-| [ADR-015](./adr-015-idempotency-strategy.md) | Idempotency Strategy | Accepted (amended 2026-08-14, 2026-08-15, 2026-08-17 and 2026-10-13) | 2026-02-07 |
+| [ADR-015](./adr-015-idempotency-strategy.md) | Idempotency Strategy | Accepted (amended 2026-08-14, 2026-08-15, 2026-08-17, 2026-10-13 and 2026-10-21) | 2026-02-07 |
 | [ADR-016](./adr-016-rate-limiting.md) | Rate Limiting and Abuse Prevention | Accepted (amended 2026-10-13) | 2026-02-07 |
 | [ADR-017](./adr-017-webhook-processing-lifecycle.md) | Webhook Processing Lifecycle | Accepted (amended 2026-10-13) | 2026-02-07 |
 | [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted (amended 2026-10-18 and 2026-10-19) | 2026-02-07 |

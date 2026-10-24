@@ -69,7 +69,7 @@ function assertRequestSequencingHooks(input: {
     typeof input.createRequestSequenceId === 'function';
   const hasIsLatestRequest = typeof input.isLatestRequest === 'function';
 
-  if (hasCreateRequestSequenceId === hasIsLatestRequest) return;
+  if (hasCreateRequestSequenceId && hasIsLatestRequest) return;
 
   throw new Error('Request sequencing hooks must be provided together');
 }
@@ -123,17 +123,16 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   onLoaded?: ((question: TQuestion | null) => void) | undefined;
   recoverNullQuestion?: NullQuestionRecovery | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
-  createRequestSequenceId?: (() => number) | undefined;
-  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
   isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   assertRequestSequencingHooks(input);
   const isMounted = input.isMounted ?? (() => true);
-  const requestId = input.createRequestSequenceId?.();
+  const requestId = input.createRequestSequenceId();
   const canCommit = () => {
     if (!isMounted()) return false;
-    if (requestId === undefined) return true;
-    return input.isLatestRequest?.(requestId) ?? true;
+    return input.isLatestRequest(requestId);
   };
 
   input.setLoadState({ status: 'loading' });
@@ -360,8 +359,8 @@ export async function runSubmitAnswerFlow<
    */
   recoverQuestionNotFound?: (() => Promise<boolean>) | undefined;
   rotateIdempotencyKey?: (() => void) | undefined;
-  createRequestSequenceId?: (() => number) | undefined;
-  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
   isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   assertRequestSequencingHooks(input);
@@ -369,11 +368,10 @@ export async function runSubmitAnswerFlow<
   if (!input.selectedChoiceId) return;
 
   const isMounted = input.isMounted ?? (() => true);
-  const requestId = input.createRequestSequenceId?.();
+  const requestId = input.createRequestSequenceId();
   const canCommit = () => {
     if (!isMounted()) return false;
-    if (requestId === undefined) return true;
-    return input.isLatestRequest?.(requestId) ?? true;
+    return input.isLatestRequest(requestId);
   };
 
   const timeSpentSeconds = buildTimeSpentSeconds(
