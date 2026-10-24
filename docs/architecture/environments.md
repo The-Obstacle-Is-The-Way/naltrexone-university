@@ -26,7 +26,7 @@ The current Vercel + Neon setup uses one Neon project with isolated database bra
 
 - Vercel **Production** targets the Neon `main` branch.
 - Vercel **Preview** and **Development** target the Neon `dev` branch.
-- The project is on Neon's Free plan (DEBT-534), so all three environments share its 100 CU-hours a month and its 10 branches.
+- The project is on Neon's Free plan (DEBT-534), so all three environments share its monthly 100 CU-hours and 5 GB of transfer, its 1 GB of storage and its 10 branches.
 - Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment for local app runtime. Normal authenticated local E2E uses the resolver-scoped Docker database; combine `E2E_USE_EXISTING_DATABASE=true` with `ALLOW_NON_LOCAL_DATABASE_URL=true` only for deliberate deploy-target E2E checks.
 
 Redacted Vercel metadata checked on 2026-06-16 confirms a `DATABASE_URL` entry exists in Production, Preview, and Development scopes, with no git-branch-specific override observed. A value-free host comparison on 2026-06-16 (each scope's `DATABASE_URL` pulled to a temp directory outside the repo, compared by host, booleans only — no connection strings or hostnames recorded) confirmed that the **Production** host is distinct from both **Preview** and **Development**, and that **Preview** and **Development** resolve to the **same** non-production host. This matches the contract above: production is isolated from the shared non-production database. The literal Neon branch *names* behind each value are confirmable in the Neon/Vercel dashboards; the safety-critical isolation is verified in-repo here without recording any secret.
@@ -37,10 +37,10 @@ Do not hard-code branch hostnames, account ids, passwords, or connection strings
 
 These are not on (DEBT-445): every Preview shares the `dev` branch and its migration ledger. Before relying on a Preview whose schema differs from `dev`'s, give each Preview its own branch:
 
-1. Move the project off Neon's Free plan first (DEBT-534). Free stops creating branches at 10 per project, and 49 PR branches deployed Previews in one October week, so Previews would start failing within a day.
+1. Move the project off Neon's Free plan first (DEBT-534). Free stops creating branches at 10 per project, and at least 34 PR branches deployed Previews in each October week, so Previews would start failing within days.
 2. In the Neon Console, make `dev` the project's default branch. Vercel's integration creates each Preview's branch, `preview/<git-branch>`, from the default branch, so this keeps production data out of Previews. Production keeps its own branch, `main`, whichever branch is the default.
 3. In Vercel Storage → `naltrexone-db`, in the project connection's settings, select Preview, not Production, under "Create database branch for deployment". Each Preview build then migrates its own branch.
-4. In the same change, add a workflow that runs Neon's `delete-branch-action` when a pull request closes, deleting `preview/<head-branch>`, with the Neon API key step-scoped as the CI Secret Standard below requires. Without it, a Preview branch is deleted only with its last deployment, 180 days by default, and each branch beyond the plan's 10 is billed.
+4. In the same change, add a workflow that runs Neon's `delete-branch-action` when a pull request closes, deleting `preview/<head-branch>`, with the Neon API key step-scoped as the CI Secret Standard below requires. Without it, a Preview branch is deleted only with its last deployment: by default after 30 days on Vercel Hobby and 180 on Pro, and not at all while a Vercel retention exception keeps that deployment. Each branch beyond the plan's 10 is billed.
 5. Verify: a pushed branch's Preview gets `preview/<branch>` in the Neon Console and migrates it in its build log, and closing the pull request deletes the branch.
 
 ### Production Release Gate

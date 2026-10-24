@@ -104,7 +104,7 @@ Rejected alternatives: retain 35 (valid within the reviewed overlap, but sacrifi
 2. Notices and the acknowledgment go to our stored copy of the account email, which can lag Clerk (DEBT-511).
 3. Notices state the configured plan amount and select subscriptions by the configured price ID. A price change would therefore misstate or skip notices (DEBT-501).
 4. Known gaps, decided but not yet built: an early bounce report can be lost (F21); a trial cancelled in the portal is still offered "Add a card", which records consent and acknowledges a renewal that will not happen (F22); a card added at or after trial end is never applied (DEBT-501 item 4).
-5. Delivery evidence needs the owner to configure the Resend webhook. Until then, notices stayed `accepted`. The owner configured it on 2026-10-24; the first real report remains to be seen (DEBT-414 F07).
+5. Delivery evidence depends on the signed Resend webhook; a notice stays `accepted` until its report arrives (DEBT-414 F07).
 6. Requeueing a quarantined notice is a manual operator step: `pnpm notice:requeue`, run against production behind the explicit database-target check, after checking Resend ([the requeue guide](../guides/operations/requeue-renewal-notice.md); DEBT-414 F23, 2026-10-18). There is no in-app surface for it.
 
 ### Mitigations
