@@ -26,6 +26,7 @@ The current Vercel + Neon setup uses one Neon project with isolated database bra
 
 - Vercel **Production** targets the Neon `main` branch.
 - Vercel **Preview** and **Development** target the Neon `dev` branch.
+- The project is on Neon's Free plan (DEBT-534), so all three environments share its 100 CU-hours a month and its 10 branches.
 - Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment for local app runtime. Normal authenticated local E2E uses the resolver-scoped Docker database; combine `E2E_USE_EXISTING_DATABASE=true` with `ALLOW_NON_LOCAL_DATABASE_URL=true` only for deliberate deploy-target E2E checks.
 
 Redacted Vercel metadata checked on 2026-06-16 confirms a `DATABASE_URL` entry exists in Production, Preview, and Development scopes, with no git-branch-specific override observed. A value-free host comparison on 2026-06-16 (each scope's `DATABASE_URL` pulled to a temp directory outside the repo, compared by host, booleans only — no connection strings or hostnames recorded) confirmed that the **Production** host is distinct from both **Preview** and **Development**, and that **Preview** and **Development** resolve to the **same** non-production host. This matches the contract above: production is isolated from the shared non-production database. The literal Neon branch *names* behind each value are confirmable in the Neon/Vercel dashboards; the safety-critical isolation is verified in-repo here without recording any secret.
