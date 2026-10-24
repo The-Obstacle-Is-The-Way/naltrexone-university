@@ -1,13 +1,13 @@
-import { pathToFileURL } from 'node:url';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from '../db/schema';
-import { NobleSha256Hasher } from '../src/adapters/gateways/noble-sha256-hasher';
-import { DrizzleRenewalNoticeDeliveryRepository } from '../src/adapters/repositories/drizzle-renewal-notice-delivery-repository';
-import { zUuid } from '../src/adapters/shared/zod-schemas';
-import type { RenewalNoticeDeliveryRepository } from '../src/application/ports/repositories';
-import { RequeueRenewalNoticeDeliveryUseCase } from '../src/application/use-cases/requeue-renewal-notice-delivery';
-import { runHumanDatabaseCommand } from './database-command';
+import * as schema from '../../db/schema';
+import { NobleSha256Hasher } from '../../src/adapters/gateways/noble-sha256-hasher';
+import { DrizzleRenewalNoticeDeliveryRepository } from '../../src/adapters/repositories/drizzle-renewal-notice-delivery-repository';
+import { zUuid } from '../../src/adapters/shared/zod-schemas';
+import type { RenewalNoticeDeliveryRepository } from '../../src/application/ports/repositories';
+import { RequeueRenewalNoticeDeliveryUseCase } from '../../src/application/use-cases/requeue-renewal-notice-delivery';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { isMain } from '../lib/entry-point.mts';
 
 // DEBT-414 F23: the supported way to send a quarantined renewal notice again.
 // It goes through RequeueRenewalNoticeDeliveryUseCase, so an unknown outcome
@@ -167,10 +167,8 @@ function usageError(message: string): Error {
   return new Error(`${message}\n${USAGE}`);
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runRequeueRenewalNotice().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

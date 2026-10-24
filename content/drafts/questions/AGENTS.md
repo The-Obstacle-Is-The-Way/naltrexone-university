@@ -72,7 +72,7 @@ For the full anti-pattern registry with real examples, see `docs/content-debt/CD
 5. Run the SCHEMA.md checklist
 6. Save to recall.md / vignettes.md (or recall.md only for Prescriber's Guide)
 7. Update PLAN.md if you advanced tracked progress
-8. Validate in the app repo with: pnpm content:import:drafts -- --dry-run
+8. Validate in the app repo with: pnpm content:import:drafts --dry-run
 ```
 
 ---

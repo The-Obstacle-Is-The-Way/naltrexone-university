@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
-} from '../tests/shared/process-env';
+} from '../../tests/shared/process-env';
 import {
   formatQuestionFeedbackExport,
   getQuestionFeedbackExportPrivacyWarnings,
