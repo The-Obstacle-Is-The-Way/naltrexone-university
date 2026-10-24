@@ -75,8 +75,8 @@ describe('withIdempotency abortClaim race safety', () => {
         userId: appUserId,
         action: 'billing:createCheckoutSession',
         key,
-        abortError: 'abort failed',
-        originalError: 'Too many requests',
+        abortError: { name: 'Error' },
+        originalError: { name: 'ApplicationError', code: 'RATE_LIMITED' },
       },
     });
   });

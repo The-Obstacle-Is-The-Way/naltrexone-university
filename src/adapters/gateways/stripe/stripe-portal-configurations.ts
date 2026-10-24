@@ -6,6 +6,7 @@ import type {
 } from '@/src/adapters/shared/stripe-types';
 import type { PortalProfile } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { StripeCallBudget } from './stripe-call-budget';
 import { callStripeWithRetry } from './stripe-retry';
 
 // DEBT-414 F05: the portal's features are set here, not in the Dashboard's
@@ -71,10 +72,12 @@ export async function resolvePortalConfigurationId({
   stripe,
   profile,
   logger,
+  budget,
 }: {
   stripe: StripeClient;
   profile: PortalProfile;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
 }): Promise<string> {
   const { configurations } = stripe.billingPortal;
   const matches: StripeBillingPortalConfiguration[] = [];
@@ -90,6 +93,7 @@ export async function resolvePortalConfigurationId({
           ...(cursor ? { starting_after: cursor } : {}),
         }),
       logger,
+      budget,
     });
     matches.push(
       ...page.data.filter((configuration) =>
@@ -110,6 +114,7 @@ export async function resolvePortalConfigurationId({
         idempotencyKey,
       }),
     logger,
+    budget,
   });
   return created.id;
 }

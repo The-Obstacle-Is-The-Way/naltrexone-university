@@ -100,7 +100,7 @@ For local integration testing, prefer recreating the database state:
 
 ```bash
 pnpm db:test:reset
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 ```

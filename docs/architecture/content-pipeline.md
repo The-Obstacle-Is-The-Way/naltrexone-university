@@ -579,7 +579,7 @@ Recommended end-to-end sanity check:
 
 ```bash
 pnpm db:test:reset
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 # Prerequisite: approved MDX is already placed under content/questions/.
 # Generate/review replacements separately using the clean-staging procedure above.
@@ -587,7 +587,7 @@ DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 DATABASE_URL="$TEST_DATABASE_URL" pnpm dev
 ```
 
-The test DB host port is per-clone (resolved by `scripts/resolve-local-test-target.ts`); never hardcode `localhost:5434`. See `docs/guides/testing/integration-tests.md`.
+The test DB host port is per-clone (resolved by `scripts/test-lanes/resolve-local-test-target.ts`); never hardcode `localhost:5434`. See `docs/guides/testing/integration-tests.md`.
 
 ---
 

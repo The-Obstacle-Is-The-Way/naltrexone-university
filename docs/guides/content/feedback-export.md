@@ -3,7 +3,7 @@
 Question feedback is exported through a human-operated, read-only script:
 
 ```bash
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback > question-feedback.csv
 DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback --format json > question-feedback.json
 ```
@@ -18,7 +18,7 @@ Default exports redact `user_id` and exclude free-text comments. Raw user identi
 bodies require explicit opt-in flags and should only be used for local editorial analysis:
 
 ```bash
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback --include-user-id > question-feedback-raw-users.csv
 DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback --include-comments > question-feedback-comments.csv
 ```

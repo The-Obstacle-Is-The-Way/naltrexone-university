@@ -175,6 +175,15 @@ describe('requeue-renewal-notice script', () => {
     ['terminal_failure', 'fake'],
   ] as const)(
     'refuses evidence inspected before a newer %s attempt existed (%s)',
+    {
+      meta: {
+        ruleProof: {
+          file: 'tests/integration/requeue-renewal-notice.integration.test.ts',
+          title:
+            'refuses evidence inspected before a newer %s attempt existed (%s)',
+        },
+      },
+    },
     async (status, backend) => {
       const targetRepository =
         backend === 'Postgres'
@@ -339,6 +348,15 @@ describe('requeue-renewal-notice script', () => {
 
   it.each(['queued', 'outcome_unknown'] as const)(
     'rejects a stale requeue after another operator leaves the notice %s',
+    {
+      meta: {
+        ruleProof: {
+          file: 'tests/integration/requeue-renewal-notice.integration.test.ts',
+          title:
+            'rejects a stale requeue after another operator leaves the notice %s',
+        },
+      },
+    },
     async (newStatus) => {
       const id = await quarantinedDelivery('outcome_unknown');
       const read = createDeferred<void>();

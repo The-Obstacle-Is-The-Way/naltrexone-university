@@ -29,6 +29,7 @@ import type {
 import type { Logger } from '@/src/application/ports/logger';
 import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
+import type { StripeCallBudget } from './stripe/stripe-call-budget';
 import { listStripeBlockingCustomerSubscriptions } from './stripe/stripe-customer-subscriptions';
 import { callStripeWithRetry } from './stripe/stripe-retry';
 import type { CheckoutDisclosureResolver } from './stripe/stripe-webhook-processor';
@@ -42,6 +43,7 @@ export type StripePaymentGatewayDeps = {
   consentStateSecret?: string | undefined;
   priceIds: StripePriceIds;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   // BUG-343 option 5: a second live subscription is a person's to correct.
   operationalAlerts: Pick<OperationalAlerts, 'raise'>;
   webhookE2EOwner?: string | undefined;
@@ -62,6 +64,7 @@ export class StripePaymentGateway implements PaymentGateway {
       input,
       options,
       logger: this.deps.logger,
+      budget: this.deps.budget,
     });
   }
 
@@ -76,6 +79,7 @@ export class StripePaymentGateway implements PaymentGateway {
       input,
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
+      budget: this.deps.budget,
       operationalAlerts: this.deps.operationalAlerts,
     });
   }
@@ -88,6 +92,7 @@ export class StripePaymentGateway implements PaymentGateway {
       stripe: this.deps.stripe,
       input,
       logger: this.deps.logger,
+      budget: this.deps.budget,
       stateSecret,
     });
   }
@@ -100,6 +105,7 @@ export class StripePaymentGateway implements PaymentGateway {
       operation: 'payment_methods.retrieve_trial_setup',
       fn: () => paymentMethods.retrieve(input.externalPaymentMethodId),
       logger: this.deps.logger,
+      budget: this.deps.budget,
     });
     const currentCustomerId =
       typeof current.customer === 'string'
@@ -124,6 +130,7 @@ export class StripePaymentGateway implements PaymentGateway {
           },
         ),
       logger: this.deps.logger,
+      budget: this.deps.budget,
     });
     const attachedCustomerId =
       typeof attached.customer === 'string'
@@ -145,6 +152,7 @@ export class StripePaymentGateway implements PaymentGateway {
       operation: 'payment_methods.retrieve_trial_setup_for_detach',
       fn: () => paymentMethods.retrieve(input.externalPaymentMethodId),
       logger: this.deps.logger,
+      budget: this.deps.budget,
     });
     const currentCustomerId =
       typeof current.customer === 'string'
@@ -159,6 +167,7 @@ export class StripePaymentGateway implements PaymentGateway {
           idempotencyKey: `trial_setup:${input.sessionId}:detach_payment_method`,
         }),
       logger: this.deps.logger,
+      budget: this.deps.budget,
     });
   }
 
@@ -177,6 +186,7 @@ export class StripePaymentGateway implements PaymentGateway {
           },
         ),
       logger: this.deps.logger,
+      budget: this.deps.budget,
     });
   }
 
@@ -189,6 +199,7 @@ export class StripePaymentGateway implements PaymentGateway {
       input,
       options,
       logger: this.deps.logger,
+      budget: this.deps.budget,
     });
   }
 
@@ -200,6 +211,7 @@ export class StripePaymentGateway implements PaymentGateway {
       externalCustomerId: input.externalCustomerId,
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
+      budget: this.deps.budget,
       webhookE2EOwner: this.deps.webhookE2EOwner,
     });
   }
@@ -213,6 +225,7 @@ export class StripePaymentGateway implements PaymentGateway {
       stripe: this.deps.stripe,
       input,
       logger: this.deps.logger,
+      budget: this.deps.budget,
       operationalAlerts: this.deps.operationalAlerts,
     });
   }
@@ -230,6 +243,7 @@ export class StripePaymentGateway implements PaymentGateway {
       signature,
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
+      budget: this.deps.budget,
       webhookE2EOwner: this.deps.webhookE2EOwner,
       resolveCheckoutDisclosure: this.deps.resolveCheckoutDisclosure,
       sha256Hasher: this.deps.sha256Hasher,

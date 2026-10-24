@@ -1,5 +1,6 @@
 import { callStripeWithRetry } from '@/src/adapters/gateways/stripe';
 import type { Logger } from '@/src/application/ports/logger';
+import type { StripeCallBudget } from './stripe/stripe-call-budget';
 
 type StripeCustomersClient = {
   del: (stripeCustomerId: string) => Promise<unknown>;
@@ -45,6 +46,7 @@ export async function deleteStripeCustomer(
   stripe: StripeClientLike,
   logger: Logger,
   stripeCustomerId: string,
+  budget?: StripeCallBudget,
 ): Promise<void> {
   await callStripeWithRetry({
     operation: 'customers.del',
@@ -61,5 +63,6 @@ export async function deleteStripeCustomer(
       }
     },
     logger,
+    budget,
   });
 }

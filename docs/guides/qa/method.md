@@ -29,7 +29,7 @@ The practice procedure has absorbed Flows A–D of the former stabilization chec
 - **Index:** `docs/guides/qa/README.md` lists the procedures, their statuses, the surfaces not yet covered, and the template.
 - **Procedures:** `docs/guides/qa/<subject>.md`, named by what they cover; there are no QA IDs.
 - **Evidence:** attach representative screenshots to the pull request or the run's report, not the repository. Working screenshots stay in the gitignored `audit-screenshots/`.
-- **Question content stays out of public evidence.** The repository and its pull requests are public, so a screenshot showing real question content (a stem, choices, an explanation, or a stem preview in a list) never goes into a pull request, a comment or a commit. Take such screens against the placeholder questions (seeded with `SEED_INCLUDE_PLACEHOLDERS=true` on a local database), or keep them in `audit-screenshots/` and give the pull request a written result for each step.
+- **Question content stays out of public evidence.** The repository and its pull requests are public, so a screenshot showing real question content (a stem, choices, an explanation, or a stem preview in a list) never goes into a pull request, a comment or a commit. Take such screens against the placeholder questions (seeded with `DATABASE_URL="$(pnpm local:test:target database-url)" pnpm db:seed --include-placeholders` after the [local database setup](../testing/integration-tests.md)), or keep them in `audit-screenshots/` and give the pull request a written result for each step.
 
 ## Procedure format
 

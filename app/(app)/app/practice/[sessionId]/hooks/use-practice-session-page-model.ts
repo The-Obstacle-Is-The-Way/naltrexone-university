@@ -24,6 +24,18 @@ import {
   getActionResultPracticeSessionConflictReason,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import {
+  endPracticeSession,
+  finalizeExamAnswers,
+  getCompletedSessionQuestionsWithFeedback,
+  getNextQuestion,
+  getPracticeSessionReview,
+  getPracticeSessionSummary,
+  getPracticeSessionTiming,
+  saveExamDraftAnswer,
+  setPracticeSessionQuestionMark,
+  submitAnswer,
+} from '@/app/(app)/app/shared/client-actions';
+import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/shared/error-message-helpers';
@@ -31,21 +43,7 @@ import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
-import {
-  endPracticeSession,
-  finalizeExamAnswers,
-  getCompletedSessionQuestionsWithFeedback,
-  getPracticeSessionReview,
-  getPracticeSessionSummary,
-  getPracticeSessionTiming,
-  saveExamDraftAnswer,
-  setPracticeSessionQuestionMark,
-} from '@/src/adapters/controllers/practice-actions';
 import type { GetPracticeSessionSummaryOutput } from '@/src/adapters/controllers/practice-controller';
-import {
-  getNextQuestion,
-  submitAnswer,
-} from '@/src/adapters/controllers/question-actions';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 

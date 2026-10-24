@@ -1,6 +1,6 @@
 # DEBT-529: The Per-Screen Request Protocols Rely on a Contract Nothing Checks, and Their Safe Defaults Are Opt-In
 
-**Status:** Verifying — promotion to main; due 2026-10-24
+**Status:** Verifying — promotion to main; due 2026-10-31
 **Priority:** P3
 **Date:** 2026-10-17
 
