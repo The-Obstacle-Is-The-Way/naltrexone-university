@@ -1,6 +1,6 @@
 # DEBT-503: Clerk's Shared Backend API Allowance Is a Single Point of Failure
 
-**Status:** In Progress — items 1, 3 and 5 released, item 5's key set in production 2026-10-11 and its deploy check corrected the same day; item 4 due 2026-11-06; item 2 waits for its trigger
+**Status:** In Progress — items 1, 3 and 5 released; item 4's steps 2 and 3 in progress, due 2026-11-06 and before the first live sale; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -117,6 +117,15 @@ This record holds the structural fixes, so that the allowance stops being the on
   - **Due 2026-11-06,** after item 5, which step 2 needs, and before the first live sale in any case.
 
     *Re-dated 2026-10-23 from 2026-10-21:* no session held this item, and none of it was built by its date. Production has no live sale yet, so the pre-sale bound still holds. The next action is step 1, the daily roll-up, by 2026-11-06.
+
+    *Assessed 2026-10-24,* after an agent warned the owner that the limit could refuse students on one hospital network, and a second agent challenged that warning:
+    - **What counts.** Requests shaped like the ones that make Clerk call its Backend API (`triggersClerkBackendCall` reads only their shape), forged ones included, which cost Clerk nothing once item 5's key is set: any request carrying a handshake value, a nonce or the older handshake token, in the query or a cookie, and a GET that carries an expired session token and a refresh cookie. Signing in, and Clerk JS's token refresh in the browser, go to Clerk's Frontend API and never count. Neither does a request whose token is still valid.
+    - **What a returning person sends.** The first return after signing in is a handshake if the browser has no `__refresh` cookie yet. A later return refreshes on the server if production sets that cookie, which Clerk's API reference says the handshake does. Both are read from the SDK; production is not yet checked. A failed refresh on a page load falls back to a handshake, so that return counts twice; any other GET is signed out instead and counts once.
+    - **Handshakes are limited twice.** BUG-323's firewall rule, read 2026-10-24, allows 30 handshake-nonce requests a minute per IP address at the edge, in fixed windows, before the proxy's own 30. Step 2 helps only refreshes. A larger handshake limit for shared networks also needs the firewall rule changed, which is the owner's setting.
+    - **Who is exposed.** An address is refused once about 30 returns land in the same clock minute, or about 15 if refreshes fail, as when a group opens the site together on one hospital or venue network. Anyone else on that address who returns in that minute waits up to a minute (`Retry-After`), and nothing alerts; open tabs with a valid token are unaffected. Before the first live sale no subscriber is exposed. On the refresh path, one person restoring seven or more tabs whose token has expired could also pass the per-session limit of six, since each GET refreshes on its own; that is read from the SDK, not measured.
+    - **New order.** Pre-launch is the cheapest time to change this path, so steps 2 and 3 are built now, test-first. Step 3 also alerts when a verified session passes its own limit. Step 1 ships before the first live sale, so it measures from the first day. It reads step 2's separate buckets, handshakes and verified refreshes, while forged refreshes stay uncounted, so it also shows whether production refreshes at all. Sizing the handshake limits, in the proxy and in the firewall, waits for those numbers. A per-address limit, the firewall's included, does not stop a sender who rotates addresses, so what protects Clerk's allowance from one is the site cap, and for refreshes step 2's signature check. This replaces the 2026-10-23 next action, step 1.
+    - **Care in step 2.** Verify RS256 only, with the configured key (`configuredClerkJwtKey`). Allow Clerk's five seconds of clock skew, and read the session cookie Clerk reads, suffixed or not as Clerk decides. Without a readable key, count as today, since the proxy then cannot tell a genuine token from a forged one. The proxy's verdict decides only what is counted, and Clerk still decides who is signed in, so a mistake miscounts and signs no one out, though a miscount can still refuse someone for up to a minute.
+    - **Held** by a session from 2026-10-24, still due 2026-11-06.
 
 ### 5. Verify session tokens without Clerk's network (P2)
 
