@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type postgres from 'postgres';
-import migrationJournal from '@/db/migrations/meta/_journal.json';
 
 export type MigrationJournalEntry = {
   idx: number;
@@ -74,8 +73,19 @@ const KNOWN_LEGACY_MIGRATION_HASH_DRIFTS: readonly KnownLegacyMigrationHashDrift
     },
   ] as const;
 
-const MIGRATION_JOURNAL_ENTRIES: readonly MigrationJournalEntry[] =
-  migrationJournal.entries.map(({ idx, tag, when }) => ({ idx, tag, when }));
+// The same db/migrations folder readMigrationFileHash reads and drizzle-kit
+// migrates, so the checks around a migration judge the journal it applies.
+export function readMigrationJournalEntries(
+  root = process.cwd(),
+): MigrationJournalEntry[] {
+  const journal: { entries: readonly MigrationJournalEntry[] } = JSON.parse(
+    readFileSync(
+      join(root, 'db', 'migrations', 'meta', '_journal.json'),
+      'utf8',
+    ),
+  );
+  return journal.entries.map(({ idx, tag, when }) => ({ idx, tag, when }));
+}
 
 export class MigrationLedgerVerificationError extends Error {
   constructor(
@@ -116,7 +126,7 @@ function hashPrefix(hash: MigrationLedgerHash): string {
     : 'missing';
 }
 
-export function formatMigrationContentDriftMessage(
+function formatMigrationContentDriftMessage(
   contentDrifts: readonly MigrationContentDrift[],
 ): string {
   const hashMismatches = contentDrifts
@@ -245,7 +255,7 @@ export function computeMigrationContentDrift(
 
 export async function verifyMigrationLedgerBeforeMigration(
   query: MigrationLedgerQuery,
-  journalEntries: readonly MigrationJournalEntry[] = MIGRATION_JOURNAL_ENTRIES,
+  journalEntries: readonly MigrationJournalEntry[] = readMigrationJournalEntries(),
 ): Promise<void> {
   const appliedMigrations = await readAppliedMigrations(
     query,
@@ -257,7 +267,7 @@ export async function verifyMigrationLedgerBeforeMigration(
 
 export async function verifyMigrationLedger(
   query: MigrationLedgerQuery,
-  journalEntries: readonly MigrationJournalEntry[] = MIGRATION_JOURNAL_ENTRIES,
+  journalEntries: readonly MigrationJournalEntry[] = readMigrationJournalEntries(),
 ): Promise<void> {
   const appliedMigrations = await readAppliedMigrations(
     query,

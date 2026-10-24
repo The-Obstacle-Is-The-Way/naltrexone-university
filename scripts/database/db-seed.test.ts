@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { recordSeeds } from '../seed/seed-test-helpers';
 import { createDatabaseTargetPlan } from './database-target';
 import { runDbSeed } from './db-seed';
-import { recordSeeds } from './seed/seed-test-helpers';
 
 const LOCAL_DATABASE_URL = 'postgresql://local@127.0.0.1:55432/app';
 // Port 1 on loopback: the connection is refused at once.

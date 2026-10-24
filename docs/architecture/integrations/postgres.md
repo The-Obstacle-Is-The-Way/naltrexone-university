@@ -65,13 +65,13 @@ inherits the three defaults regardless of entry point.
 | Process and source | Why the defaults fit |
 | --- | --- |
 | Pages, actions, webhooks and crons through `lib/db.ts` | These are the application's existing intended bounds. Database waits must not consume a whole invocation. Provider and job deadlines remain separate. |
-| Vercel build: `vercel.json`, `scripts/internal/run-managed-db-migrate.ts`, `scripts/database-process.ts`, `drizzle.config.ts`; human `db:migrate` | Drizzle Kit creates its own client. The pooled integration test captures all three values inside its actual migration transaction and observes `55P03` under a held ledger lock. Accept the five-second lock bound: fail the deployment instead of queueing requests behind a waiting migration. The 30-second statement limit also fails an unplanned long rewrite. |
-| Pre/post-build ledger checks, `scripts/verify-migration-ledger.ts` | Bounded metadata/shape reads; no intentional idle transaction. |
+| Vercel build: `vercel.json`, `scripts/database/managed/run-managed-db-migrate.ts`, `scripts/database/database-process.ts`, `drizzle.config.ts`; human `db:migrate` | Drizzle Kit creates its own client. The pooled integration test captures all three values inside its actual migration transaction and observes `55P03` under a held ledger lock. Accept the five-second lock bound: fail the deployment instead of queueing requests behind a waiting migration. The 30-second statement limit also fails an unplanned long rewrite. |
+| Pre/post-build ledger checks, `scripts/database/verify-migration-ledger.ts` | Bounded metadata/shape reads; no intentional idle transaction. |
 | `db:seed`, managed `db:seed:all`/`db:seed:prod`, `scripts/seed.ts` and `scripts/seed/question-syncer.ts` | Read and prepare files before per-question transactions. Each statement and lock wait is bounded; the whole seed may take longer than 30 seconds. |
 | `scripts/content-release/{stage-release,activate-release,bootstrap-release,hold-questions}.ts`, shared `command-support.ts`, and `scripts/seed/withdraw-questions.ts` | Prepare input before database work. Release transactions serialize on the release pointer and issue successive SQL statements, without operator prompts or provider calls inside them. The lock limit prevents a release waiting indefinitely behind another writer. |
-| `scripts/export-question-feedback.ts` | One joined read; file formatting/output follows the query. A slow export fails rather than keeping an unbounded query alive. |
-| `scripts/requeue-renewal-notice.ts` | One row read and one conditional update through the requeue use case, with no transaction and no provider call. |
-| `db:studio`, `scripts/db-studio.ts`, and manual clients using this role | Individual operations inherit the bounds, including an interactive transaction left idle. Studio does not justify an unbounded default. `db:generate` uses local schema files and does not need a database session. |
+| `scripts/feedback/export-question-feedback.ts` | One joined read; file formatting/output follows the query. A slow export fails rather than keeping an unbounded query alive. |
+| `scripts/operations/requeue-renewal-notice.ts` | One row read and one conditional update through the requeue use case, with no transaction and no provider call. |
+| `db:studio`, `scripts/database/db-studio.ts`, and manual clients using this role | Individual operations inherit the bounds, including an interactive transaction left idle. Studio does not justify an unbounded default. `db:generate` uses local schema files and does not need a database session. |
 
 No current process requires a higher bound. This is a source/workload decision,
 not a production-capacity measurement. Seed, content-release and runtime paths

@@ -125,9 +125,10 @@ A hold blocks its exact revision from activation. A published replacement remain
 - `src/application/use-cases/get-previous-attempt.test.ts`: `reveals nothing for an omitted attempt on a question %s`
 - `src/application/use-cases/get-previous-attempt.test.ts`: `still reveals the revision a learner answered on a question %s`
 
-### R20. An item counts toward a score when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt (withdrawn, under review, or key-corrected). A retired question keeps counting, and activity counts (total answered, the streak) count every answer.
+### R20. An item counts toward a score when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt (withdrawn, under review, or key-corrected). A retired question keeps counting, and activity counts (total answered, the streak) count every answer. Scored items with no correct answers display 0%; only a zero score denominator displays a dash.
 
 - `src/domain/services/scoring.test.ts`: `with a fair chance %s, counts an item whose question is %s: %s`
+- `app/(app)/app/shared/session-score-presentation.test.tsx`: `agrees across the session screens for $mode with $name`
 - `tests/integration/scores-when-content-changes.integration.test.ts`: `agrees across the summary, History and the Dashboard as content changes during and after an exam`
 - `src/application/use-cases/get-user-stats.test.ts`: `leaves a withdrawn question out of accuracy, not out of activity`
 

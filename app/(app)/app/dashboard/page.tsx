@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { isResultNotScored } from '@/app/(app)/app/shared/components/review-navigator-utils';
 import { redirectIfUnsubscribed } from '@/app/(app)/app/shared/redirect-if-unsubscribed';
+import { formatScorePercentage } from '@/app/(app)/app/shared/score-percentage';
 import { ErrorCard } from '@/components/error-card';
 import {
   questionAvailabilityHeading,
@@ -30,10 +31,6 @@ export const maxDuration = 30;
 export const metadata: Metadata = {
   title: 'Dashboard - Addiction Boards',
 };
-
-function formatPercent(value: number): string {
-  return `${Math.round(value * 100)}%`;
-}
 
 function toSentenceCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -75,9 +72,10 @@ export function DashboardView({
           <div className="text-sm text-muted-foreground">Overall accuracy</div>
           {/* ADR-022 Decision 3: over the scored answers only. */}
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
-            {stats.scoredOverall > 0
-              ? formatPercent(stats.accuracyOverall)
-              : '—'}
+            {formatScorePercentage({
+              scored: stats.scoredOverall,
+              accuracy: stats.accuracyOverall,
+            })}
           </div>
           <UnscoredDisclosure
             count={stats.unscoredQuestionsOverall}
@@ -95,9 +93,10 @@ export function DashboardView({
         <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Accuracy (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
-            {stats.scoredLast7Days > 0
-              ? formatPercent(stats.accuracyLast7Days)
-              : '—'}
+            {formatScorePercentage({
+              scored: stats.scoredLast7Days,
+              accuracy: stats.accuracyLast7Days,
+            })}
           </div>
           <UnscoredDisclosure
             count={stats.unscoredQuestionsLast7Days}
@@ -185,12 +184,7 @@ export function DashboardView({
                         </span>
                         <span className="text-muted-foreground">
                           {' '}
-                          (
-                          {row.scored > 0 &&
-                          (row.mode === 'exam' || row.answered > 0)
-                            ? formatPercent(row.accuracy)
-                            : '—'}
-                          )
+                          ({formatScorePercentage(row)})
                         </span>
                       </div>
                       <UnscoredDisclosure

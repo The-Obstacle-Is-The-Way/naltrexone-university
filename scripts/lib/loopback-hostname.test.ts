@@ -26,6 +26,7 @@ describe('loopback hostname classification', () => {
     'tests/integration/tag-taxonomy-census.integration.test.ts',
     'tests/integration/db.integration.test.ts',
     'scripts/test-lanes/e2e-local-orchestrator.ts',
+    'scripts/database/database-target.ts',
     'tests/shared/resolve-integration-database-url.ts',
   ])('uses the shared classification at %s', (file) => {
     const source = readFileSync(file, 'utf8');

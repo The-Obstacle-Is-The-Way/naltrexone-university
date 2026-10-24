@@ -4,6 +4,7 @@ import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
+import { formatScorePercentage } from '@/app/(app)/app/shared/score-percentage';
 import { ErrorCard } from '@/components/error-card';
 import { UnscoredDisclosure } from '@/components/question/unscored-disclosure';
 import { Button } from '@/components/ui/button';
@@ -41,10 +42,6 @@ type SessionSummaryContentProps = {
   durationLabel: string;
   endedOn: string;
 };
-
-function formatSessionAccuracy(value: number): string {
-  return `${Math.round(value * 100)}%`;
-}
 
 function formatSessionMode(mode: 'tutor' | 'exam'): string {
   return mode === 'exam' ? 'Exam' : 'Tutor';
@@ -181,8 +178,7 @@ export function HistorySessionsTab({
           const endedOn = formatDate(row.endedAt);
           // ADR-022 Decision 3: the score is over the scored items only.
           const fractionLabel = `${row.correct}/${row.scored}`;
-          const accuracyLabel =
-            row.scored > 0 ? formatSessionAccuracy(row.accuracy) : '—';
+          const accuracyLabel = formatScorePercentage(row);
           const durationLabel = formatSessionDurationDisplay(
             row.durationSeconds,
           );

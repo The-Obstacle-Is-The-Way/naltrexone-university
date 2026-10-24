@@ -82,6 +82,87 @@ describe('draft import filesystem boundary', () => {
     );
   }
 
+  it.each([
+    [['--dry-rnu'], /Unknown argument: --dry-rnu/],
+    [['--unknown', 'value'], /Unknown argument: --unknown/],
+    [['stray'], /Unknown argument: stray/],
+    [['--dry-run', '--dry-run'], /Duplicate argument: --dry-run/],
+    [['--in', 'duplicate'], /Duplicate argument: --in/],
+    [['--out', 'duplicate'], /Duplicate argument: --out/],
+    [['--status'], /Missing value for flag: --status/],
+    [['--status', '--dry-run'], /Missing value for flag: --status/],
+    [
+      ['--status', 'draft', '--status', 'published'],
+      /Duplicate argument: --status/,
+    ],
+    [['--', '--dry-run'], /Unknown argument: --$/m],
+  ])('rejects unsupported arguments %j before writing', (extra, expected) => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--import',
+        'tsx',
+        'scripts/import-draft-questions.ts',
+        '--in',
+        input,
+        '--out',
+        output,
+        ...extra,
+      ],
+      { encoding: 'utf8' },
+    );
+    expect(result.status, result.stdout).toBe(1);
+    expect(result.stderr).toMatch(expected);
+    expect(existsSync(output)).toBe(false);
+  });
+
+  it('refuses a forwarded leading pnpm separator before writing (#1567)', () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--import',
+        'tsx',
+        'scripts/import-draft-questions.ts',
+        '--',
+        '--in',
+        input,
+        '--status',
+        'published',
+        '--out',
+        output,
+      ],
+      { encoding: 'utf8' },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/argument/i);
+    expect(existsSync(output)).toBe(false);
+  });
+
+  it('accepts the environment seed command', () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--import',
+        'tsx',
+        'scripts/import-draft-questions.ts',
+        '--in',
+        input,
+        '--status',
+        'published',
+        '--out',
+        output,
+      ],
+      { encoding: 'utf8' },
+    );
+    expect(result.status, result.stderr).toBe(0);
+    expect(
+      readFileSync(
+        path.join(output, 'group', 'fixture-source', 'fixture-001.mdx'),
+        'utf8',
+      ),
+    ).toMatch(/status: ['"]?published/);
+  });
+
   it('writes a valid document below the output root', () => {
     const result = run();
     expect(result.status, result.stderr).toBe(0);

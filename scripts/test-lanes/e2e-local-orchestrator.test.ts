@@ -59,7 +59,11 @@ describe('createE2ECommandPlan', () => {
     });
     expect(plan[1]).toMatchObject({
       command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/internal/run-managed-db-migrate.ts'],
+      args: [
+        'exec',
+        'tsx',
+        'scripts/database/managed/run-managed-db-migrate.ts',
+      ],
       env: targetEnv,
     });
     expect(plan[2]).toMatchObject({
@@ -67,7 +71,7 @@ describe('createE2ECommandPlan', () => {
       args: [
         'exec',
         'tsx',
-        'scripts/internal/run-managed-db-seed.ts',
+        'scripts/database/managed/run-managed-db-seed.ts',
         '--include-placeholders',
       ],
       env: targetEnv,

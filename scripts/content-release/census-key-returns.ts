@@ -1,9 +1,9 @@
-import { pathToFileURL } from 'node:url';
 import { sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type * as schema from '../../db/schema';
 import { canonicalMarkdownSql } from '../../src/adapters/repositories/shared/canonical-markdown-sql';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { isMain } from '../lib/entry-point.mts';
 import { withCommandDatabase } from './command-support';
 
 type KeyReturnCensus = {
@@ -93,9 +93,8 @@ export async function runKeyReturnCensus(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runKeyReturnCensus().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

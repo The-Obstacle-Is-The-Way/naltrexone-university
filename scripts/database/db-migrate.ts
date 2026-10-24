@@ -1,4 +1,4 @@
-import { pathToFileURL } from 'node:url';
+import { isMain } from '../lib/entry-point.mts';
 import { runHumanDatabaseCommand } from './database-command';
 import { runDatabaseProcess } from './database-process';
 
@@ -9,10 +9,8 @@ export async function runDbMigrate(): Promise<void> {
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runDbMigrate().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

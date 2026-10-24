@@ -1,9 +1,9 @@
-import { pathToFileURL } from 'node:url';
 import { desc, eq } from 'drizzle-orm';
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from '../db/schema';
-import { runHumanDatabaseCommand } from './database-command';
+import * as schema from '../../db/schema';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { isMain } from '../lib/entry-point.mts';
 
 const REDACTED_USER_ID = '[redacted]';
 
@@ -320,10 +320,7 @@ async function main(): Promise<void> {
   await runExportQuestionFeedback();
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (isMain(import.meta.url)) {
   main().catch((error) => {
     console.error(error);
     process.exitCode = 1;

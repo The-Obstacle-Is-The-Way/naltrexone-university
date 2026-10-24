@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { recordSeeds } from '../seed/seed-test-helpers';
+import { recordSeeds } from '../../seed/seed-test-helpers';
 import { runManagedDbSeed } from './run-managed-db-seed';
 
 const REMOTE_DATABASE_URL = 'postgresql://app@db.example/app';

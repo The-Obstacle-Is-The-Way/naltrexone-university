@@ -1,4 +1,3 @@
-import { pathToFileURL } from 'node:url';
 import { eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
@@ -7,7 +6,8 @@ import {
   answerKeyChanged,
   type KeyChoice,
 } from '../../src/domain/services/answer-key';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { isMain } from '../lib/entry-point.mts';
 import { parseSeedQuestionFile } from '../seed/question-parser';
 import { withCommandDatabase } from './command-support';
 import { readContentCommit } from './content-source';
@@ -153,9 +153,8 @@ export async function runCompareLiveKeys(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runCompareLiveKeys().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

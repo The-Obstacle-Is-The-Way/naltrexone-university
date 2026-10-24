@@ -67,8 +67,8 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 1. Promotion PR (dev → main): CI (GitHub Actions)
    └─ pnpm typecheck
    └─ pnpm lint:ci
-   └─ pnpm exec tsx scripts/internal/run-managed-db-migrate.ts # CI database only
-   └─ pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders
+   └─ pnpm exec tsx scripts/database/managed/run-managed-db-migrate.ts # CI database only
+   └─ pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts --include-placeholders
    └─ pnpm test:coverage
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # every trigger; no provider secret required
@@ -241,7 +241,9 @@ seed of a commit before `0042` fails on the retired revision-sync function.
 
 ## 3. Data-Affecting Migration Pattern
 
-When a migration changes enums, renames columns, or otherwise affects data that the seed script populates (e.g., tag taxonomy changes), the migration SQL itself should include the necessary data cleanup. This keeps the procedure to two commands. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass, as in the manual reseed above:
+When a migration changes seed-managed data (for example, tag taxonomy), preserve or transform the required rows in the migration itself. Do not delete derived rows on the assumption that a later seed will restore them: direct seeding refuses a database with an active content release. After bootstrap, migrations must leave the data coherent without a reseed; content changes use the reviewed stage/activation procedure.
+
+Only before an active release exists may a reviewed migration plan include a separate reseed from admitted canonical input. The historical two-command pattern below applies only to that state. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass, as in the manual reseed above:
 
 ```bash
 # 1. Apply schema migration (includes any required data cleanup)
@@ -254,7 +256,7 @@ DATABASE_URL="<target>" DB_TARGET_ACK='<from the refusal>' pnpm db:seed
 #    SELECT kind, COUNT(*) FROM tags GROUP BY kind;
 ```
 
-**Design principle:** Migrations that affect seed-managed tables (like `tags`, `question_tags`) should delete the derived rows as part of the migration SQL, so no manual cleanup is needed. The seed script rebuilds them from the canonical MDX source files. See SPEC-033 §14 for a concrete example.
+**Design principle:** Keep data and schema consistent at each migration boundary. SPEC-033 §14 records a pre-bootstrap cleanup/reseed example, not a general instruction to delete `tags` or `question_tags`. Prove the planned transformation against representative stored data and its constraints before applying it.
 
 **For additive-only migrations** (new columns, new tables, new enum values), `pnpm db:migrate` alone is sufficient — no reseed needed unless the seed populates the new columns.
 

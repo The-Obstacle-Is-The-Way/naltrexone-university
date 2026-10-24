@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
-} from '../src/application/shared/transactional-email-payload';
+} from '../../src/application/shared/transactional-email-payload';
 import {
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
-} from '../src/application/test-helpers/fakes';
+} from '../../src/application/test-helpers/fakes';
 import {
   parseRequeueRenewalNoticeArgs,
   type RequeueRenewalNoticeDeps,

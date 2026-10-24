@@ -79,19 +79,19 @@ require the exact `DB_TARGET_ACK` under the repository's database-target rules.
 
 ```bash
 # Validate draft inputs without writing MDX
-pnpm content:import:drafts -- --dry-run
+pnpm content:import:drafts --dry-run
 
 # Generate imported MDX as draft status, into an absent or empty destination
 pnpm content:import:drafts
 
 # Generate imported MDX as published status, into an absent or empty destination
-pnpm content:import:drafts -- --status published
+pnpm content:import:drafts --status published
 
 # Seed MDX into the database
 pnpm db:seed
 
 # Include the placeholder fixtures in this clone's local test database
-DATABASE_URL="$(pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts database-url)" pnpm db:seed --include-placeholders
+DATABASE_URL="$(pnpm local:test:target database-url)" pnpm db:seed --include-placeholders
 ```
 
 ## Workflow
