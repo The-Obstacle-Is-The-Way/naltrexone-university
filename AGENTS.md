@@ -96,11 +96,11 @@ Read the matching rule before editing. Claude Code loads these by path, and Code
 6. Merge only with the merge guard, never the button or `gh pr merge`:
 
    ```bash
-   pnpm exec tsx scripts/merge-reviewed-pr.ts <PR>          # read-only check
-   pnpm exec tsx scripts/merge-reviewed-pr.ts <PR> --merge  # verify and merge
+   pnpm pr:merge-reviewed <PR>          # read-only check
+   pnpm pr:merge-reviewed <PR> --merge  # verify and merge
    ```
 
-7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`. A promotion ships all of `dev`, so first pass every gated QA procedure whose flows `dev` changes ([QA method](docs/guides/qa/method.md#when-procedures-run), item 2).
+7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm pr:verify-promotion <PR> --merge` after `git fetch`. A promotion ships all of `dev`, so first pass every gated QA procedure whose flows `dev` changes ([QA method](docs/guides/qa/method.md#when-procedures-run), item 2).
 
 Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, link ADR or record changes, and show screenshots of any changed UI, never of real questions: the repository is public, so capture the placeholder questions or describe the result ([QA method](docs/guides/qa/method.md), Evidence). How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](./docs/guides/release/promote-to-production.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
 
@@ -108,7 +108,7 @@ Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the 
 
 Open bug and debt records are in `docs/records/`, with one index. Its ["How Records Work"](docs/records/README.md#how-records-work) section holds the rules.
 - Read **Now** and the Waiting triggers relevant to your work at session start, and triage any overdue dated action, in any live status, before new work. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
-- A new ID comes from `pnpm exec tsx scripts/next-record-id.ts bug` (or `debt`).
+- A new ID comes from `pnpm record:next bug` (or `debt`).
 - Write the record first and have a second agent challenge it. Before any push involving an exploitable security finding, apply the index’s private-review and disclosure exception; a public draft PR is not private.
 - Ship it with its fix. Specify new features in [`docs/product/`](docs/product/README.md); multi-PR duration alone is not debt.
 - Only the index links records; elsewhere, cite the ID.

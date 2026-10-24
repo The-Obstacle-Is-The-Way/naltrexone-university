@@ -4,7 +4,10 @@ export type TrialSetupOperationStage =
   | 'pending'
   | 'attached'
   | 'defaultSet'
-  | 'completed';
+  | 'completed'
+  // BUG-364: set as the default, then detached when completion found the
+  // trial's cancellation scheduled.
+  | 'terminalAfterDefault';
 
 /**
  * Drives one add-card operation through the repository's own lifecycle, up to
@@ -52,5 +55,14 @@ export async function seedTrialSetupOperation(
   await repo.markSubscriptionDefaultSet({ sessionId, claimId, selectedAt: at });
   if (input.stage === 'defaultSet') return;
 
+  if (input.stage === 'terminalAfterDefault') {
+    await repo.markTerminal({
+      sessionId,
+      claimId,
+      reason: 'trial_cancellation_scheduled',
+      terminalAt: at,
+    });
+    return;
+  }
   await repo.markCompleted({ sessionId, claimId, completedAt: at });
 }

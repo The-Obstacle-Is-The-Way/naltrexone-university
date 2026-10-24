@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import {
   createStripeCheckoutSession,
@@ -33,6 +34,22 @@ import type { StripeCallBudget } from './stripe/stripe-call-budget';
 import { listStripeBlockingCustomerSubscriptions } from './stripe/stripe-customer-subscriptions';
 import { callStripeWithRetry } from './stripe/stripe-retry';
 import type { CheckoutDisclosureResolver } from './stripe/stripe-webhook-processor';
+
+// The Subscription fields a trial card's detach reads. Stripe sends the default
+// as an id unless the request expands it.
+const trialSetupSubscriptionSchema = z.object({
+  status: z.string(),
+  default_payment_method: z
+    .union([z.string(), z.object({ id: z.string() })])
+    .nullable()
+    .optional(),
+});
+
+// Stripe refuses any update to a Subscription in these statuses.
+const FINAL_STRIPE_SUBSCRIPTION_STATUSES: ReadonlySet<string> = new Set([
+  'canceled',
+  'incomplete_expired',
+]);
 
 export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
@@ -147,7 +164,48 @@ export class StripePaymentGateway implements PaymentGateway {
   async detachTrialPaymentMethod(
     input: DetachTrialPaymentMethodInput,
   ): Promise<void> {
-    const { paymentMethods } = this.deps.stripe;
+    const { paymentMethods, subscriptions } = this.deps.stripe;
+    // BUG-364: Stripe keeps a detached card as the Subscription's default, so
+    // that default is cleared first. Stripe refuses to change a final
+    // Subscription, and a default another card holds is not this Session's.
+    const subscription = trialSetupSubscriptionSchema.safeParse(
+      await callStripeWithRetry({
+        operation: 'subscriptions.retrieve_trial_setup_for_detach',
+        fn: () => subscriptions.retrieve(input.externalSubscriptionId),
+        logger: this.deps.logger,
+        budget: this.deps.budget,
+      }),
+    );
+    if (!subscription.success) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe returned an unreadable trial Subscription',
+      );
+    }
+    const defaultPaymentMethod = subscription.data.default_payment_method;
+    const defaultPaymentMethodId =
+      typeof defaultPaymentMethod === 'string'
+        ? defaultPaymentMethod
+        : defaultPaymentMethod?.id;
+    if (
+      defaultPaymentMethodId === input.externalPaymentMethodId &&
+      !FINAL_STRIPE_SUBSCRIPTION_STATUSES.has(subscription.data.status)
+    ) {
+      await callStripeWithRetry({
+        operation: 'subscriptions.clear_trial_setup_default_payment_method',
+        fn: () =>
+          subscriptions.update(
+            input.externalSubscriptionId,
+            { default_payment_method: '' },
+            {
+              idempotencyKey: `trial_setup:${input.sessionId}:clear_subscription_default`,
+            },
+          ),
+        logger: this.deps.logger,
+        budget: this.deps.budget,
+      });
+    }
+
     const current = await callStripeWithRetry({
       operation: 'payment_methods.retrieve_trial_setup_for_detach',
       fn: () => paymentMethods.retrieve(input.externalPaymentMethodId),

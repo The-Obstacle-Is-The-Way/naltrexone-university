@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 
 const fixtureAttempt1Id = crypto.randomUUID();
 const fixtureChoice1Id = crypto.randomUUID();
@@ -168,6 +169,7 @@ describe('practice-session-page-logic', () => {
       const setSessionInfo = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () =>
           ok(
@@ -213,6 +215,7 @@ describe('practice-session-page-logic', () => {
       );
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         questionId: fixtureQuestion9Id,
         getNextQuestionFn,
@@ -239,6 +242,7 @@ describe('practice-session-page-logic', () => {
       );
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         fromIndex: 4,
         getNextQuestionFn,
@@ -266,6 +270,7 @@ describe('practice-session-page-logic', () => {
       const setSessionInfo = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => ok(null),
         nowMs: () => 1234,
@@ -291,6 +296,7 @@ describe('practice-session-page-logic', () => {
       const setSubmitRequestToken = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => err('INTERNAL_ERROR', 'Boom'),
         nowMs: () => 0,
@@ -319,6 +325,7 @@ describe('practice-session-page-logic', () => {
       const setQuestion = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => {
           throw new Error('Boom');
@@ -354,6 +361,7 @@ describe('practice-session-page-logic', () => {
       const setSessionInfo = vi.fn();
 
       const promise = loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => deferred.promise,
         nowMs: () => 1234,
@@ -386,6 +394,7 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
 
       const action = createLoadNextQuestionAction({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         startTransition,
         getNextQuestionFn: async () => ok(createFixtureNextQuestion()),
@@ -423,6 +432,7 @@ describe('practice-session-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
@@ -466,6 +476,7 @@ describe('practice-session-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         question: null,
         selectedChoiceId: fixtureChoice1Id,
@@ -500,6 +511,7 @@ describe('practice-session-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         question: createFixtureNextQuestion(),
         selectedChoiceId: null,
@@ -522,6 +534,7 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
@@ -545,6 +558,7 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
@@ -574,6 +588,7 @@ describe('practice-session-page-logic', () => {
       const setSubmitResult = vi.fn();
 
       const promise = submitAnswerForQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,

@@ -7,8 +7,13 @@ export type TrialPaymentMethodSetupOperationStatus =
   | 'terminal'
   | 'expired';
 
+// BUG-364 (DEBT-414 F22): a completion after a scheduled cancellation, or for
+// a subscription that no longer runs, ends terminal too, since the renewal its
+// consent describes will not happen.
 export type TrialPaymentMethodSetupTerminalReason =
-  'billing_ownership_mismatch';
+  | 'billing_ownership_mismatch'
+  | 'subscription_inactive'
+  | 'trial_cancellation_scheduled';
 
 export type TrialPaymentMethodSetupOperationInput = {
   sessionId: string;

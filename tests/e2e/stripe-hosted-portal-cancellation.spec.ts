@@ -188,6 +188,23 @@ test.describe
         currentPeriodEnd: trial.currentPeriodEnd,
       });
       await page.goto('/app/billing');
-      await expect(page.getByText('Cancellation scheduled')).toBeVisible();
+      // The trial banner now starts with the same words, so match exactly.
+      await expect(
+        page.getByText('Cancellation scheduled', { exact: true }),
+      ).toBeVisible();
+      // BUG-364 (DEBT-414 F22): once the trial is cancelled, neither the
+      // banner nor the Billing line promises a renewal or offers a card.
+      await expect(
+        page.getByText(/^Cancellation scheduled\. Your access ends /),
+      ).toBeVisible();
+      await expect(
+        page.getByText(
+          'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe and then add a card, or email support@addictionboards.com.',
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Add a card to keep access' }),
+      ).toHaveCount(0);
+      await expect(page.getByText(/renews at/i)).toHaveCount(0);
     });
   });

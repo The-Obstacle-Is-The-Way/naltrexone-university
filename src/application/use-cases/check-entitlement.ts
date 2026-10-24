@@ -24,6 +24,9 @@ export type CheckEntitlementOutput = {
    * trial); null for every other status.
    */
   trialEndsAt?: Date | null;
+  // BUG-364 (DEBT-414 F22): a scheduled cancellation ends a trial without a
+  // charge, so the layout must not promise a renewal or offer a card.
+  cancelAtPeriodEnd?: boolean;
 };
 
 export class CheckEntitlementUseCase {
@@ -42,6 +45,7 @@ export class CheckEntitlementUseCase {
         plan: null,
         hasActiveSubscriptionPeriod: false,
         trialEndsAt: null,
+        cancelAtPeriodEnd: false,
       };
     }
 
@@ -65,6 +69,7 @@ export class CheckEntitlementUseCase {
         subscription.status === 'inTrial'
           ? subscription.currentPeriodEnd
           : null,
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
     };
   }
 }
