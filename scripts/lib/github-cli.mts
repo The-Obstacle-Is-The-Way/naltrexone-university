@@ -44,13 +44,11 @@ export function ghFailureReason(error: unknown): string | undefined {
   const { code, signal, stderr, status } = error as Record<string, unknown>;
   if (typeof code === 'string') return code;
   if (typeof signal === 'string') return `killed by ${signal}`;
-  const first =
-    typeof stderr === 'string'
-      ? stderr
-          .split('\n')
-          .map((part) => part.trim())
-          .find(Boolean)
-      : undefined;
+  const text = typeof stderr === 'string' ? stderr : '';
+  const first = text
+    .split('\n')
+    .map((part) => part.trim())
+    .find(Boolean);
   if (first)
     return first.length > MAX_REASON_LENGTH
       ? `${first.slice(0, MAX_REASON_LENGTH - 1)}…`
