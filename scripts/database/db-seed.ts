@@ -1,10 +1,10 @@
-import { pathToFileURL } from 'node:url';
+import { isMain } from '../lib/entry-point.mts';
+import { parseSeedOptions, type SeedOptions } from '../seed/seed-options';
 import { runHumanDatabaseCommand } from './database-command';
 import {
   classifyDatabaseTarget,
   requireExplicitDatabaseUrl,
 } from './database-target';
-import { parseSeedOptions, type SeedOptions } from './seed/seed-options';
 
 type DbSeedInput = {
   args?: readonly string[];
@@ -17,7 +17,7 @@ async function seedDatabase(
   databaseUrl: string,
   options: SeedOptions,
 ): Promise<void> {
-  const { runSeed } = await import('./seed');
+  const { runSeed } = await import('../seed');
   await runSeed(databaseUrl, options);
 }
 
@@ -47,10 +47,8 @@ export async function runDbSeed({
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runDbSeed({ args: process.argv.slice(2) }).catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

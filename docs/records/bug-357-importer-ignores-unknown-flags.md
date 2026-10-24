@@ -1,0 +1,49 @@
+# BUG-357: The Draft Importer Ignores Unknown Flags
+
+**Status:** Verifying — promotion to main; due 2026-10-26
+**Priority:** P3
+**Date:** 2026-10-18
+
+---
+
+The Summary, Evidence and Impact describe audit baseline `0680cb2d`, before this fix; Resolution describes the implementation in this PR.
+
+## Summary
+
+The draft importer recognizes flags by searching the argument array, but never rejects the remaining arguments. A typo in `--dry-run` turns a requested preview into a write when the output directory is empty or absent.
+
+## Evidence
+
+- `scripts/import-draft-questions.ts:13-53` checks only recognized flags; `:46` enables dry-run only for the exact spelling.
+- `:163-172` writes when `dryRun` is false. The empty-output check at `:90-104` protects an existing nonempty corpus, but does not prevent new unintended files.
+- Reproduced with one synthetic `recall.md` using the valid fixture shape in `scripts/import-draft-questions.test.ts:15-46`, input and output under a temporary directory: `node --import tsx scripts/import-draft-questions.ts --in <input> --out <empty-output> --dry-run` exited 0 with `files=1 questions=1 written=0 (dry-run) uniqueQids=1` and no output files. Changing only the last argument to `--dry-rnu` exited 0 with `written=1` and created `misc/fixture-source/audit-001.mdx`.
+
+## Impact
+
+An operator can unintentionally materialize drafts. Without `--out`, the output is `content/questions/imported/` (`:21`), which is gitignored and absent in a fresh clone, so a mistyped preview writes into the tree `pnpm db:seed` reads. The command itself opens no database, and a nonempty output directory still fails closed.
+
+Corrected 2026-10-19: the default output is the seed's input tree, the environment seeds send the leading `--`, and the typo creates unintended files without deleting existing content.
+
+## Options
+
+1. Consume every argument with explicit supported flags and reject unknown, duplicate or missing-value arguments before filesystem work. Refuse a forwarded pnpm `--` like other unknown arguments; the environment seeds pass flags directly under #1567.
+2. Keep permissive parsing and warn in the guide. This leaves unintended writes possible in an empty output tree.
+
+## Resolution
+
+Implemented option 1. The importer consumes every argument and rejects unknown, positional, duplicate and missing-value arguments before filesystem work. A forwarded pnpm `--` is refused like any other unknown argument, as #1567 decided for strict parsers, and the environment seeds now pass their arguments directly. Subprocess tests use synthetic temporary input and inspect the output tree for unintended writes.
+
+Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
+
+Corrected 2026-10-20: option 1 preserved the leading separator; the importer now refuses it, following #1567's rule, and its one caller no longer sends it.
+
+## Verification
+
+- [x] A typo and each unsupported argument exit nonzero and create no output, red first.
+- [x] The supported flags, default write behavior and explicit dry-run remain covered, including the environment seeds' `pnpm content:import:drafts --status published --out <staging>` call; a forwarded `--` is refused before writing.
+
+## Related
+
+- DEBT-532: the scripts audit previously embedded this defect without its own record.
+
+Corrected 2026-10-20: align option 1 with the implemented separator refusal and direct-argument caller; the baseline reproduction remains historical.

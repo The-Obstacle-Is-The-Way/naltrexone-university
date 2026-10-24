@@ -1,9 +1,9 @@
-import { pathToFileURL } from 'node:url';
 import { type SQL, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type * as schema from '../../db/schema';
 import { canonicalMarkdownSql } from '../../src/adapters/repositories/shared/canonical-markdown-sql';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { isMain } from '../lib/entry-point.mts';
 import { withCommandDatabase } from './command-support';
 
 type NormalizationCensus = {
@@ -87,9 +87,8 @@ export async function runNormalizationCensus(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runNormalizationCensus().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
