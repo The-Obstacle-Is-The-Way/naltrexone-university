@@ -8,9 +8,9 @@
 
 ## Summary
 
-The scheduled GitHub jobs call `gh` through `createGhRunner` (`scripts/lib/github-cli.mts`), which DEBT-532 part 2 (#1603) added on 2026-10-24. It passes `stdio: 'pipe'`, so `gh`'s error line is kept on the thrown error and no longer printed. The calls it replaced set no `stdio`, and Node then copies the child's error output to the job log. A runner test pins the new behavior, and the runner's comment leaves diagnostics to each caller.
+The scheduled GitHub jobs call `gh` through `createGhRunner` (`scripts/lib/github-cli.mts`), which DEBT-532 part 2 (#1603) added; it merged to `dev` on 2026-10-24. The runner passes `stdio: 'pipe'`, so `gh`'s error output stays on the thrown error and is no longer printed. The eight calls it replaced set no `stdio`, and Node then copies a child's error output to the job log. A runner test pins the new behavior, and the runner's comment leaves diagnostics to each caller.
 
-Five callers print a fixed line, so after the next promotion a failed run will say that it failed but not why. `documentation-due-checks.ts` gives the reason for the fixed line: other failures can carry a GitHub credential.
+Five callers print a fixed line, so after the next promotion a failed run will say that it failed but not why:
 
 - `scripts/watchers/security-txt-renewal.mts`: "security.txt renewal check failed; inspect the file and GitHub issue access."
 - `scripts/watchers/operational-alert-watcher.ts`: "Operational alert watcher failed; inspect GitHub issue access."
@@ -18,35 +18,41 @@ Five callers print a fixed line, so after the next promotion a failed run will s
 - `scripts/records/documentation-due-checks.ts`: "Overdue production check failed; inspect the records and GitHub issue access."
 - `scripts/review/coderabbit-learnings-review.ts`: "CodeRabbit learnings review failed; inspect GitHub comment and issue access."
 
-`production-release-watch.ts` and `upstream-fix-watch.ts` print the error's message. For a `gh` failure, Node's message includes the command and its error output, so these two keep the cause.
+The other callers keep the cause. `production-release-watch.ts` and `upstream-fix-watch.ts` print the error's message, which for a `gh` failure is Node's `Command failed: gh <arguments>` followed by `gh`'s error output. `merge-reviewed-pr.ts` and `verify-promotion.ts` leave the error uncaught, so Node prints that message.
 
-#1560 named the generic line as a follow-up bug and left it unchanged.
+The fixed lines' catches are bare `catch {}` with no comment, and so are the advisory watcher's per-item catches. AGENTS.md allows a bare catch only for a suppressed secondary failure. #1560 named the generic line as a follow-up bug and left it unchanged.
 
 ## Evidence
 
-- **What main's log shows.** BUG-344 found the advisory watcher's 403s from `gh`'s own lines. Run 38851671722 (2026-10-16) logged `gh: Resource not accessible by integration (HTTP 403)` four times at 04:41:39–40Z, followed by the watcher's "Could not open or close issues for: GHSA-qrxm-fqhp-jwvm, …", which names the wrong step (BUG-344). With the current runner, only the watcher's line would remain.
+- **What main's log shows.** BUG-344 diagnosed the advisory watcher's 403s from `gh`'s own lines in four runs on 2026-10-14 and 2026-10-15; its evidence table counts them. A recurrence on 2026-10-16 logged `gh: Resource not accessible by integration (HTTP 403)` four times, then the watcher's "Could not open or close issues for: GHSA-qrxm-fqhp-jwvm, …", which names the wrong step (BUG-344). With the current runner, only the watcher's line would remain.
 - **What the runner does now.** `scripts/lib/github-cli.test.ts` runs a fake `gh` that writes to its error output and exits 3. The test asserts that the parent's error output stays empty and that `error.stderr` holds the line.
-- **Node's behavior,** checked on Node 24.21.0. `execFileSync` on a child that writes `gh-line` to its error output and exits 3 copies the line to the parent's error output when no `stdio` is given, and copies nothing with `stdio: 'pipe'`.
-- **The replaced calls.** Before part 2, `security-txt-renewal.mts`, `upstream-advisory-watch.mts`, `github-alert-issues.ts` and `coderabbit-learnings-review.ts` each called `execFileSync` with no `stdio` option (`git show 36dcd26c^:scripts/<file>`).
+- **Node's behavior,** checked on Node 24.21.0. `execFileSync` on a child that writes `gh-line` to its error output and exits 3 copies the line to the parent's error output when no `stdio` is given, and copies nothing with `stdio: 'pipe'`. `error.stderr` holds the output either way.
+- **`gh`'s error formats,** checked with gh 2.101.0. A failed `gh api` call writes `gh: Not Found (HTTP 404)` to its error output and GitHub's JSON body to its standard output. A failed `gh issue list` writes `GraphQL: Could not resolve to a Repository with the name '…'. (repository)`, with no status. A bad token gives `HTTP 401: Bad credentials (https://api.github.com/graphql)` on the first line and a sign-in hint on the second. The issue commands these jobs use go through GraphQL.
 
 ## Impact
 
-The loss is diagnostic only: a failing run still exits nonzero and fails its job. Scheduled workflows run `main`'s code, so no run has lost the line yet; the next promotion carries the change. After that, finding a failure's cause takes a separate probe. BUG-344's diagnosis had the line and still needed one.
+The loss is diagnostic only: a failing run still exits nonzero and fails its job. Scheduled workflows run `main`'s code, so no run has lost the line yet; the next promotion carries the change. After that, finding a failure's cause takes a separate probe.
 
 ## Options
 
-1. **Print a value-free reason.** A shared helper beside the runner turns a `gh` failure into its HTTP status (`HTTP 403`) or its transport failure (timed out, output over its limit, `gh` not found, or exit status). Each caller adds the reason to its line, and the advisory watcher adds it beside each advisory or repository it names. An error that did not come from `gh` adds nothing, so the existing value-free tests still hold.
-2. **Print `gh`'s error line again,** from the runner or from each caller. This restores exactly what `main` logs today, but it puts GitHub's message text back in the log, which the fixed lines were written to keep out.
+1. **Print only the HTTP status or transport failure.** It carries less text, but GraphQL errors have no status, so most of these jobs' issue writes would report only an exit status. It also depends on parsing a message format that `gh` does not document.
+2. **Each fixed line adds `gh`'s first error line.** A shared helper beside the runner returns the first non-empty line of `error.stderr`, capped in length. With no error output, it returns Node's code for the transport failure (`ETIMEDOUT`, `ENOBUFS`, `ENOENT`). For any other error it returns nothing, and the line stays as it is. The advisory watcher keeps each reason beside the advisory or repository it reports. This restores what `main` logs today, now beside the job's own line.
+3. **Drop `stdio: 'pipe'`,** so Node copies every error output again. It is the smallest change, but it also prints `gh` output for failures the code handles on purpose, such as a 404 from a repository the advisory watcher has stopped watching, and it reverses the runner's tested contract.
 
 ## Resolution (decided)
 
-Option 1. A status code or transport failure carries no value, so the callers' rule against printing what might hold a credential still holds without an exception. A status is also the first fact BUG-344's diagnosis needed.
+Option 2. It restores the cause in each job's own line, and it depends on no particular message format, so GraphQL errors stay visible.
+
+**Why this is safe to print.** The fixed lines exist because an arbitrary error can carry anything; `documentation-due-checks.ts` says such failures can carry a GitHub credential. The helper never prints an arbitrary error's message. It reads only `gh`'s own error output, which `main` has logged on every run. `gh` does not print its token, and Actions masks the job's `GH_TOKEN`. The cap keeps a long response out of the log.
+
+The catches that report a reason name the error they read, so none of them stays a bare `catch {}`.
 
 ## Verification
 
-- [ ] Each of the five callers names the `gh` status or transport failure in its failure line, and an error that did not come from `gh` still prints the fixed line.
+- [ ] The helper is tested through `createGhRunner` with a fake `gh`. A REST error, a GraphQL error and a two-line error each give their first line. A timeout, an output overflow and a missing executable each give their code. An error not from `gh` gives nothing, and an overlong line is capped.
+- [ ] Each of the five callers prints the reason after its fixed line for a `gh` failure, and only the fixed line for any other error. The existing value-free tests and the advisory watcher's 404 and rate-limit handling keep passing.
 - [ ] The advisory watcher names the reason beside each advisory or repository it reports.
-- [ ] Promotion to `main`, whose scheduled runs use the new lines.
+- [ ] Promotion to `main`, followed by a passing scheduled run of each changed job. A hosted run that prints a failure line is claimed only once one has run.
 
 ## Related
 
