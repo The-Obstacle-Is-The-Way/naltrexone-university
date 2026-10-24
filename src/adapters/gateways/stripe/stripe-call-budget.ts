@@ -4,6 +4,11 @@ import { ApplicationError } from '@/src/application/errors';
 export const STRIPE_CALLER_BUDGET_MS = 25_000;
 // The budgeted transport's one retry waits this long first.
 export const STRIPE_RETRY_BACKOFF_MS = 500;
+// BUG-368: an abort or backoff timer can fire up to about 2.5 ms before
+// performance.now() reaches its time, leaving a sliver that no request can use
+// and that would arm a doomed one. A remainder below this counts as spent; it
+// is far below any real Stripe round trip.
+export const STRIPE_MIN_REQUEST_MS = 10;
 
 export class StripeCallBudget {
   private readonly deadline: number;
@@ -16,8 +21,14 @@ export class StripeCallBudget {
     this.deadline = now() + durationMs;
   }
 
+  /**
+   * The time a request can still use. An attempt's abort timer runs on a
+   * whole-millisecond clock, so it can fire a fraction of a millisecond before
+   * the deadline; that fraction counts as none, not as a doomed request.
+   */
   remainingMs(): number {
-    return Math.max(0, this.deadline - this.now());
+    const remaining = this.deadline - this.now();
+    return remaining < STRIPE_MIN_REQUEST_MS ? 0 : remaining;
   }
 
   requireRemainingMs(): number {
@@ -56,9 +67,10 @@ export class StripeCallBudget {
     delayMs: number,
     beforeWait?: () => void,
   ): Promise<boolean> {
-    if (this.remainingMs() <= delayMs) return false;
+    // The retry after the backoff needs a usable remainder of its own.
+    if (this.remainingMs() <= delayMs + STRIPE_MIN_REQUEST_MS) return false;
     beforeWait?.();
-    if (this.remainingMs() <= delayMs) return false;
+    if (this.remainingMs() <= delayMs + STRIPE_MIN_REQUEST_MS) return false;
     await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
     return this.remainingMs() > 0;
   }
