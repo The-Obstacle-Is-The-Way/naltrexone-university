@@ -141,7 +141,7 @@ which would copy the scope's user past `scrubEvent`.
   stopped cron raises nothing. The renewal job checks in with the Sentry cron
   monitor `send-renewal-notices` on each run it admits, and a daily GitHub
   Actions job, "Operational alert watcher"
-  (`scripts/operational-alert-watcher.ts`), reads Sentry at 11:37 UTC. This is
+  (`scripts/watchers/operational-alert-watcher.ts`), reads Sentry at 11:37 UTC. This is
   the one list of its checks. It keeps one GitHub issue, "Operational alerts
   may not be reaching the owner", open while:
   - the job has not checked in for 25 hours, or its last run's status is not

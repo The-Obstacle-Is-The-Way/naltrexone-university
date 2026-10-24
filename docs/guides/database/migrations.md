@@ -147,7 +147,7 @@ It then runs a content/ledger pre-check, applies the
 checked-in migration journal, runs an exact post-check, and then builds:
 
 ```bash
-pnpm exec tsx scripts/check-clerk-jwt-key.ts \
+pnpm exec tsx scripts/deploy/check-clerk-jwt-key.ts \
   && pnpm exec tsx scripts/verify-migration-ledger.ts pre \
   && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts \
   && pnpm exec tsx scripts/verify-migration-ledger.ts post \

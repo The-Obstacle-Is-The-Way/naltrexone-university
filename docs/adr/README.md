@@ -216,7 +216,7 @@ One kind of document per folder under `docs/`, chosen by a first-match placement
 
 ### ADR-024: Review, Merge and Promotion
 
-Feature PRs merge only with CodeRabbit's approval of the exact head, through `scripts/merge-reviewed-pr.ts`; an approval carries across a sync that leaves the reviewable diff unchanged. GitHub's ruleset enforces what it can. Promotions from `dev` to `main` prove their sources instead of being reviewed again. CodeRabbit reviews only what can merge. Agents never ask it to record a learning, and, as amended 2026-10-16, keep commenting through the owner's account. Production waits for `main`'s CI through Vercel Deployment Checks.
+Feature PRs merge only with CodeRabbit's approval of the exact head, through `scripts/review/merge-reviewed-pr.ts`; an approval carries across a sync that leaves the reviewable diff unchanged. GitHub's ruleset enforces what it can. Promotions from `dev` to `main` prove their sources instead of being reviewed again. CodeRabbit reviews only what can merge. Agents never ask it to record a learning, and, as amended 2026-10-16, keep commenting through the owner's account. Production waits for `main`'s CI through Vercel Deployment Checks.
 
 ### ADR-025: Test Doubles by Shape or Behaviour
 

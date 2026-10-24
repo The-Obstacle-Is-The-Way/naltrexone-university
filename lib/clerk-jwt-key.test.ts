@@ -96,7 +96,7 @@ describe('matchesPublishedClerkKeys', () => {
 });
 
 // Only a key set can show the configured key is wrong; any other answer says
-// nothing about it (scripts/check-clerk-jwt-key.ts).
+// nothing about it (scripts/deploy/check-clerk-jwt-key.ts).
 describe('isPublishedKeySet', () => {
   it.each([
     ['an empty key set', { keys: [] }],
