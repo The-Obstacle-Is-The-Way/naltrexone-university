@@ -102,6 +102,7 @@ This record holds the structural fixes, so that the allowance stops being the on
 
     Kinds are independent downstream too: each kind and window opens its own Sentry issue, and each new issue emails. The rule is in `docs/architecture/observability.md` under Operational alerts.
   - **Still to show after release:** one test event of these kinds reaches the owner through the alerts' workflow, which matches any `alert.kind` tag.
+  - **Found and fixed 2026-10-24: failures behind `auth.protect()`'s rewrite went uncounted.** A server action or a script's fetch of a protected route is not a page request, so `auth.protect()` answers a signed-out visitor with Clerk's 404 rewrite instead of the sign-in redirect. The rewrite sets its own auth reason, and Clerk appends the request's: `protect-rewrite, jwk-remote-failed-to-load`. `clerkCallFailure` compared the whole header, so it named nothing there. Page loads were still counted, so a key outage still alerted, but refused refreshes on protected fetches and rejected signatures on server actions went uncounted. It now sets the rewrite's reason aside. The real-SDK test drives a protected fetch through the installed middleware, for a failed key fetch and a refused refresh, and unit tests cover each joined reason.
 
 ### 4. Measure these requests, and stop refusing real signed-in visitors per address (P2)
 
