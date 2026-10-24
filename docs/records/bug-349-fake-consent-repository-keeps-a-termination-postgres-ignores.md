@@ -1,6 +1,6 @@
 # BUG-349: The Fake Consent Repository Keeps a Later Termination That Postgres Ignores
 
-**Status:** Verifying — promotion to main of the shared first-observation and retention rule; due 2026-10-22
+**Status:** Verifying — promotion to main of the shared first-observation and retention rule; due 2026-10-31
 **Priority:** P3
 **Date:** 2026-10-17
 

@@ -27,7 +27,7 @@ Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle 
 5. **Never touch a remote database by accident.**
    - Database commands need an explicit `DATABASE_URL`; remote targets also need `DB_TARGET_ACK`.
    - Never `drizzle-kit push`.
-   - Local tests resolve a per-clone target: `pnpm exec tsx scripts/resolve-local-test-target.ts env`. Never hardcode its port, and never blanket-kill `:3000`; another clone may own it.
+   - Local tests resolve a per-clone target: `pnpm local:test:target env`. Never hardcode its port, and never blanket-kill `:3000`; another clone may own it.
 6. **Never bypass review or protection.** No `--admin`, ruleset bypass, Force Promote, or direct push to `dev` or `main`.
 
 ## Before Writing Code
@@ -66,7 +66,7 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 - **Integration database:**
 
   ```bash
-  TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
+  pnpm test:integration # starts this clone’s database, migrates, seeds, then tests
   ```
 
 - **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](./docs/guides/testing/e2e-tests.md).
@@ -100,9 +100,9 @@ Read the matching rule before editing. Claude Code loads these by path, and Code
    pnpm exec tsx scripts/merge-reviewed-pr.ts <PR> --merge  # verify and merge
    ```
 
-7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`.
+7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`. A promotion ships all of `dev`, so first pass every gated QA procedure whose flows `dev` changes ([QA method](docs/guides/qa/method.md#when-procedures-run), item 2).
 
-Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, link ADR or record changes, and show screenshots of any changed UI. How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](./docs/guides/release/promote-to-production.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
+Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, link ADR or record changes, and show screenshots of any changed UI, never of real questions: the repository is public, so capture the placeholder questions or describe the result ([QA method](docs/guides/qa/method.md), Evidence). How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](./docs/guides/release/promote-to-production.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
 
 ## Records
 

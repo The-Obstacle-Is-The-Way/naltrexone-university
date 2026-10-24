@@ -5,6 +5,7 @@ import type {
   ClerkWebhookEvent,
   ClerkWebhookTransaction,
 } from '@/src/adapters/controllers/clerk-webhook-controller';
+import type { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
 import {
   HTTP_BAD_REQUEST,
   HTTP_INTERNAL_SERVER_ERROR,
@@ -27,6 +28,7 @@ type StripeClient = {
 export type ClerkWebhookRouteContainer = {
   logger: Logger;
   stripe: StripeClient;
+  stripeBudget?: StripeCallBudget | undefined;
   createRateLimiter: () => RateLimiter;
   getClerkUserById: ClerkWebhookDeps['getClerkUserById'];
   transaction: <T>(
@@ -39,6 +41,7 @@ type DeleteStripeCustomerFn = (
   stripe: StripeClient,
   logger: Logger,
   stripeCustomerId: string,
+  budget?: StripeCallBudget,
 ) => Promise<void>;
 
 export function createWebhookHandler(
@@ -108,11 +111,13 @@ export function createWebhookHandler(
       await processClerkWebhook(
         {
           transaction: container.transaction,
-          deleteStripeCustomer: deleteStripeCustomer.bind(
-            null,
-            container.stripe,
-            container.logger,
-          ),
+          deleteStripeCustomer: (stripeCustomerId) =>
+            deleteStripeCustomer(
+              container.stripe,
+              container.logger,
+              stripeCustomerId,
+              container.stripeBudget,
+            ),
           getClerkUserById: container.getClerkUserById,
           logger: container.logger,
         },

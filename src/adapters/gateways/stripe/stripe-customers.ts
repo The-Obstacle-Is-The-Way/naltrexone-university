@@ -9,6 +9,7 @@ import type {
   PaymentGatewayRequestOptions,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { StripeCallBudget } from './stripe-call-budget';
 import { callStripeWithRetry } from './stripe-retry';
 
 const SAFE_STRIPE_SEARCH_METADATA_VALUE = /^[A-Za-z0-9_-]+$/;
@@ -27,11 +28,13 @@ export async function createStripeCustomer({
   input,
   options,
   logger,
+  budget,
 }: {
   stripe: StripeClient;
   input: CreateCustomerInput;
   options?: PaymentGatewayRequestOptions | undefined;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
 }): Promise<CreateCustomerOutput> {
   const params = {
     email: input.email,
@@ -51,6 +54,7 @@ export async function createStripeCustomer({
         limit: 2,
       }),
     logger,
+    budget,
   });
 
   const matches = existing.data.filter(
@@ -85,6 +89,7 @@ export async function createStripeCustomer({
         idempotencyKey,
       }),
     logger,
+    budget,
   });
 
   if (!customer.id) {

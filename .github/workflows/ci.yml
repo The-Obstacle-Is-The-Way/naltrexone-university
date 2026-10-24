@@ -35,6 +35,7 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/addiction_boards_test
+      DB_TEST_PORT: '5432'
 
       # App base URL used by redirects / Playwright baseURL
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
@@ -74,8 +75,8 @@ jobs:
       # DEBT-516: the first of Docker Hub, ECR Public and Google's mirror that
       # serves this digest. Refresh it with docker-compose.yml's, per
       # docs/guides/dependencies/updating-dependencies.md.
-      - name: Start Postgres
-        run: bash scripts/ci/start-postgres.sh
+      - name: Pull Postgres
+        run: bash scripts/ci/pull-image.sh --env POSTGRES_IMAGE_REPOSITORY Postgres "$POSTGRES_IMAGE_DIGEST" docker.io/library/postgres public.ecr.aws/docker/library/postgres mirror.gcr.io/library/postgres
         timeout-minutes: 12
         env:
           POSTGRES_IMAGE_DIGEST: sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5 # postgres:16, PostgreSQL 16.15
@@ -86,7 +87,7 @@ jobs:
       - name: Pull PgBouncer
         timeout-minutes: 7
         env:
-          PGBOUNCER_IMAGE_DIGEST: sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340 # v1.25.2-p0
+          PGBOUNCER_IMAGE_DIGEST: sha256:488422e38cff912895d0d65d8963fcd306e6ac589a724398b6eb8e294e94d624 # v1.26.1-p0, PgBouncer 1.26.1
         run: bash scripts/ci/pull-image.sh --env PGBOUNCER_IMAGE_REPOSITORY PgBouncer "$PGBOUNCER_IMAGE_DIGEST" docker.io/edoburu/pgbouncer mirror.gcr.io/edoburu/pgbouncer
 
       - name: Setup pnpm
@@ -96,7 +97,7 @@ jobs:
           run_install: false
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -104,21 +105,17 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Start transaction pooler
+      - name: Start test database
         timeout-minutes: 3
         run: |
-          # A plain assignment fails the step when the resolver fails; an
-          # export of a command substitution would mask that failure.
-          target_env="$(pnpm exec tsx scripts/resolve-local-test-target.ts env)"
+          # A plain assignment preserves the resolver exit status before export.
+          target_env="$(pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts env)"
           COMPOSE_PROJECT_NAME="$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' <<< "$target_env")"
           DB_TEST_POOLER_PORT="$(sed -n 's/^DB_TEST_POOLER_PORT=//p' <<< "$target_env")"
           : "${COMPOSE_PROJECT_NAME:?The resolver gave no Compose project}" "${DB_TEST_POOLER_PORT:?The resolver gave no pooler port}"
           export COMPOSE_PROJECT_NAME DB_TEST_POOLER_PORT
-          printf 'DB_TEST_POOLER_PORT=%s\n' "$DB_TEST_POOLER_PORT" >> "$GITHUB_ENV"
-          docker compose up --no-start --no-deps --pull never pgbouncer
-          # Postgres was started separately with registry failover above.
-          docker network connect --alias db "${COMPOSE_PROJECT_NAME}_default" postgres
-          docker compose up -d --no-deps --wait --wait-timeout 60 --pull never pgbouncer
+          printf 'COMPOSE_PROJECT_NAME=%s\nDB_TEST_POOLER_PORT=%s\n' "$COMPOSE_PROJECT_NAME" "$DB_TEST_POOLER_PORT" >> "$GITHUB_ENV"
+          docker compose up -d --wait --wait-timeout 60 --pull never db pgbouncer
 
       - name: Typecheck
         run: pnpm typecheck
@@ -133,9 +130,7 @@ jobs:
         run: pnpm exec tsx scripts/internal/run-managed-db-migrate.ts
 
       - name: Seed DB (placeholder content)
-        run: pnpm exec tsx scripts/internal/run-managed-db-seed.ts
-        env:
-          SEED_INCLUDE_PLACEHOLDERS: 'true'
+        run: pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders
 
       - name: Unit tests with coverage
         id: unit_tests
@@ -244,7 +239,7 @@ jobs:
 
       - name: Upload Playwright failure output
         if: ${{ !cancelled() && steps.e2e_smoke.outcome == 'failure' && steps.playwright_output_scan.outcome == 'success' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-test-results
           path: |
@@ -298,7 +293,7 @@ jobs:
           summarize 'E2E smoke' "$E2E_OUTCOME" "$E2E_SKIP_REASON"
 
       # DEBT-516: the runner printed a service container's log after the job;
-      # Start Postgres runs the database itself, so this step prints it.
+      # Compose starts the database, so this step prints its log.
       - name: Postgres log
         if: ${{ !cancelled() }}
-        run: docker logs postgres || true
+        run: docker compose logs --no-color db || true

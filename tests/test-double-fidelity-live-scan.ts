@@ -1,4 +1,4 @@
-import { pathToFileURL } from 'node:url';
+import { isMain } from '../scripts/lib/entry-point.mts';
 import {
   HAND_ROLLED_PORT_DOUBLE_FLOORS,
   OWN_CODE_MODULE_MOCK_FLOORS,
@@ -72,8 +72,6 @@ export function runCli(
   process.stdout.write('PASS test-double-fidelity issues=0\n');
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runCli();
 }

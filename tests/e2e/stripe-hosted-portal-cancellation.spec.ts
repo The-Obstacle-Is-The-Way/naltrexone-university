@@ -1,8 +1,9 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+import { test } from './helpers/clerk-auth-test';
 import {
   readE2ELocalSubscription,
   readE2EStripeSubscription,
@@ -77,6 +78,9 @@ async function expectStoredCancellation(scheduled: boolean): Promise<void> {
 
 test.describe
   .serial('Billing-portal cancellation', () => {
+    // Beyond a signed-in flow, each case resets the user to a first-timer
+    // before and after, restores the paid subscription, works through the
+    // Stripe-hosted portal and replays the signed webhook.
     test.setTimeout(150_000);
 
     // Hosted Checkout's trial subscription carries no owner tag, so only a

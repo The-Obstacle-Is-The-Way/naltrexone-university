@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
+import { redirectIfUnsubscribed } from '@/app/(app)/app/shared/redirect-if-unsubscribed';
 import { ErrorCard } from '@/components/error-card';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import {
@@ -225,6 +226,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
 }
 
 export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
+  redirectIfUnsubscribed([result]);
   if (!result.ok) {
     return (
       <div className="space-y-6">

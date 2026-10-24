@@ -151,7 +151,7 @@ describe('bookmark-controller', () => {
       expect(deps.setBookmarkUseCase.inputs).toEqual([]);
     });
 
-    it('returns UNSUBSCRIBED when not entitled', async () => {
+    it('returns UNSUBSCRIBED from setBookmark when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
       const result = await setBookmark(
@@ -450,7 +450,7 @@ describe('bookmark-controller', () => {
       expect(deps.getBookmarksUseCase.inputs).toEqual([]);
     });
 
-    it('returns UNSUBSCRIBED when not entitled', async () => {
+    it('returns UNSUBSCRIBED from getBookmarks when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
       const result = await getBookmarks({}, deps);

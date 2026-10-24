@@ -15,13 +15,15 @@ import {
   type SessionNavigation,
   type SessionUnansweredReveal,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import {
+  getQuestionBySlug,
+  submitAnswer,
+} from '@/app/(app)/app/shared/client-actions';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
 import type { SubmitAnswerRequestToken } from '@/app/(app)/app/shared/submit-answer-request-key';
 import { reportClientError } from '@/lib/report-client-error';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
-import { submitAnswer } from '@/src/adapters/controllers/question-actions';
-import { getQuestionBySlug } from '@/src/adapters/controllers/question-view-actions';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { AttemptRetryOrigin } from '@/src/domain/entities';
 import {

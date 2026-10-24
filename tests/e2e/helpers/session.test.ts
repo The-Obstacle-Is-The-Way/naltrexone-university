@@ -8,6 +8,7 @@ import {
   START_SESSION_NAVIGATION_TIMEOUT_MS,
   type StartSessionLocator,
   type StartSessionPage,
+  type StartSessionRequest,
   startSession,
 } from './session';
 
@@ -19,6 +20,7 @@ type LocatorLike = StartSessionLocator;
 type PracticePageLike = StartSessionPage;
 type PracticePageHarness = PracticePageLike & {
   getSessionStartAlertReadCount(): number;
+  getListenerCount(): number;
 };
 type WaitForOptions = Parameters<LocatorLike['waitFor']>[0];
 
@@ -93,7 +95,42 @@ function createLocator(input: {
   return locator;
 }
 
+type ActionFailure = {
+  actionId: string;
+  errorText: string;
+  redirect?: { clerkAuthReason?: string; location: string; status: number };
+};
+
+function createActionFailure(failure: ActionFailure): StartSessionRequest {
+  const redirect = failure.redirect;
+  const action: StartSessionRequest = {
+    failure: () => (redirect ? null : { errorText: failure.errorText }),
+    headers: () => ({ 'next-action': failure.actionId }),
+    redirectedFrom: () => null,
+    response: async () =>
+      redirect
+        ? {
+            headers: () => ({
+              location: redirect.location,
+              ...(redirect.clerkAuthReason
+                ? { 'x-clerk-auth-reason': redirect.clerkAuthReason }
+                : {}),
+            }),
+            status: () => redirect.status,
+          }
+        : null,
+  };
+  if (!redirect) return action;
+  return {
+    failure: () => ({ errorText: failure.errorText }),
+    headers: () => ({}),
+    redirectedFrom: () => action,
+    response: async () => null,
+  };
+}
+
 function createPracticePage(input: {
+  actionFailures?: ActionFailure[];
   availableQuestionCount: number;
   availableStatus?: 'Unanswered' | 'Incorrect' | 'Bookmarked';
   defaultQuestionCount?: number;
@@ -132,6 +169,7 @@ function createPracticePage(input: {
   };
   const availableStatus = input.availableStatus ?? 'Unanswered';
   const preexistingAlerts = input.preexistingAlerts ?? [];
+  const failureListeners = new Set<(request: StartSessionRequest) => void>();
 
   const completeSessionStart = () => {
     state.startedQuestionCount =
@@ -139,6 +177,9 @@ function createPracticePage(input: {
       Math.min(state.requestedQuestionCount, input.availableQuestionCount);
     state.currentUrl = '/app/practice/session-1';
     state.sessionStarted = true;
+    for (const failure of input.actionFailures ?? [])
+      for (const listener of failureListeners)
+        listener(createActionFailure(failure));
   };
 
   const startSessionButton = createLocator({
@@ -397,6 +438,19 @@ function createPracticePage(input: {
       });
     }),
     getSessionStartAlertReadCount: () => state.sessionStartAlertReadCount,
+    getListenerCount: () => failureListeners.size,
+    on: vi.fn(
+      (
+        _event: 'requestfailed',
+        listener: (request: StartSessionRequest) => void,
+      ) => failureListeners.add(listener),
+    ),
+    off: vi.fn(
+      (
+        _event: 'requestfailed',
+        listener: (request: StartSessionRequest) => void,
+      ) => failureListeners.delete(listener),
+    ),
     url: () => {
       if (state.sessionStartNavigationCompletesOnNextUrlRead) {
         state.sessionStartNavigationCompletesOnNextUrlRead = false;
@@ -636,5 +690,111 @@ describe('startSession helper', () => {
     await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
       'startSession created 3-question session but 2 were requested',
     );
+  });
+
+  it('names each server action that failed when the first question fails', async () => {
+    const page = createPracticePage({
+      actionFailures: [
+        { actionId: 'first-question-action', errorText: 'net::ERR_FAILED' },
+      ],
+      availableQuestionCount: 5,
+      firstQuestionAlert: 'Failed to fetch',
+    });
+
+    await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
+      'startSession failed loading the first question: Failed to fetch; failed server actions: first-question-action net::ERR_FAILED',
+    );
+  });
+
+  it('names a request that failed after a redirect by its server action, with the redirect status, Clerk reason and target path only', async () => {
+    const page = createPracticePage({
+      actionFailures: [
+        {
+          actionId: 'first-question-action',
+          errorText: 'net::ERR_FAILED',
+          redirect: {
+            clerkAuthReason: 'dev-browser-missing',
+            location:
+              'https://example.clerk.accounts.dev/v1/client/handshake?redirect_url=private-detail',
+            status: 307,
+          },
+        },
+      ],
+      availableQuestionCount: 5,
+      firstQuestionAlert: 'Failed to fetch',
+    });
+    const result = startSession(page, 'tutor', 2);
+
+    await expect(result).rejects.toThrow(
+      'failed server actions: first-question-action net::ERR_FAILED after 307 to example.clerk.accounts.dev/v1/client/handshake (Clerk: dev-browser-missing)',
+    );
+    await expect(result).rejects.not.toThrow('private-detail');
+  });
+
+  it('reads a same-origin redirect target as its path only', async () => {
+    const page = createPracticePage({
+      actionFailures: [
+        {
+          actionId: 'first-question-action',
+          errorText: 'net::ERR_FAILED',
+          redirect: {
+            location: '/sign-in?redirect_url=private-detail',
+            status: 307,
+          },
+        },
+      ],
+      availableQuestionCount: 5,
+      firstQuestionAlert: 'Failed to fetch',
+    });
+    const result = startSession(page, 'tutor', 2);
+
+    await expect(result).rejects.toThrow(
+      'first-question-action net::ERR_FAILED after 307 to /sign-in',
+    );
+    await expect(result).rejects.not.toThrow('private-detail');
+  });
+
+  it("reads a redirect target's route words only, and another site's as its host", async () => {
+    const redirectTo = (location: string) =>
+      startSession(
+        createPracticePage({
+          actionFailures: [
+            {
+              actionId: 'first-question-action',
+              errorText: 'net::ERR_FAILED',
+              redirect: { location, status: 307 },
+            },
+          ],
+          availableQuestionCount: 5,
+          firstQuestionAlert: 'Failed to fetch',
+        }),
+        'tutor',
+        2,
+      );
+
+    const unknown = redirectTo('/account/private-detail');
+    await expect(unknown).rejects.toThrow(
+      'first-question-action net::ERR_FAILED after 307 to /…/…',
+    );
+    await expect(unknown).rejects.not.toThrow('private-detail');
+    const elsewhere = redirectTo(
+      'https://checkout.stripe.com/c/pay/cs_test_privatedetail',
+    );
+    await expect(elsewhere).rejects.toThrow(
+      'first-question-action net::ERR_FAILED after 307 to checkout.stripe.com',
+    );
+    await expect(elsewhere).rejects.not.toThrow('privatedetail');
+  });
+
+  it('stops listening once the session has started', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+    });
+
+    await startSession(page, 'tutor', 2);
+
+    expect(page.on).toHaveBeenCalled();
+    expect(page.getListenerCount()).toBe(0);
   });
 });
