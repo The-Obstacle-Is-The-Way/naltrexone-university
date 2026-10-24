@@ -559,6 +559,11 @@ export class FakeStripeCheckoutClient implements StripeClient {
       if (!subscription) {
         throw new Error(`Missing fake Subscription: ${subscriptionId}`);
       }
+      // An empty value clears the default, as on Stripe.
+      if (params.default_payment_method === '') {
+        subscription.default_payment_method = null;
+        return structuredClone(subscription);
+      }
       if (
         this.paymentMethodCustomer(params.default_payment_method) !==
         subscription.customer

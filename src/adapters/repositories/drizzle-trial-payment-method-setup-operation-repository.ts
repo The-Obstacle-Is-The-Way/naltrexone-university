@@ -22,6 +22,7 @@ type OperationRow = typeof trialPaymentMethodSetupOperations.$inferSelect;
 // Keyed by every reason, so a new reason fails to compile until it is read back.
 const TERMINAL_REASONS: Record<TrialPaymentMethodSetupTerminalReason, true> = {
   billing_ownership_mismatch: true,
+  subscription_inactive: true,
   trial_cancellation_scheduled: true,
 };
 

@@ -225,6 +225,7 @@ async function endTrialPaymentMethodSetup(
     sessionId: input.completion.sessionId,
     externalPaymentMethodId: input.completion.stripePaymentMethodId,
     externalCustomerId: input.completion.externalCustomerId,
+    externalSubscriptionId: input.completion.externalSubscriptionId,
   });
   await deps.transaction(
     async ({ stripeEvents, trialPaymentMethodSetupOperations }) => {
@@ -239,26 +240,41 @@ async function endTrialPaymentMethodSetup(
   );
 }
 
-// The trial the Session added its card to: the user's subscription, on the
-// Session's plan, Stripe subscription and customer. Otherwise null.
-async function findSetupSubscription(
+// BUG-364: the trial the Session adds its card to, or why the card cannot stay
+// on it. The claim and the transaction that records consent ask the same
+// question, so a subscription changed while Stripe is called is caught too.
+async function checkSetupSubscription(
   {
     subscriptions,
     stripeCustomers,
   }: Pick<StripeWebhookTransaction, 'subscriptions' | 'stripeCustomers'>,
   completion: TrialPaymentMethodSetupCompletion,
-): Promise<Subscription | null> {
+): Promise<
+  | { subscription: Subscription }
+  | { endReason: TrialPaymentMethodSetupTerminalReason }
+> {
   const [subscription, externalSubscriptionId, customer] = await Promise.all([
     subscriptions.findByUserId(completion.userId),
     subscriptions.findExternalSubscriptionIdByUserId(completion.userId),
     stripeCustomers.findByUserId(completion.userId),
   ]);
-  return subscription !== null &&
-    subscription.plan === completion.plan &&
-    externalSubscriptionId === completion.externalSubscriptionId &&
-    customer?.stripeCustomerId === completion.externalCustomerId
-    ? subscription
-    : null;
+  if (
+    subscription === null ||
+    subscription.plan !== completion.plan ||
+    externalSubscriptionId !== completion.externalSubscriptionId ||
+    customer?.stripeCustomerId !== completion.externalCustomerId
+  ) {
+    return { endReason: 'billing_ownership_mismatch' };
+  }
+  if (!isEntitledStatus(subscription.status)) {
+    return { endReason: 'subscription_inactive' };
+  }
+  // A Session opened before a portal cancellation can complete after it. Its
+  // consent describes a renewal that will not happen.
+  if (subscription.cancelAtPeriodEnd) {
+    return { endReason: 'trial_cancellation_scheduled' };
+  }
+  return { subscription };
 }
 
 async function processTrialPaymentMethodSetupWebhook(
@@ -307,7 +323,7 @@ async function processTrialPaymentMethodSetupWebhook(
         return null;
       }
 
-      const subscription = await findSetupSubscription(
+      const checked = await checkSetupSubscription(
         { subscriptions, stripeCustomers },
         completion,
       );
@@ -326,31 +342,21 @@ async function processTrialPaymentMethodSetupWebhook(
           'Trial payment-method setup is already being processed',
         );
       }
-      return { claimed: result, subscription };
+      return { claimed: result, checked };
     },
   );
 
   if (!claimResult) return;
-  const { claimed, subscription } = claimResult;
+  const { claimed, checked } = claimResult;
 
-  if (!subscription) {
+  // BUG-364 (DEBT-414 F22): no card stays on a trial that will not renew, and
+  // nothing is recorded.
+  if ('endReason' in checked) {
     await endTrialPaymentMethodSetup(deps, {
       event,
       completion,
       claimId,
-      reason: 'billing_ownership_mismatch',
-    });
-    return;
-  }
-  // BUG-364 (DEBT-414 F22): a Session opened before a portal cancellation can
-  // complete after it. Its consent describes a renewal that will not happen,
-  // so no card stays on the trial and nothing is recorded.
-  if (subscription.cancelAtPeriodEnd) {
-    await endTrialPaymentMethodSetup(deps, {
-      event,
-      completion,
-      claimId,
-      reason: 'trial_cancellation_scheduled',
+      reason: checked.endReason,
     });
     return;
   }
@@ -402,13 +408,11 @@ async function processTrialPaymentMethodSetupWebhook(
     // BUG-364: the subscription can change while Stripe is called above, so
     // the transaction that records consent repeats the claim's checks and
     // takes the consent's dates from what it reads now.
-    const current = await findSetupSubscription(transaction, completion);
-    if (!current) {
-      return { terminalReason: 'billing_ownership_mismatch' } as const;
+    const recheck = await checkSetupSubscription(transaction, completion);
+    if ('endReason' in recheck) {
+      return { terminalReason: recheck.endReason } as const;
     }
-    if (current.cancelAtPeriodEnd) {
-      return { terminalReason: 'trial_cancellation_scheduled' } as const;
-    }
+    const current = recheck.subscription;
     const consent = await new RecordRenewalConsentUseCase(
       renewalConsentRecords,
     ).execute({

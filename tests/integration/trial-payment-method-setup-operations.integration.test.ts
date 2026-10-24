@@ -295,10 +295,12 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     );
   });
 
-  // BUG-364 (DEBT-414 F22): a completion after a scheduled cancellation ends
-  // terminal with its own reason, which must read back.
+  // BUG-364 (DEBT-414 F22): a completion after a scheduled cancellation, or for
+  // a subscription that no longer runs, ends terminal with its own reason,
+  // which must read back.
   it.each([
     'billing_ownership_mismatch',
+    'subscription_inactive',
     'trial_cancellation_scheduled',
   ] as const)(
     'persists the %s terminal reason and time for the holding claim',
