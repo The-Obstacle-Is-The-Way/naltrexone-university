@@ -212,7 +212,7 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/application/use-cases/create-checkout-session.test.ts`: `does not pass a trial to the gateway for a user with an existing subscription row`
 - `src/application/use-cases/create-checkout-session.test.ts`: `returns ALREADY_SUBSCRIBED when a subscription is still current`
 
-### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices. In the app, a trial with a scheduled cancellation promises no renewal and offers no card, and a card added through a setup started before the cancellation records no renewal consent. Billing and email state the cutoff in UTC, Eastern and Pacific time, naming a different local date or year.
+### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices. In the app, a trial with a scheduled cancellation promises no renewal and offers no card, and a card added through a setup records no renewal consent if the app recorded the cancellation first, even when the setup began before it. Billing and email state the cutoff in UTC, Eastern and Pacific time, naming a different local date or year.
 
 - `src/domain/services/entitlement.test.ts`: `keeps access until the period ends when cancellation is scheduled`
 - `app/(app)/app/billing/page.test.tsx`: `states the $name cancellation cutoff with UTC, Eastern and Pacific times`
