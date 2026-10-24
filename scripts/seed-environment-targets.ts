@@ -1,7 +1,7 @@
 import {
   authorizeHumanDatabaseTargets,
   classifyDatabaseTarget,
-} from './database-target';
+} from './database/database-target';
 
 export type VercelSeedEnvironment = 'development' | 'preview' | 'production';
 

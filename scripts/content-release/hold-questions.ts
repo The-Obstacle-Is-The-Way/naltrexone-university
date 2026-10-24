@@ -1,5 +1,5 @@
-import { pathToFileURL } from 'node:url';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { isMain } from '../lib/entry-point.mts';
 import { parseQidCommandArgs } from '../seed/qid-command-args';
 import {
   formatActivation,
@@ -57,10 +57,8 @@ export async function runHoldQuestions(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runHoldQuestions().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

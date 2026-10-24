@@ -53,7 +53,11 @@ export function createE2ECommandPlan({
     {
       label: 'Migrate isolated local Docker test database',
       command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/internal/run-managed-db-migrate.ts'],
+      args: [
+        'exec',
+        'tsx',
+        'scripts/database/managed/run-managed-db-migrate.ts',
+      ],
       env: targetEnv,
     },
     {
@@ -62,7 +66,7 @@ export function createE2ECommandPlan({
       args: [
         'exec',
         'tsx',
-        'scripts/internal/run-managed-db-seed.ts',
+        'scripts/database/managed/run-managed-db-seed.ts',
         '--include-placeholders',
       ],
       env: targetEnv,

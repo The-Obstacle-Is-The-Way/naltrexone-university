@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   computeMigrationContentDrift,
@@ -7,9 +15,10 @@ import {
   formatSchemaDriftMessage,
   type MigrationLedgerQuery,
   type MigrationLedgerRow,
+  readMigrationJournalEntries,
   verifyMigrationLedger,
   verifyMigrationLedgerBeforeMigration,
-} from '@/scripts/migration-ledger';
+} from './migration-ledger';
 
 function createMigrationLedgerSql(
   query: () => Promise<MigrationLedgerRow[]>,
@@ -215,6 +224,36 @@ describe('migration ledger schema-drift preflight', () => {
         },
       ]),
     ).resolves.toBeUndefined();
+  });
+
+  it('reads the journal from the same migrations folder as the migration files', () => {
+    // drizzle-kit migrates the working directory's db/migrations; the ledger
+    // checks around it must judge that journal, not a copy bundled at import.
+    const root = mkdtempSync(join(tmpdir(), 'ledger-journal-'));
+    try {
+      mkdirSync(join(root, 'db', 'migrations', 'meta'), { recursive: true });
+      writeFileSync(
+        join(root, 'db', 'migrations', 'meta', '_journal.json'),
+        JSON.stringify({
+          version: '7',
+          dialect: 'postgresql',
+          entries: [
+            {
+              idx: 0,
+              version: '7',
+              when: 1,
+              tag: '0000_probe',
+              breakpoints: true,
+            },
+          ],
+        }),
+      );
+      expect(readMigrationJournalEntries(root)).toEqual([
+        { idx: 0, tag: '0000_probe', when: 1 },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('formats content-drift failures without leaking secrets, hostnames, or full hashes', async () => {

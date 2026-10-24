@@ -4,9 +4,13 @@ Integration tests run against a real PostgreSQL database to verify repository qu
 
 ---
 
+Use the exact resolver-provided URL for the full local lane; its host is `127.0.0.1`. Session-proof suites require that URL and reject even a `localhost` substitution. Loopback classification recognizes `[::1]`, but the installed postgres.js URL parser misreads a bracketed IPv6 literal, so setup refuses it with that reason and asks for `127.0.0.1` or `localhost`. A hostname may resolve to IPv6 at the driver level, but that does not bypass the lane’s target restrictions.
+
 ## Local Setup
 
-From a fresh local test database, all four steps are required. Skipping any step causes test failures that look like real bugs but aren't.
+`pnpm test:integration` starts this clone's Postgres and PgBouncer, migrates, seeds placeholders, then runs Vitest. Preparation stops at the first failure and never resets the database. For quick reruns against an already prepared local target, use `INTEGRATION_SKIP_PREPARE=true pnpm test:integration`; this still uses the clone's resolver target. Explicit existing-target mode runs tests only.
+
+The following commands expose each preparation step for diagnosis.
 
 ### 1. Start the Test Database
 
@@ -26,12 +30,12 @@ On the supported macOS/Linux hosts, the orchestrator forwards `SIGINT`/`SIGTERM`
 
 If process discovery itself fails, cleanup can still kill the known root group and reports the error; separately detached descendants cannot be discovered on that path. Use the same cwd-verified orphan check below before restarting.
 
-Before another authenticated E2E run, check for running Playwright/`run-local-e2e` processes in every `naltrexone-university*` clone and wait if one is active (the provider user is shared). For a listener left by an uncatchable interruption such as `SIGKILL`, get this clone's app port from `pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts json`. Inspect it with `lsof -nP -iTCP:<resolved-app-port> -sTCP:LISTEN`, then check each candidate with `lsof -a -p <pid> -d cwd`. Terminate only a confirmed orphan whose cwd is this clone; never kill another clone's processes or use a blanket port kill.
+Before another authenticated E2E run, check for running Playwright/`run-local-e2e` processes in every `naltrexone-university*` clone and wait if one is active (the provider user is shared). For a listener left by an uncatchable interruption such as `SIGKILL`, get this clone's app port from `pnpm local:test:target json`. Inspect it with `lsof -nP -iTCP:<resolved-app-port> -sTCP:LISTEN`, then check each candidate with `lsof -a -p <pid> -d cwd`. Terminate only a confirmed orphan whose cwd is this clone; never kill another clone's processes or use a blanket port kill.
 
 ### 2. Run Migrations
 
 ```bash
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts database-url)"
+TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 ```
 
@@ -75,7 +79,7 @@ The 2026-10-14 run produced that exact receipt (04:59:25Z–05:00:44Z), after th
 ### One-Liner (Full Setup)
 
 ```bash
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders && pnpm test:integration
+pnpm test:integration
 ```
 
 ### Reset (Nuclear Option)
@@ -86,7 +90,7 @@ If the database gets into a bad state:
 pnpm db:test:reset
 ```
 
-This runs `docker compose -p <resolved-project> down -v` and then starts the resolved `db` and `pgbouncer` services again. You'll need to re-run migrations and seeding (steps 2-3) afterward.
+This runs `docker compose -p <resolved-project> down -v` and then starts the resolved `db` and `pgbouncer` services again. `pnpm test:integration` prepares it again afterward.
 
 ---
 
@@ -100,7 +104,7 @@ This runs `docker compose -p <resolved-project> down -v` and then starts the res
 
 The committed `.env.test` file deliberately contains no `DATABASE_URL`. Local wrappers inject the resolver-owned target, and CI opts into its runner-local database with `INTEGRATION_USE_EXISTING_DATABASE=true`. A raw Vitest invocation with no explicit database therefore fails closed instead of guessing a shared local target.
 
-To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. To override ports, set `DB_TEST_PORT` or `DB_TEST_POOLER_PORT` before both startup and testing; use `pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts database-url` when prefixing migration/seed commands. Do not edit committed `.env.test` just for a one-off local port.
+To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. To override ports, set `DB_TEST_PORT` or `DB_TEST_POOLER_PORT` before both startup and testing; use `pnpm local:test:target database-url` when prefixing migration/seed commands. Do not edit committed `.env.test` just for a one-off local port.
 
 ---
 
@@ -109,8 +113,8 @@ To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. T
 GitHub Actions (`.github/workflows/ci.yml`) starts its own PostgreSQL 16 container on every run, in its `Start test database` Compose step, from the first of Docker Hub, ECR Public and Google's mirror that serves the pinned digest. It does not depend on local Docker state. The pipeline runs:
 
 1. Pull Postgres and PgBouncer through the bounded registry helper before package installation. After installation, resolve the Compose project and pooler port, then start both services together with `docker compose up -d --wait --wait-timeout 60 --pull never db pgbouncer`. The dependency update guide owns image refresh (BUG-352).
-2. `pnpm exec tsx scripts/internal/run-managed-db-migrate.ts` — applies migrations to the CI database
-3. `pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders` — seeds test data, including the placeholder fixtures
+2. `pnpm exec tsx scripts/database/managed/run-managed-db-migrate.ts` — verifies the ledger, applies migrations to the CI database, then verifies it again.
+3. `pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts --include-placeholders` — seeds test data, including the placeholder fixtures.
 4. `pnpm test:integration:coverage` — runs all integration tests with coverage, including the pooled timeout and managed-migration proofs
 
 Integration tests are part of every PR and every push to `main`.
@@ -130,18 +134,18 @@ The suites are the `*.integration.test.ts` files in `tests/integration/`; each f
 The test setup checks database connectivity before running any tests. If you see this error:
 
 1. Is Docker running? Check with `docker ps`
-2. Inspect the resolved target with `pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts env`
+2. Inspect the resolved target with `pnpm local:test:target env`
 3. Is the Compose service running for that project? Check with `docker ps --filter label=com.docker.compose.project=<COMPOSE_PROJECT_NAME>`. A bare `docker compose ps` fails without `DB_TEST_POOLER_PORT`, because Compose interpolates the whole file for every command
 4. If not, restart: `pnpm db:test:up`
 5. If the container exists but tables are missing: re-run migrations (see above)
 
 **Migrations "fail" with no message**
 
-A wrong database port fails without saying why: `drizzle-kit` prints no connection error, and `pnpm db:migrate` reports only `Database command failed (exit code 1).` Its first line, `Database target: LOCAL <host>:<port>/<database>`, names the target it used, so check that. Otherwise `pnpm test:integration` then fails en masse on missing tables. Never hardcode a port: pass the resolved target, as in the setup command above, and check it with `pnpm local:test:target`.
+A wrong database port fails without saying why: `drizzle-kit` prints no connection error, and `pnpm db:migrate` reports only `Database command failed (exit code 1).` Its first line, `Database target: LOCAL <host>:<port>/<database>`, names the target it used, so check that. The default integration command stops at that migration failure; an explicitly unprepared quick rerun can instead fail on missing tables. Never hardcode a port: pass the resolved target, as in the setup command above, and check it with `pnpm local:test:target`.
 
 **Stale containers on wrong ports/projects**
 
-If you see an old Compose project, stop it with `COMPOSE_PROJECT_NAME=<old-project> DB_TEST_POOLER_PORT=1 docker compose down` or remove the specific container intentionally. `down` publishes no port, so any value satisfies the file's required variable. Do not remove another clone's active project. Run `pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts env` to confirm the project for this clone, then `pnpm db:test:up`.
+If you see an old Compose project, stop it with `COMPOSE_PROJECT_NAME=<old-project> DB_TEST_POOLER_PORT=1 docker compose down` or remove the specific container intentionally. `down` publishes no port, so any value satisfies the file's required variable. Do not remove another clone's active project. Run `pnpm local:test:target env` to confirm the project for this clone, then `pnpm db:test:up`.
 
 **Wrong DATABASE_URL (explicit passthrough only)**
 
@@ -163,15 +167,15 @@ Symptoms: `pgcrypto` extension missing (`db.integration.test.ts` checks the migr
 
 ```bash
 pnpm db:test:reset
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts database-url)"
+TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders
 ```
 
 **`tag-taxonomy-census` fails / `INTEGRATION_SEED_MISSING`**
 
-The tags table is empty because `pnpm db:seed` was not run. See Step 3 above.
+The tags table is empty. Run the default preparation command, or seed the explicitly selected existing target as in Step 3.
 
 **Raw Drizzle Kit configuration reads `.env.local` first**
 
-The supported `db:generate`, `db:migrate`, `db:studio`, and `db:seed` package entries refuse an implicit target and require an explicit `DATABASE_URL`; remote human targets also require the exact redacted `DB_TARGET_ACK` reported by the command. A raw dependency-CLI invocation loads `drizzle.config.ts` directly and can still resolve `.env.local`, so do not use it for repository work. Always prefix the supported package command with the resolver-selected test `DATABASE_URL` when targeting the local test database.
+The connected `db:migrate`, `db:studio`, and `db:seed` package entries refuse an implicit target and require an explicit `DATABASE_URL`; remote human targets also require the exact redacted `DB_TARGET_ACK` reported by the command. A raw dependency-CLI invocation loads `drizzle.config.ts` directly and can still resolve `.env.local`, so do not use it for repository work. Prefix connected package commands with the resolver-selected test `DATABASE_URL` when targeting the local test database. `pnpm db:generate` uses a separate offline configuration and needs no credentials.
