@@ -76,7 +76,7 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 **History and ownership:**
 - DEBT-446 (closed) parked Part 3b on 2026-07-20 because the seed then refused key changes under graded history (BUG-281) and a reseed undid a stale run. `3ac01fc8` removed that refusal, and ADR-022 keeps a stale window's answers out of scores after a repair. Its trigger has not fired, but its premise is gone, so this record takes Part 3b's scope.
 - DEBT-492's “none is live” statement concerned its release-only gaps before bootstrap. It did not claim that the direct seed was safe. Its stored-revision check remains incomplete for the cases above.
-- BUG-351 owns the stale-input defect, the duplicate-match defect, provenance and the reviewed publication plan. DEBT-531 owns remaining content-comparison and hold-scope decisions. DEBT-483 keeps bootstrap timing and the managed seed's transition.
+- BUG-351 owns the stale-input defect, the duplicate-match defect, provenance and the reviewed publication plan. DEBT-531 decided content comparison and hold scope, with ADR-021's and ADR-022's amendments. DEBT-483 keeps bootstrap timing and the managed seed's transition.
 
 ## Impact
 

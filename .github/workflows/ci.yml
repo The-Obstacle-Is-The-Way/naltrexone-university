@@ -87,7 +87,7 @@ jobs:
       - name: Pull PgBouncer
         timeout-minutes: 7
         env:
-          PGBOUNCER_IMAGE_DIGEST: sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340 # v1.25.2-p0
+          PGBOUNCER_IMAGE_DIGEST: sha256:488422e38cff912895d0d65d8963fcd306e6ac589a724398b6eb8e294e94d624 # v1.26.1-p0, PgBouncer 1.26.1
         run: bash scripts/ci/pull-image.sh --env PGBOUNCER_IMAGE_REPOSITORY PgBouncer "$PGBOUNCER_IMAGE_DIGEST" docker.io/edoburu/pgbouncer mirror.gcr.io/edoburu/pgbouncer
 
       - name: Setup pnpm
@@ -97,7 +97,7 @@ jobs:
           run_install: false
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -239,7 +239,7 @@ jobs:
 
       - name: Upload Playwright failure output
         if: ${{ !cancelled() && steps.e2e_smoke.outcome == 'failure' && steps.playwright_output_scan.outcome == 'success' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-test-results
           path: |

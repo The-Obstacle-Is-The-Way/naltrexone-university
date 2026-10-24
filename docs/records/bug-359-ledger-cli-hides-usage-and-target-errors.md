@@ -1,6 +1,6 @@
 # BUG-359: The Ledger CLI Hides Usage and Target Errors
 
-**Status:** Verifying — promotion to main; due 2026-10-23
+**Status:** Verifying — promotion to main; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 

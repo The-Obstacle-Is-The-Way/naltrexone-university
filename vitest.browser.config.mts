@@ -22,6 +22,7 @@ export default defineConfig({
       'drizzle-orm',
       'drizzle-orm/pg-core',
       'drizzle-orm/postgres-js',
+      'next/dist/client/components/unrecognized-action-error',
       'next/server',
       'pino',
       'postgres',

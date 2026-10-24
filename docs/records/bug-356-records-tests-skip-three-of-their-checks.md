@@ -1,6 +1,6 @@
 # BUG-356: The Records Tests Skip Their Ledger-Line, Status and Queue-Review Checks
 
-**Status:** Verifying — promotion to main; due 2026-10-23
+**Status:** Verifying — promotion to main; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 

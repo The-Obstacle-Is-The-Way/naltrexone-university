@@ -107,3 +107,12 @@ export function restoreProcessEnv(snapshot: ProcessEnvSnapshot): void;
 ### Do not churn clean files
 
 Many existing env-mutation sites are already correctly restored. Apply this rule to new or changed tests; do not rewrite known-clean files only to make style uniform.
+
+## Git in tests
+
+A test that runs git in a fixture repository first removes every inherited `GIT_*` variable from git's environment. A git hook, such as the pre-push hook that runs the unit tests, exports `GIT_DIR` and its relatives. Left in place, they point the fixture's git commands at the clone itself, and a `git init` there can mark the clone bare. Two patterns do this:
+
+- `vi.stubEnv(name, undefined)` for each variable, which `vi.unstubAllEnvs()` restores: `tests/documentation-records.test.ts`.
+- A cleaned environment passed to the child process: `isolatedGitEnv` in `scripts/dependencies/lockfile-union-git.test.ts`.
+
+Both then set `GIT_CONFIG_GLOBAL` to an empty or fixture file and `GIT_CONFIG_NOSYSTEM=1`, so the user's and the system's Git configuration cannot change what the fixture sees.

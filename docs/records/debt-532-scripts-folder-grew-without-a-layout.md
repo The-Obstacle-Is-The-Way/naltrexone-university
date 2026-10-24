@@ -1,6 +1,6 @@
 # DEBT-532: The Scripts Folder Has Inconsistent Shared Helpers and No Layout
 
-**Status:** Open — the content families' move waits for BUG-351 and DEBT-531
+**Status:** Open — the content families' move waits for BUG-351; DEBT-531 resolved 2026-10-23
 **Priority:** P3
 **Date:** 2026-10-18
 

@@ -29,6 +29,7 @@ export function createAction<
   TDeps,
   TContainer = unknown,
 >(config: {
+  action?: string;
   schema: ZodType<TInput, unknown>;
   getDeps: GetDepsFn<TDeps, TContainer>;
   execute: (
@@ -44,10 +45,10 @@ export function createAction<
   return async (input, deps, options) => {
     const parsed = config.schema.safeParse(input);
     if (!parsed.success) {
-      return handleError(
-        parsed.error,
-        options?.logger ? { logger: options.logger } : undefined,
-      );
+      return handleError(parsed.error, {
+        ...(options?.logger ? { logger: options.logger } : {}),
+        ...(config.action ? { action: config.action } : {}),
+      });
     }
 
     try {
@@ -62,10 +63,10 @@ export function createAction<
       });
       return ok(output);
     } catch (error) {
-      return handleError(
-        error,
-        options?.logger ? { logger: options.logger } : undefined,
-      );
+      return handleError(error, {
+        ...(options?.logger ? { logger: options.logger } : {}),
+        ...(config.action ? { action: config.action } : {}),
+      });
     }
   };
 }

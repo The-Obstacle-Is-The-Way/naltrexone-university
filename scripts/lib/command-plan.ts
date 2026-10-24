@@ -169,7 +169,7 @@ export async function spawnCommand(
         reject(
           signalFailure
             ? signalFailure.error
-            : new Error(`Local E2E interrupted by ${signal}.`),
+            : new Error(`Test lane interrupted by ${signal}.`),
         );
       }, signalGraceMs);
       try {

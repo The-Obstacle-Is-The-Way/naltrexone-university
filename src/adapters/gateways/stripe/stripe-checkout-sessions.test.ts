@@ -514,7 +514,7 @@ describe('createStripeCheckoutSession', () => {
     expect(logger.warnCalls).toContainEqual({
       context: expect.objectContaining({
         sessionId: existingId,
-        error: 'retrieve failed',
+        error: { name: 'Error' },
       }),
       msg: 'Failed to inspect existing checkout session',
     });

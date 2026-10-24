@@ -1,6 +1,6 @@
 # BUG-354: Scripts Exit 0 Without Running When Called Without Their Extension or Through a Symlink
 
-**Status:** Verifying — promotion to main; due 2026-10-23
+**Status:** Verifying — promotion to main; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 

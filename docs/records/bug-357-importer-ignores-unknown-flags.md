@@ -1,6 +1,6 @@
 # BUG-357: The Draft Importer Ignores Unknown Flags
 
-**Status:** Verifying — promotion to main; due 2026-10-23
+**Status:** Verifying — promotion to main; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 

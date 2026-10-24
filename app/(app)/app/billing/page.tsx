@@ -10,6 +10,7 @@ import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import type { CheckTrialSavedCardUseCase } from '@/src/application/ports/use-cases';
+import { formatRenewalNoticeCutoff } from '@/src/application/shared/renewal-notice-email-format';
 import type { Subscription } from '@/src/domain/entities';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
@@ -18,17 +19,6 @@ export const maxDuration = 30;
 export const metadata: Metadata = {
   title: 'Billing - Addiction Boards',
 };
-
-const billingDateFormatter = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-  timeZone: 'UTC',
-});
-
-function formatBillingDate(date: Date): string {
-  return billingDateFormatter.format(date);
-}
 
 // BUG-308: learner-facing names for the domain's subscription statuses.
 const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
@@ -151,7 +141,7 @@ export function BillingContent(props: BillingContentProps) {
           <div className="mt-1">
             Your subscription will cancel on{' '}
             <span className="font-medium">
-              {formatBillingDate(subscription.currentPeriodEnd)}
+              {formatRenewalNoticeCutoff(subscription.currentPeriodEnd)}
             </span>
             . You&apos;ll keep access until then.
           </div>
