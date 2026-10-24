@@ -1,6 +1,6 @@
-# DEBT-534: Production's Database Runs on Neon's Free Plan, Which Suspends It When the Month's Compute Runs Out
+# DEBT-534: Neon's Free Plan Can Suspend Production's Database Until the Month Ends
 
-**Status:** Open — the owner moves the database to Neon's Launch plan before the first live sale, with Vercel Pro (DEBT-512)
+**Status:** Open — the owner moves it to Neon Launch before the first live sale
 **Priority:** P2
 **Date:** 2026-10-21
 

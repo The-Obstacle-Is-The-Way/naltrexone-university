@@ -33,6 +33,16 @@ Redacted Vercel metadata checked on 2026-06-16 confirms a `DATABASE_URL` entry e
 
 Do not hard-code branch hostnames, account ids, passwords, or connection strings in the repo. Verify those values through the Vercel Storage dashboard, Vercel environment variables, or a local redacted host check before running migrations.
 
+### Per-Preview Database Branches
+
+These are not on (DEBT-445): every Preview shares the `dev` branch and its migration ledger. Before relying on a Preview whose schema differs from `dev`'s, give each Preview its own branch:
+
+1. Move the project off Neon's Free plan first (DEBT-534). Free stops creating branches at 10 per project, and 49 PR branches deployed Previews in one October week, so Previews would start failing within a day.
+2. In the Neon Console, make `dev` the project's default branch. Vercel's integration creates each Preview's branch, `preview/<git-branch>`, from the default branch, so this keeps production data out of Previews. Production keeps its own branch, `main`, whichever branch is the default.
+3. In Vercel Storage → `naltrexone-db`, in the project connection's settings, select Preview, not Production, under "Create database branch for deployment". Each Preview build then migrates its own branch.
+4. In the same change, add a workflow that runs Neon's `delete-branch-action` when a pull request closes, deleting `preview/<head-branch>`, with the Neon API key step-scoped as the CI Secret Standard below requires. Without it, a Preview branch is deleted only with its last deployment, 180 days by default, and each branch beyond the plan's 10 is billed.
+5. Verify: a pushed branch's Preview gets `preview/<branch>` in the Neon Console and migrates it in its build log, and closing the pull request deletes the branch.
+
 ### Production Release Gate
 
 Promotion-PR E2E precedes the merge to `main`. Vercel builds the main commit in parallel with main's GitHub Actions `test` job; the required production Deployment Check consumes that exact check before assigning production domains. The Vercel setting, not an echo-only CI `deploy` job, owns this hold. Build Ready alone is not proof of promotion. See [Deployment Procedure](../guides/release/promote-to-production.md#production-deployment-check) for required configuration and the separate CI/domain-assignment receipt.
