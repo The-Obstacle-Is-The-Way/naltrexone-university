@@ -10,6 +10,7 @@ import {
 import {
   CLERK_BACKEND_CALL_RATE_LIMIT,
   CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
+  CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
   CLERK_BACKEND_CALL_SITE_RATE_LIMIT,
   ONE_MINUTE_MS,
 } from '@/src/adapters/shared/rate-limits';
@@ -74,6 +75,30 @@ describe('requests that make Clerk call its Backend API', () => {
       limit: 1000,
       windowMs: ONE_MINUTE_MS,
     });
+  });
+
+  // DEBT-503 item 4: a refresh of a session Clerk signed has its own
+  // per-address bucket, wide enough for one hospital or venue network.
+  it('limits refreshes of genuine sessions per address in a wider bucket', () => {
+    expect(CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT).toEqual({
+      limit: 200,
+      windowMs: ONE_MINUTE_MS,
+    });
+  });
+
+  // Clerk treats a token as current until five seconds past its expiry.
+  it("ignores a session within Clerk's five seconds of clock skew", () => {
+    const refreshing = (exp: number) =>
+      request('https://example.com/pricing', {
+        cookie: `__session=${sessionToken(exp)}; __refresh_abc=x`,
+      });
+
+    expect(
+      triggersClerkBackendCall(refreshing(NOW_SECONDS - 4), NOW_SECONDS),
+    ).toBe(false);
+    expect(
+      triggersClerkBackendCall(refreshing(NOW_SECONDS - 5), NOW_SECONDS),
+    ).toBe(true);
   });
 
   const expired = sessionToken(NOW_SECONDS - 60);

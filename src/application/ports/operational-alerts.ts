@@ -15,6 +15,10 @@ export const OPERATIONAL_ALERT_KINDS = [
   // cooldown of a worse one. Our site-wide sign-in limit refused requests:
   // returning visitors everywhere wait.
   'clerk_site_limit_reached',
+  // DEBT-503 item 4: a limit only real accounts can fill refused a refresh of
+  // a session Clerk signed, so real people waited; the response is raising
+  // that limit.
+  'clerk_signed_in_limit_reached',
   // Clerk refused or failed our calls: a user lookup's 429, or session
   // refreshes and handshake nonce lookups failing past a threshold.
   'clerk_backend_calls_refused',
