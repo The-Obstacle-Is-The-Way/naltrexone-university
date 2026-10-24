@@ -65,3 +65,4 @@ export {
   MS_PER_SECOND,
   SECONDS_PER_DAY,
 } from './time-constants';
+export { classifyTrialEnding, type TrialEnding } from './trial-ending';

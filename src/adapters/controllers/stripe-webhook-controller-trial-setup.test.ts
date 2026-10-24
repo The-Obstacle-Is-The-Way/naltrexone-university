@@ -33,8 +33,9 @@ async function seedTrialOwnership(
   harness: StripeWebhookTestHarness,
   completion: TrialSetupCompletion,
   input: {
-    status?: 'inTrial' | 'active';
+    status?: 'inTrial' | 'active' | 'canceled';
     currentPeriodEnd?: Date;
+    cancelAtPeriodEnd?: boolean;
     stripeCustomerId?: string;
   } = {},
 ) {
@@ -44,7 +45,7 @@ async function seedTrialOwnership(
     plan: completion.plan,
     status: input.status ?? 'inTrial',
     currentPeriodEnd: input.currentPeriodEnd ?? completion.trialEndsAt,
-    cancelAtPeriodEnd: false,
+    cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
     startedAt: new Date('2026-01-22T00:00:00.000Z'),
     billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     expectedVersion: null,
@@ -278,6 +279,7 @@ describe('processStripeWebhook trial payment-method setup', () => {
         sessionId: 'cs_setup_wrong_owner',
         externalPaymentMethodId: 'pm_123',
         externalCustomerId: 'cus_signed',
+        externalSubscriptionId: completion.externalSubscriptionId,
       },
     ]);
     await expect(
@@ -286,6 +288,295 @@ describe('processStripeWebhook trial payment-method setup', () => {
       status: 'terminal',
       terminalReason: 'billing_ownership_mismatch',
       terminalAt: expect.any(Date),
+    });
+  });
+
+  // BUG-364 (DEBT-414 F22): a setup Session opened before a portal
+  // cancellation can complete after it. The renewal it consented to will not
+  // happen, so no card stays on the trial and no consent or acknowledgment is
+  // recorded; undoing the cancellation brings back the add-card offer.
+  it('detaches the card and records no renewal consent once the trial has a scheduled cancellation', async () => {
+    const completion = createTestWebhookTrialSetupCompletion({
+      sessionId: 'cs_setup_after_cancellation',
+      userId: crypto.randomUUID(),
+    });
+    const paymentGateway = createWebhookPaymentGateway({
+      eventId: 'evt_setup_after_cancellation',
+      type: 'checkout.session.completed',
+      trialPaymentMethodSetupCompletion: completion,
+    });
+    const harness = createStripeWebhookTestHarness({ paymentGateway });
+    await seedTrialOwnership(harness, completion, { cancelAtPeriodEnd: true });
+    await seedPendingTrialSetupOperation(harness.setupOperations, completion);
+
+    await expect(
+      processStripeWebhook(harness.deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      }),
+    ).resolves.toBeUndefined();
+    expect(paymentGateway.trialPaymentMethodAttachInputs).toEqual([]);
+    expect(paymentGateway.trialSubscriptionDefaultInputs).toEqual([]);
+    expect(paymentGateway.trialPaymentMethodDetachInputs).toEqual([
+      {
+        sessionId: 'cs_setup_after_cancellation',
+        externalPaymentMethodId: completion.stripePaymentMethodId,
+        externalCustomerId: completion.externalCustomerId,
+        externalSubscriptionId: completion.externalSubscriptionId,
+      },
+    ]);
+    await expect(
+      harness.setupOperations.findBySessionId('cs_setup_after_cancellation'),
+    ).resolves.toMatchObject({
+      status: 'terminal',
+      terminalReason: 'trial_cancellation_scheduled',
+      terminalAt: expect.any(Date),
+      subscriptionDefaultSetAt: null,
+    });
+    expect(harness.renewalConsents.snapshot()).toEqual([]);
+    expect(harness.renewalNoticeDeliveries.snapshot()).toEqual([]);
+  });
+
+  // BUG-364: the cancellation can also be recorded while completion is
+  // calling Stripe, after its first check. The consent transaction rechecks,
+  // so the card it already set as the default is detached instead.
+  it('rechecks the cancellation before recording consent, and detaches a card it already set as the default', async () => {
+    const completion = createTestWebhookTrialSetupCompletion({
+      sessionId: 'cs_setup_cancelled_midway',
+      userId: crypto.randomUUID(),
+    });
+    let cancelInPortal = async () => undefined;
+    class CancellingDuringDefaultGateway extends FakePaymentGateway {
+      override async setTrialSubscriptionDefaultPaymentMethod(
+        input: Parameters<
+          FakePaymentGateway['setTrialSubscriptionDefaultPaymentMethod']
+        >[0],
+      ): Promise<void> {
+        await super.setTrialSubscriptionDefaultPaymentMethod(input);
+        await cancelInPortal();
+      }
+    }
+    const paymentGateway = new CancellingDuringDefaultGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_setup_cancelled_midway',
+        type: 'checkout.session.completed',
+        trialPaymentMethodSetupCompletion: completion,
+      },
+    });
+    const harness = createStripeWebhookTestHarness({ paymentGateway });
+    await seedTrialOwnership(harness, completion);
+    await seedPendingTrialSetupOperation(harness.setupOperations, completion);
+    cancelInPortal = async () => {
+      await harness.subscriptions.upsert({
+        userId: completion.userId,
+        externalSubscriptionId: completion.externalSubscriptionId,
+        plan: completion.plan,
+        status: 'inTrial',
+        currentPeriodEnd: completion.trialEndsAt,
+        cancelAtPeriodEnd: true,
+        startedAt: new Date('2026-01-22T00:00:00.000Z'),
+        billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
+        expectedVersion:
+          await harness.subscriptions.findObservationVersionByUserId(
+            completion.userId,
+          ),
+      });
+    };
+
+    await processStripeWebhook(harness.deps, {
+      rawBody: 'raw',
+      signature: 'sig',
+    });
+
+    expect(paymentGateway.trialSubscriptionDefaultInputs).toHaveLength(1);
+    expect(paymentGateway.trialPaymentMethodDetachInputs).toEqual([
+      {
+        sessionId: 'cs_setup_cancelled_midway',
+        externalPaymentMethodId: completion.stripePaymentMethodId,
+        externalCustomerId: completion.externalCustomerId,
+        externalSubscriptionId: completion.externalSubscriptionId,
+      },
+    ]);
+    await expect(
+      harness.setupOperations.findBySessionId('cs_setup_cancelled_midway'),
+    ).resolves.toMatchObject({
+      status: 'terminal',
+      terminalReason: 'trial_cancellation_scheduled',
+    });
+    await expect(
+      harness.setupOperations.hasSubscriptionDefaultSet({
+        userId: completion.userId,
+        stripeSubscriptionId: completion.externalSubscriptionId,
+      }),
+    ).resolves.toBe(false);
+    expect(harness.renewalConsents.snapshot()).toEqual([]);
+    expect(harness.renewalNoticeDeliveries.snapshot()).toEqual([]);
+  });
+
+  it('attaches no card and records no consent for a trial canceled outright', async () => {
+    const completion = createTestWebhookTrialSetupCompletion({
+      sessionId: 'cs_setup_trial_canceled',
+      userId: crypto.randomUUID(),
+    });
+    const paymentGateway = createWebhookPaymentGateway({
+      eventId: 'evt_setup_trial_canceled',
+      type: 'checkout.session.completed',
+      trialPaymentMethodSetupCompletion: completion,
+    });
+    const harness = createStripeWebhookTestHarness({ paymentGateway });
+    // An immediate cancellation leaves cancelAtPeriodEnd false.
+    await seedTrialOwnership(harness, completion, { status: 'canceled' });
+    await seedPendingTrialSetupOperation(harness.setupOperations, completion);
+
+    await processStripeWebhook(harness.deps, {
+      rawBody: 'raw',
+      signature: 'sig',
+    });
+
+    expect(paymentGateway.trialPaymentMethodAttachInputs).toEqual([]);
+    expect(paymentGateway.trialPaymentMethodDetachInputs).toHaveLength(1);
+    await expect(
+      harness.setupOperations.findBySessionId('cs_setup_trial_canceled'),
+    ).resolves.toMatchObject({
+      status: 'terminal',
+      terminalReason: 'subscription_inactive',
+    });
+    expect(harness.renewalConsents.snapshot()).toEqual([]);
+  });
+
+  describe('when the subscription changes while Stripe is called', () => {
+    async function completeWhileSubscriptionChanges(
+      sessionId: string,
+      change: (completion: TrialSetupCompletion) => {
+        externalSubscriptionId: string;
+        status: 'inTrial' | 'active' | 'canceled';
+        currentPeriodEnd: Date;
+      },
+    ) {
+      const completion = createTestWebhookTrialSetupCompletion({
+        sessionId,
+        userId: crypto.randomUUID(),
+      });
+      let changeSubscription = async () => undefined;
+      class ChangingDuringDefaultGateway extends FakePaymentGateway {
+        override async setTrialSubscriptionDefaultPaymentMethod(
+          input: Parameters<
+            FakePaymentGateway['setTrialSubscriptionDefaultPaymentMethod']
+          >[0],
+        ): Promise<void> {
+          await super.setTrialSubscriptionDefaultPaymentMethod(input);
+          await changeSubscription();
+        }
+      }
+      const paymentGateway = new ChangingDuringDefaultGateway({
+        externalCustomerId: 'cus_123',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: {
+          eventId: `evt_${sessionId}`,
+          type: 'checkout.session.completed',
+          trialPaymentMethodSetupCompletion: completion,
+        },
+      });
+      const harness = createStripeWebhookTestHarness({ paymentGateway });
+      await seedTrialOwnership(harness, completion);
+      await seedPendingTrialSetupOperation(harness.setupOperations, completion);
+      changeSubscription = async () => {
+        await harness.subscriptions.upsert({
+          userId: completion.userId,
+          plan: completion.plan,
+          cancelAtPeriodEnd: false,
+          startedAt: new Date('2026-01-22T00:00:00.000Z'),
+          billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
+          ...change(completion),
+          expectedVersion:
+            await harness.subscriptions.findObservationVersionByUserId(
+              completion.userId,
+            ),
+        });
+      };
+
+      await processStripeWebhook(harness.deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      });
+      return { completion, harness, paymentGateway };
+    }
+
+    it('records consent with the billing period read when consent is recorded', async () => {
+      const paidPeriodEnd = new Date('2026-03-01T00:00:00.000Z');
+      const { harness } = await completeWhileSubscriptionChanges(
+        'cs_setup_period_moved',
+        (completion) => ({
+          externalSubscriptionId: completion.externalSubscriptionId,
+          status: 'active',
+          currentPeriodEnd: paidPeriodEnd,
+        }),
+      );
+
+      expect(harness.renewalConsents.snapshot()).toEqual([
+        expect.objectContaining({
+          setupSessionId: 'cs_setup_period_moved',
+          trialEndsAt: null,
+          cancellationDeadline: paidPeriodEnd,
+        }),
+      ]);
+    });
+
+    it('records no consent and detaches the card when the subscription is no longer the one the Session added it to', async () => {
+      const { completion, harness, paymentGateway } =
+        await completeWhileSubscriptionChanges(
+          'cs_setup_subscription_replaced',
+          (current) => ({
+            externalSubscriptionId: 'sub_replacement',
+            status: 'inTrial',
+            currentPeriodEnd: current.trialEndsAt,
+          }),
+        );
+
+      expect(paymentGateway.trialPaymentMethodDetachInputs).toEqual([
+        {
+          sessionId: 'cs_setup_subscription_replaced',
+          externalPaymentMethodId: completion.stripePaymentMethodId,
+          externalCustomerId: completion.externalCustomerId,
+          externalSubscriptionId: completion.externalSubscriptionId,
+        },
+      ]);
+      await expect(
+        harness.setupOperations.findBySessionId(
+          'cs_setup_subscription_replaced',
+        ),
+      ).resolves.toMatchObject({
+        status: 'terminal',
+        terminalReason: 'billing_ownership_mismatch',
+      });
+      expect(harness.renewalConsents.snapshot()).toEqual([]);
+      expect(harness.renewalNoticeDeliveries.snapshot()).toEqual([]);
+    });
+
+    it('records no consent and detaches the card when the trial is canceled outright', async () => {
+      const { harness, paymentGateway } =
+        await completeWhileSubscriptionChanges(
+          'cs_setup_canceled_midway',
+          (current) => ({
+            externalSubscriptionId: current.externalSubscriptionId,
+            status: 'canceled',
+            currentPeriodEnd: current.trialEndsAt,
+          }),
+        );
+
+      expect(paymentGateway.trialPaymentMethodDetachInputs).toHaveLength(1);
+      await expect(
+        harness.setupOperations.findBySessionId('cs_setup_canceled_midway'),
+      ).resolves.toMatchObject({
+        status: 'terminal',
+        terminalReason: 'subscription_inactive',
+      });
+      expect(harness.renewalConsents.snapshot()).toEqual([]);
+      expect(harness.renewalNoticeDeliveries.snapshot()).toEqual([]);
     });
   });
 

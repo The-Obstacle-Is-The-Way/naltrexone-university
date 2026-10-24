@@ -8,8 +8,9 @@ export type CheckTrialSavedCardOutput = { cardSaved: boolean };
 
 // BUG-308: a trial gains a card only through the add-card flow, because the
 // trial's billing portal offers no payment-method update (DEBT-414 F05). So
-// it renews on a saved card exactly when that flow set one as the current
-// Stripe subscription's default.
+// it has a saved card exactly when that flow set one as the current Stripe
+// subscription's default. A saved card alone does not mean the trial renews:
+// a scheduled cancellation still ends it (BUG-364, classifyTrialEnding).
 export class CheckTrialSavedCardUseCase {
   constructor(
     private readonly subscriptions: SubscriptionRepository,

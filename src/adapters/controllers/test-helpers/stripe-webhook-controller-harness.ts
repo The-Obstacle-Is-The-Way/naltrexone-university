@@ -1,5 +1,8 @@
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
-import type { TrialPaymentMethodSetupOperationInput } from '@/src/application/ports/trial-payment-method-setup-operation-repository';
+import type {
+  TrialPaymentMethodSetupOperationInput,
+  TrialPaymentMethodSetupOperationRepository,
+} from '@/src/application/ports/trial-payment-method-setup-operation-repository';
 import {
   FakeLogger,
   FakePaymentGateway,
@@ -175,7 +178,7 @@ export function createWebhookPaymentGateway(
 // same terms the event's accepted snapshot carries. Returns the seeded input
 // so assertions can name the values the operation contributes.
 export async function seedPendingTrialSetupOperation(
-  setupOperations: FakeTrialPaymentMethodSetupOperationRepository,
+  setupOperations: TrialPaymentMethodSetupOperationRepository,
   accepted: Pick<
     TrialPaymentMethodSetupOperationInput,
     | 'sessionId'
