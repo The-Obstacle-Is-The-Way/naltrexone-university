@@ -132,7 +132,7 @@ describe('app/(app)/app/layout (shell)', () => {
       subscriptionStatus: 'active' as const,
       plan: 'monthly' as const,
       trialEndsAt: null,
-      trialCardSaved: false,
+      trialEnding: null,
     }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
@@ -158,7 +158,7 @@ describe('app/(app)/app/layout (shell)', () => {
       subscriptionStatus: 'active';
       plan: 'monthly';
       trialEndsAt: null;
-      trialCardSaved: false;
+      trialEnding: null;
     };
     let resolveEntitledAppUser:
       | ((value: EntitledActiveUser) => void)
@@ -185,7 +185,7 @@ describe('app/(app)/app/layout (shell)', () => {
       subscriptionStatus: 'active',
       plan: 'monthly',
       trialEndsAt: null,
-      trialCardSaved: false,
+      trialEnding: null,
     });
 
     const element = await renderPromise;
@@ -200,7 +200,7 @@ describe('app/(app)/app/layout (shell)', () => {
       subscriptionStatus: 'pastDue' as const,
       plan: 'monthly' as const,
       trialEndsAt: null,
-      trialCardSaved: false,
+      trialEnding: null,
     }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
 
@@ -232,7 +232,7 @@ describe('app/(app)/app/layout (shell)', () => {
       subscriptionStatus: 'inTrial' as const,
       plan: 'annual' as const,
       trialEndsAt: new Date('2026-02-08T00:00:00Z'),
-      trialCardSaved: false,
+      trialEnding: 'needsCard' as const,
     }));
     const createTrialPaymentMethodActionFn = vi.fn(async () => undefined);
 
@@ -290,7 +290,7 @@ describe('app/(app)/app/layout (shell)', () => {
         subscriptionStatus: 'inTrial' as const,
         plan: 'annual' as const,
         trialEndsAt: new Date('2026-02-08T00:00:00Z'),
-        trialCardSaved: true,
+        trialEnding: 'renewsOnSavedCard' as const,
       })),
       authNavFn: vi.fn(async () => <div>AuthNav</div>),
       mobileNav: <div>MobileNav</div>,
@@ -322,6 +322,47 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(banner?.textContent).not.toContain('Add a card');
   });
 
+  // BUG-364 (DEBT-414 F22): a scheduled cancellation ends the trial without a
+  // charge, so the banner states when access ends, not a renewal or a card.
+  it('states when access ends instead of a renewal or a card once cancellation is scheduled', async () => {
+    const element = await renderAppLayout({
+      children: <div>Child content</div>,
+      enforceEntitledAppUserFn: vi.fn(async () => ({
+        subscriptionStatus: 'inTrial' as const,
+        plan: 'annual' as const,
+        trialEndsAt: new Date('2026-02-08T00:00:00Z'),
+        trialEnding: 'cancellationScheduled' as const,
+      })),
+      authNavFn: vi.fn(async () => <div>AuthNav</div>),
+      mobileNav: <div>MobileNav</div>,
+      createTrialPaymentMethodActionFn: vi.fn(async () => undefined),
+      nowFn: () => new Date('2026-02-04T12:00:00Z'),
+    });
+
+    const doc = parseHtml(renderToStaticMarkup(element));
+    const banner = doc.body.firstElementChild?.children[0];
+    const accessEnd = banner
+      ? findElementByText(
+          banner,
+          'span',
+          'Cancellation scheduled. Your access ends February 8, 2026 at 12:00 AM UTC (February 7 at 7:00 PM EST, February 7 at 4:00 PM PST).',
+        )
+      : null;
+
+    expect(
+      banner ? findElementByText(banner, 'span', '4 days left in trial') : null,
+    ).not.toBeNull();
+    expect(accessEnd).not.toBeNull();
+    expect(
+      banner ? findAnchorByHref(banner, ROUTES.APP_BILLING)?.textContent : null,
+    ).toBe('Manage billing');
+    expect(
+      banner ? findButtonByText(banner, 'Add a card to keep access') : null,
+    ).toBeNull();
+    expect(banner?.textContent).not.toContain('renews');
+    expect(banner?.textContent).not.toContain('Add a card');
+  });
+
   it('renders singular trial countdown copy within the final day', async () => {
     const element = await renderAppLayout({
       children: <div>Child content</div>,
@@ -329,7 +370,7 @@ describe('app/(app)/app/layout (shell)', () => {
         subscriptionStatus: 'inTrial' as const,
         plan: 'monthly' as const,
         trialEndsAt: new Date('2026-02-08T00:00:00Z'),
-        trialCardSaved: false,
+        trialEnding: 'needsCard' as const,
       })),
       authNavFn: vi.fn(async () => <div>AuthNav</div>),
       mobileNav: <div>MobileNav</div>,
@@ -350,7 +391,7 @@ describe('app/(app)/app/layout (shell)', () => {
         subscriptionStatus: 'active' as const,
         plan: 'monthly' as const,
         trialEndsAt: null,
-        trialCardSaved: false,
+        trialEnding: null,
       })),
       authNavFn: vi.fn(async () => <div>AuthNav</div>),
       mobileNav: <div>MobileNav</div>,
@@ -372,7 +413,7 @@ describe('app/(app)/app/layout (shell)', () => {
         subscriptionStatus: 'inTrial' as const,
         plan: 'monthly' as const,
         trialEndsAt: null,
-        trialCardSaved: false,
+        trialEnding: 'needsCard' as const,
       })),
       authNavFn: vi.fn(async () => <div>AuthNav</div>),
       mobileNav: <div>MobileNav</div>,

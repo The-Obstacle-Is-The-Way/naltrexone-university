@@ -86,7 +86,7 @@ Measured 2026-10-11 on `dev` after #1464.
    - A fix that is already proven and lands in one pull request uses that PR's description as its record. The description has the same sections as a record: evidence, options, decision and verification.
    - If a check outlives that pull request, such as its promotion, it needs a record, so the weekly due check sees it.
 2. **Write first, and challenge on the branch.**
-   - Take the next ID with `pnpm record:next`; the guard fails a duplicate that two branches took at once.
+   - Take the next ID with `pnpm record:next bug` (or `debt`); the guard fails a duplicate that two branches took at once.
    - Commit the record first on the work branch, and push the branch without opening a PR.
    - A second agent challenges it there, and corrects it in place with a `Corrected YYYY-MM-DD` note.
    - No CodeRabbit review is spent until there is code.
