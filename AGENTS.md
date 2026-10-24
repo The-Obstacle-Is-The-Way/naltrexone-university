@@ -25,7 +25,7 @@ Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle 
    - Use `git --no-pager`, and `git commit -m "…"`.
    - Never `pnpm -s <cmd>`: it runs `<cmd>` as a script or binary, which can open Vim and hang.
 5. **Never touch a remote database by accident.**
-   - Database commands need an explicit `DATABASE_URL`; remote targets also need `DB_TARGET_ACK`.
+   - Commands that connect to a database need an explicit `DATABASE_URL`; remote targets also need `DB_TARGET_ACK`.
    - Never `drizzle-kit push`.
    - Local tests resolve a per-clone target: `pnpm local:test:target env`. Never hardcode its port, and never blanket-kill `:3000`; another clone may own it.
 6. **Never bypass review or protection.** No `--admin`, ruleset bypass, Force Promote, or direct push to `dev` or `main`.
@@ -121,7 +121,8 @@ pnpm lint            # Biome, plus the test-double ratchet (pnpm lint:doubles)
 pnpm typecheck
 pnpm test --run      # unit; pnpm test:browser; pnpm test:integration
 pnpm test:e2e        # required E2E; pnpm test:e2e:stripe-hosted is observational
-pnpm db:generate | db:migrate | db:seed | db:studio   # explicit DATABASE_URL
+pnpm db:generate                                     # offline, no credentials
+pnpm db:migrate | db:seed | db:studio                  # explicit DATABASE_URL
 pnpm db:test:up | db:test:down                         # local test database
 pnpm local:test:target                                 # this clone's local target
 pnpm quality:crap | test:mutation                      # observational quality reports
@@ -134,5 +135,6 @@ pnpm quality:crap | test:mutation                      # observational quality r
 - [`docs/product/specification.md`](docs/product/specification.md): the product specification. Where it disagrees with the code on a schema or type, the code is right; correct the spec.
 - [`docs/design-system/`](docs/design-system/README.md): the design system. [`docs/guides/`](docs/guides/README.md): how to test, release, review and merge, and run UI QA. [`docs/architecture/`](docs/architecture/README.md): how the system is built. The map: [`docs/README.md`](docs/README.md).
 - [`docs/guides/testing/browser-automation.md`](./docs/guides/testing/browser-automation.md): browser checks behind Clerk sign-in. Never skip a visual check because a page redirects to sign-in: sign in first. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
+- [`scripts/README.md`](scripts/README.md): the script directory and entry-point conventions. Use the package command for operator tasks; guarded entry points share `scripts/lib/entry-point.mts`, enforced by `tests/script-entry-points.test.ts`.
 - [`.agents/skills/`](.agents/skills/README.md): vendored agent skills and their refresh procedure.
 - CI secrets: step-scoped credentials, SHA-pinned actions, and no credentials for Dependabot ([the CI Secret Standard](./docs/architecture/environments.md#ci-secret-standard)).

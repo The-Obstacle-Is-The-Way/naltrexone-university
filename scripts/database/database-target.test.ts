@@ -5,9 +5,39 @@ import {
   requireExplicitDatabaseUrl,
   serializeRemoteDatabaseTargets,
 } from './database-target';
-import { authorizeManagedDatabaseTargets } from './internal/database-target-managed';
+import { authorizeManagedDatabaseTargets } from './managed/database-target-managed';
 
 describe('database target authorization', () => {
+  it.each([
+    () => requireExplicitDatabaseUrl({}),
+    () => classifyDatabaseTarget('not-a-database-url'),
+    () => classifyDatabaseTarget('postgres://user:password@localhost/'),
+    () => classifyDatabaseTarget('mysql://user:password@localhost/app'),
+    () => authorizeManagedDatabaseTargets([]),
+  ])(
+    'identifies an input failure separately from an infrastructure error',
+    (operation) => {
+      try {
+        operation();
+        throw new Error('Expected the invalid input to fail');
+      } catch (error) {
+        expect(error).toMatchObject({ name: 'DatabaseTargetInputError' });
+      }
+    },
+  );
+
+  it('refuses a non-Postgres protocol with the stable invalid-URL message', () => {
+    expect(() =>
+      classifyDatabaseTarget('mysql://user:password@localhost/app'),
+    ).toThrow('The explicitly supplied DATABASE_URL is invalid.');
+  });
+
+  it('requires at least one target', () => {
+    expect(() => authorizeManagedDatabaseTargets([])).toThrow(
+      'At least one explicit DATABASE_URL is required.',
+    );
+  });
+
   it('refuses implicit dotenv fallback when DATABASE_URL is not supplied', () => {
     expect(() => requireExplicitDatabaseUrl({})).toThrow(
       /explicit DATABASE_URL.*implicit.*fallback/i,
