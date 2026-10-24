@@ -54,7 +54,7 @@ describe('local E2E interruption', () => {
         signals.emit(signal);
         expect(await result).toEqual(
           expect.objectContaining({
-            message: `Local E2E interrupted by ${signal}.`,
+            message: `Test lane interrupted by ${signal}.`,
           }),
         );
         await vi.waitFor(() => {
@@ -105,7 +105,7 @@ describe('local E2E interruption', () => {
       signals.emit('SIGTERM');
       expect(await result).toEqual(
         expect.objectContaining({
-          message: 'Local E2E interrupted by SIGTERM.',
+          message: 'Test lane interrupted by SIGTERM.',
         }),
       );
       await vi.waitFor(() => {

@@ -1,3 +1,4 @@
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { Logger, LoggerContext } from '@/src/application/ports/logger';
 import {
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_LIMIT,
@@ -158,7 +159,7 @@ export async function reconcileAllStripeSubscriptionPages(
       const message = toErrorMessage(error);
       warnStoppedEarly(deps.logger, 'page_rejected', offset, {
         pagesScanned: aggregate.pagesScanned,
-        error: message,
+        error: projectSafeErrorDiagnostics(error),
       });
       return stoppedEarlyResult(
         {

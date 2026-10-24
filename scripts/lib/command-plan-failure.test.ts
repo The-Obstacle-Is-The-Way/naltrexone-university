@@ -129,7 +129,7 @@ describe('local E2E command failures', () => {
           vi.stubEnv('PATH', `${slow}${path.delimiter}${process.env.PATH}`);
           signals.emit('SIGTERM');
           expect(await result).toMatchObject({
-            message: 'Local E2E interrupted by SIGTERM.',
+            message: 'Test lane interrupted by SIGTERM.',
           });
           await vi.waitFor(() => {
             expect(() => process.kill(detachedPid, 0)).toThrow();

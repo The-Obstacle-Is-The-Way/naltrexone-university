@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { reportClientError } from '@/lib/report-client-error';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 
 /**
  * Logs an error an error page caught and reports it to Sentry, which does not
@@ -12,7 +13,7 @@ export function useReportCaughtError(
   reportError: typeof reportClientError = reportClientError,
 ): void {
   useEffect(() => {
-    console.error(component, error);
+    console.error(component, projectSafeErrorDiagnostics(error));
     if (!error.digest) reportError(error, { component });
   }, [error, component, reportError]);
 }

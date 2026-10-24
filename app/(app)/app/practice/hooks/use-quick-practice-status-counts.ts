@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { countAvailableQuestions } from '@/app/(app)/app/shared/client-actions';
 import {
   reportClientError,
   shouldReportClientError,
 } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import { countAvailableQuestions } from '@/src/adapters/controllers/practice-actions';
 import {
   AllQuestionProgressStatuses,
   type QuestionDifficulty,

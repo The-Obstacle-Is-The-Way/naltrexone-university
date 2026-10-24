@@ -281,16 +281,8 @@ describe('app/pricing/subscribe-actions', () => {
       expect(url.searchParams.get('error_code')).toBeNull();
       expect(url.searchParams.get('error_message')).toBeNull();
 
-      // BUG-325: the key is the caller's text, so only its length is logged.
-      expect(logError).toHaveBeenCalledWith(
-        {
-          plan: 'monthly',
-          idempotencyKeyLength: 6,
-          errorCode: 'INTERNAL_ERROR',
-          errorMessage: longMessage,
-        },
-        'Stripe checkout failed',
-      );
+      // The controller owns the operational diagnostic before this result.
+      expect(logError).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllEnvs();
     }
@@ -332,7 +324,6 @@ describe('app/pricing/subscribe-actions', () => {
         plan: 'annual',
         idempotencyKeyLength: 5000,
         errorCode: 'VALIDATION_ERROR',
-        errorMessage: 'Invalid input',
       },
       'Stripe checkout refused its input',
     );

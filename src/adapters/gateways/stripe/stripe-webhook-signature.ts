@@ -37,3 +37,40 @@ export function constructStripeWebhookEvent({
     }
   }
 }
+
+export type WebhookSignatureFailureReason =
+  | 'missing_secret'
+  | 'unparseable_header'
+  | 'timestamp_outside_tolerance'
+  | 'no_matching_signature'
+  | 'other';
+
+// The SDK's fixed messages, matched by prefix; its free text never reaches
+// the log, only the reason (BUG-325).
+const SIGNATURE_FAILURE_PREFIXES: ReadonlyArray<
+  readonly [string, WebhookSignatureFailureReason]
+> = [
+  ['No webhook secret value was provided', 'missing_secret'],
+  ['Unable to extract timestamp and signatures', 'unparseable_header'],
+  ['No signatures found with expected scheme', 'unparseable_header'],
+  ['Timestamp outside the tolerance zone', 'timestamp_outside_tolerance'],
+  [
+    'No signatures found matching the expected signature',
+    'no_matching_signature',
+  ],
+];
+
+/**
+ * A fixed reason for a failed verification, which tells a misconfigured
+ * secret or a stale delivery from a forgery without logging the caller's
+ * header or the SDK's text.
+ */
+export function webhookSignatureFailureReason(
+  error: unknown,
+): WebhookSignatureFailureReason {
+  if (!(error instanceof Error)) return 'other';
+  const match = SIGNATURE_FAILURE_PREFIXES.find(([prefix]) =>
+    error.message.startsWith(prefix),
+  );
+  return match?.[1] ?? 'other';
+}

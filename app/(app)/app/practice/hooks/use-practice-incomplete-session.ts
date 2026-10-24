@@ -3,7 +3,7 @@ import {
   discardPracticeSession,
   endPracticeSession,
   getIncompletePracticeSession,
-} from '@/src/adapters/controllers/practice-actions';
+} from '@/app/(app)/app/shared/client-actions';
 import type { GetIncompletePracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   type AbandonRequestToken,
