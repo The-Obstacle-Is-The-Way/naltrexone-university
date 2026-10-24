@@ -1,4 +1,5 @@
 import { isMain } from '../lib/entry-point.mts';
+import { withGhFailureReason } from '../lib/github-cli.mts';
 import {
   type AlertIssueSync,
   type AlertIssues,
@@ -392,9 +393,12 @@ export async function runOperationalAlertWatcher(
   try {
     output.log(`Operational alert watcher: ${await watch()}`);
     return 0;
-  } catch {
+  } catch (error) {
     output.error(
-      'Operational alert watcher failed; inspect GitHub issue access.',
+      withGhFailureReason(
+        'Operational alert watcher failed; inspect GitHub issue access.',
+        error,
+      ),
     );
     return 1;
   }

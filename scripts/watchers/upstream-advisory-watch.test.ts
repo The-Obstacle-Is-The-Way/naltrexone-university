@@ -423,7 +423,7 @@ describe('watching several repositories', () => {
       closed: [],
       unreviewed: [],
       read: 0,
-      unreadable: ['gone/direct', 'nodejs/undici'],
+      unreadable: ['gone/direct (not found)', 'nodejs/undici'],
       unwatched: ['substack/node-commondir'],
     });
   });

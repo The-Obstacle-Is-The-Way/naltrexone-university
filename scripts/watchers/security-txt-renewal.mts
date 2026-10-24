@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { isMain } from '../lib/entry-point.mts';
-import { createGhRunner } from '../lib/github-cli.mts';
+import { createGhRunner, withGhFailureReason } from '../lib/github-cli.mts';
 import { listRepositoryIssueEntries } from '../lib/github-issues.mts';
 
 const ISSUE_TITLE = 'Renew security.txt contact metadata';
@@ -161,9 +161,12 @@ export async function runSecurityTxtRenewal(
   try {
     output.log(`security.txt renewal: ${await check()}`);
     return 0;
-  } catch {
+  } catch (error) {
     output.error(
-      'security.txt renewal check failed; inspect the file and GitHub issue access.',
+      withGhFailureReason(
+        'security.txt renewal check failed; inspect the file and GitHub issue access.',
+        error,
+      ),
     );
     return 1;
   }

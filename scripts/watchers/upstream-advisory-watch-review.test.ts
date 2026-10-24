@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
 import {
   type AdvisoryDatabase,
   closeReviewedIssues,
@@ -219,6 +220,38 @@ describe('closing issues GitHub’s review rules out', () => {
         find: async () => reviewed(['brace-expansion', '>= 4.0.0, < 5.0.5']),
       }),
     ).toEqual({ closed: [], failed: ['GHSA-aaaa-bbbb-cccc'], unreviewed: [] });
+  });
+
+  it('names gh’s reason beside a review it could not read and an issue it could not close', async () => {
+    const refused = await ghRunnerFailure(
+      'gh: Resource not accessible by integration (HTTP 403)\n',
+    );
+    const closeRefused = await ghRunnerFailure(
+      'GraphQL: Resource not accessible by integration (closeIssue)\n',
+    );
+    const issues = new MemoryIssues();
+    issues.issues.push(
+      watcherIssue(5, 'GHSA-aaaa-bbbb-cccc'),
+      watcherIssue(6, 'GHSA-dddd-eeee-ffff'),
+    );
+    issues.close = async () => {
+      throw closeRefused;
+    };
+    const database: AdvisoryDatabase = {
+      find: async (ghsaId) => {
+        if (ghsaId === 'GHSA-aaaa-bbbb-cccc') throw refused;
+        return reviewed(['brace-expansion', '>= 4.0.0, < 5.0.5']);
+      },
+    };
+    expect(await closeReviewedIssues(issues, locked, database)).toEqual({
+      closed: [],
+      failed: [
+        'GHSA-dddd-eeee-ffff (GraphQL: Resource not accessible by integration (closeIssue))',
+      ],
+      unreviewed: [
+        'GHSA-aaaa-bbbb-cccc (gh: Resource not accessible by integration (HTTP 403))',
+      ],
+    });
   });
 });
 
