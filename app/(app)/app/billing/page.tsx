@@ -12,6 +12,7 @@ import type { SubscriptionRepository } from '@/src/application/ports/repositorie
 import type { CheckTrialSavedCardUseCase } from '@/src/application/ports/use-cases';
 import { formatRenewalNoticeCutoff } from '@/src/application/shared/renewal-notice-email-format';
 import type { Subscription } from '@/src/domain/entities';
+import { classifyTrialEnding, type TrialEnding } from '@/src/domain/services';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 export const maxDuration = 30;
@@ -80,6 +81,27 @@ export type BillingContentProps =
       trialCardSaved?: never;
     };
 
+function trialRenewalCopy(
+  subscription: Subscription,
+  ending: TrialEnding,
+  cardSaved: boolean,
+): string {
+  const pricing = PRICING_DATA[subscription.plan];
+  switch (ending) {
+    // BUG-364: the trial ends as scheduled; while it lasts it still blocks
+    // Checkout, so the way back is undoing the cancellation or support.
+    // Without a card, undoing it alone still ends the trial.
+    case 'cancellationScheduled':
+      return cardSaved
+        ? 'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe, or email support@addictionboards.com.'
+        : 'Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe and then add a card, or email support@addictionboards.com.';
+    case 'renewsOnSavedCard':
+      return `Renews at ${pricing.price} per ${pricing.frequency} on your saved card when your trial ends, until you cancel.`;
+    case 'needsCard':
+      return 'No card on file. Your trial ends without a charge unless you add a card from the trial banner.';
+  }
+}
+
 function TrialRenewalLine({
   subscription,
   cardSaved,
@@ -87,12 +109,13 @@ function TrialRenewalLine({
   subscription: Subscription;
   cardSaved: boolean;
 }) {
-  const pricing = PRICING_DATA[subscription.plan];
+  const ending = classifyTrialEnding({
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    cardSaved,
+  });
   return (
     <div className="text-sm text-muted-foreground">
-      {cardSaved
-        ? `Renews at ${pricing.price} per ${pricing.frequency} on your saved card when your trial ends, until you cancel.`
-        : 'No card on file. Your trial ends without a charge unless you add a card from the trial banner.'}
+      {trialRenewalCopy(subscription, ending, cardSaved)}
     </div>
   );
 }
@@ -159,11 +182,14 @@ type BillingBanner = { tone: 'error'; message: string };
 function getTrialPaymentMethodNotice(
   outcome: string | string[] | undefined,
   trialCardSaved: boolean,
+  trialCancellationScheduled: boolean,
 ): string | null {
   switch (normalizeSearchParam(outcome)) {
     case 'success':
-      return trialCardSaved
-        ? 'Your card is saved.'
+      if (trialCardSaved) return 'Your card is saved.';
+      // BUG-364: completion after the cancellation keeps no card.
+      return trialCancellationScheduled
+        ? "Your trial's cancellation is scheduled, so the card was not saved."
         : 'Stripe is confirming your card. Refresh this page in a moment.';
     case 'cancel':
       return 'No card was added. Your trial continues.';
@@ -184,6 +210,7 @@ function parseBillingErrorCode(
 
 function getBillingBanner(
   code: BillingPageErrorCode | undefined,
+  trialCancellationScheduled: boolean,
 ): BillingBanner | null {
   if (!code) return null;
   switch (code) {
@@ -196,10 +223,13 @@ function getBillingBanner(
     // including when the terms changed after they were displayed, which is
     // refused before Stripe is contacted, so the message names no cause.
     case 'trial_payment_method_failed':
+      // BUG-364: the add-card action refuses a trial whose cancellation is
+      // scheduled, and the trial banner then offers no terms to review.
       return {
         tone: 'error',
-        message:
-          "We couldn't start adding your card. Review the current terms from the trial banner and try again.",
+        message: trialCancellationScheduled
+          ? "We couldn't add your card because your trial's cancellation is scheduled."
+          : "We couldn't start adding your card. Review the current terms from the trial banner and try again.",
       };
   }
 
@@ -254,8 +284,11 @@ export default async function BillingPage(props?: BillingPageProps) {
 
   const [{ subscription, trialCardSaved }, resolvedSearchParams] =
     await Promise.all([billingDataPromise, searchParamsPromise]);
+  const trialCancellationScheduled =
+    subscription?.status === 'inTrial' && subscription.cancelAtPeriodEnd;
   const banner = getBillingBanner(
     parseBillingErrorCode(resolvedSearchParams?.error),
+    trialCancellationScheduled,
   );
 
   if (!subscription) {
@@ -271,6 +304,7 @@ export default async function BillingPage(props?: BillingPageProps) {
       notice={getTrialPaymentMethodNotice(
         resolvedSearchParams?.trial_payment_method,
         trialCardSaved,
+        trialCancellationScheduled,
       )}
     />
   );

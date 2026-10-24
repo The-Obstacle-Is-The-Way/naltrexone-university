@@ -366,7 +366,7 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
 
 **Before opening one, run the gated QA procedures it needs.** A promotion ships everything `dev` holds that `main` lacks, not only the PR that prompted it, so run `git fetch` and read `origin/main..origin/dev` against each procedure whose header says `Promotion gate: yes`. If the range changes that procedure's flows, it must pass against the dev preview first ([QA method](../qa/method.md#when-procedures-run), item 2). The promotion's description names each procedure and either links its run or says why its flows are unchanged. If `dev` gains a merge before the promotion merges, fetch and check the range again, run any procedure whose flows the new merge changes, and update the description.
 
-1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm exec tsx scripts/verify-promotion.ts <PR>`. It verifies:
+1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm pr:verify-promotion <PR>`. It verifies:
    - a same-repository `dev` → `main` PR, with up-to-date ancestry;
    - every first-parent merge's source PR, and the actual second-parent head;
    - each source's formal approval predating its merge: exact-head, or carried as the [merge guard](./review-and-merge.md#the-merge-guard) allows, with each source diff taken against the merge's first parent;
@@ -376,7 +376,7 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
    Direct commits, ambiguous PR associations, missing approvals and incomplete evidence fail closed.
 2. **Source-thread counts are current observations.** GitHub cannot reconstruct their historical count, so keep the source merge receipts; the thread-resolution ruleset covers the merge-time requirement.
 3. **Adjudicate any finding CodeRabbit posts on the promotion anyway.** Resolve threads with receipts. A stale requested-changes review on an older promotion head may be dismissed with a comment citing this procedure and the current source proof; never dismiss an unaddressed finding. Do not request a promotion review.
-4. **Merge with `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge`.** It:
+4. **Merge with `pnpm pr:verify-promotion <PR> --merge`.** It:
    - fetches `origin` and re-runs the proof;
    - writes the output into a marked section of the PR body, and confirms the body shows it;
    - re-reads the PR and refuses if its base or head moved;

@@ -63,6 +63,14 @@ export class CreateTrialPaymentMethodSetupSessionUseCase {
         'An unexpired trial is required to add a payment method',
       );
     }
+    // BUG-364 (DEBT-414 F22): the trial ends as scheduled, so a card added now
+    // would record consent to a renewal that will not happen.
+    if (subscription.cancelAtPeriodEnd) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'A trial with a scheduled cancellation cannot add a payment method',
+      );
+    }
 
     const [externalSubscriptionId, customer] = await Promise.all([
       this.subscriptions.findExternalSubscriptionIdByUserId(input.userId),

@@ -212,7 +212,7 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/application/use-cases/create-checkout-session.test.ts`: `does not pass a trial to the gateway for a user with an existing subscription row`
 - `src/application/use-cases/create-checkout-session.test.ts`: `returns ALREADY_SUBSCRIBED when a subscription is still current`
 
-### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices. Billing and email state the cutoff in UTC, Eastern and Pacific time, naming a different local date or year.
+### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices. In the app, a trial with a scheduled cancellation promises no renewal and offers no card, and a card added through a setup records no renewal consent if the app recorded the cancellation first, even when the setup began before it. Billing and email state the cutoff in UTC, Eastern and Pacific time, naming a different local date or year.
 
 - `src/domain/services/entitlement.test.ts`: `keeps access until the period ends when cancellation is scheduled`
 - `app/(app)/app/billing/page.test.tsx`: `states the $name cancellation cutoff with UTC, Eastern and Pacific times`
@@ -220,6 +220,13 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `selects only active, renewing annual subscriptions in the supplied window`
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `lists active, renewing monthly subscriptions in id order, after a cursor`
 - `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: `a paid subscriber cancels without obstruction; renewal stops and access continues to the period end`
+- `src/domain/services/trial-ending.test.ts`: `ends a trial whose cancellation is scheduled, whether or not a card is saved`
+- `app/(app)/app/layout-shell.test.tsx`: `states when access ends instead of a renewal or a card once cancellation is scheduled`
+- `app/(app)/app/billing/billing-trial-card.test.tsx`: `states that a trial with cancellation scheduled ends without a charge (saved card=%s)`
+- `src/application/use-cases/create-trial-payment-method-setup-session.test.ts`: `refuses before Stripe when the trial has a scheduled cancellation`
+- `src/adapters/controllers/stripe-webhook-controller-trial-setup.test.ts`: `detaches the card and records no renewal consent once the trial has a scheduled cancellation`
+- `tests/integration/trial-payment-method-setup-operations.integration.test.ts`: `persists the %s terminal reason and time for the holding claim`
+- `tests/integration/stripe-webhook-trial-setup-cancellation.integration.test.ts`: `records no consent and detaches the card when the cancellation lands while Stripe is called`
 
 ### R12. A repeated or out-of-order billing event never applies twice and never moves a subscription back to an older state.
 
