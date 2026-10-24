@@ -89,10 +89,11 @@ describe('withIdempotency practice-session conflict caching', () => {
         userId: appUserId,
         action: 'practice:setPracticeSessionQuestionMark',
         key,
-        abortError: 'plain abort failure',
-        originalError: 'plain execute failure',
       },
     });
+    // Exact: a thrown non-Error projects to nothing, never its text.
+    expect(logger.errorCalls[0]?.context?.abortError).toEqual({});
+    expect(logger.errorCalls[0]?.context?.originalError).toEqual({});
   });
 
   it('caches and rethrows the original execute error when the cache policy throws', async () => {

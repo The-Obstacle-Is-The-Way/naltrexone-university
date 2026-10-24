@@ -1,3 +1,5 @@
+import { canonicalizeMarkdown } from '../value-objects/markdown-normalization';
+
 /** A choice as the answer key reads it. */
 export type KeyChoice = {
   readonly label: string;
@@ -9,7 +11,7 @@ function keyOf(choices: readonly KeyChoice[]): string {
   return JSON.stringify(
     choices
       .filter((choice) => choice.isCorrect)
-      .map((choice) => [choice.label, choice.textMd])
+      .map((choice) => [choice.label, canonicalizeMarkdown(choice.textMd)])
       .sort(),
   );
 }
@@ -17,8 +19,8 @@ function keyOf(choices: readonly KeyChoice[]): string {
 /**
  * ADR-022 Decision 4: whether the answer key changed between the revision an
  * attempt was graded against and the current one. The key is each correct
- * choice's label and text. The comparison is conservative: moving or
- * rewording the correct option counts as a change.
+ * choice's exact label and normalized text. Moving or rewording the correct
+ * option counts as a change; the seed's whitespace normalization does not.
  */
 export function answerKeyChanged(
   graded: readonly KeyChoice[],

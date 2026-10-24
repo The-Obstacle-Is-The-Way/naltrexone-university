@@ -14,9 +14,9 @@ const HUMAN_SAME_REPO_PR_CONDITION =
   "github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository";
 const DEPENDABOT_ACTOR_GUARD = "github.actor != 'dependabot[bot]'";
 const PINNED_SETUP_NODE =
-  'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020';
+  'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1';
 const PINNED_UPLOAD_ARTIFACT =
-  'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
+  'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9';
 const PINNED_POSTGRES_16_DIGEST =
   'sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5';
 // Every workflow, so a new one cannot miss the action-pin check.
@@ -267,6 +267,23 @@ describe('CI workflow', () => {
     expect(hostedE2e.env).toMatchObject({
       E2E_USE_EXISTING_DATABASE: 'true',
     });
+  });
+
+  // BUG-353: the placeholder fixtures are a seed flag, and the seed refuses
+  // the SEED_INCLUDE_PLACEHOLDERS variable it once read.
+  it('seeds the placeholder fixtures by flag, and no workflow sets the retired variable', () => {
+    for (const filePath of [CI_WORKFLOW_PATH, STRIPE_HOSTED_WORKFLOW_PATH]) {
+      expect(
+        findParsedStep(filePath, 'Seed DB (placeholder content)').run,
+      ).toBe(
+        'pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders',
+      );
+    }
+    for (const filePath of WORKFLOW_PATHS) {
+      expect(readFileSync(filePath, 'utf8')).not.toContain(
+        'SEED_INCLUDE_PLACEHOLDERS',
+      );
+    }
   });
 
   it('delegates skip policy to the parser-backed unit-lane scan', () => {
@@ -693,7 +710,7 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     const workflow = readStripeHostedWorkflow();
 
     expect(
-      findParsedStep(STRIPE_HOSTED_WORKFLOW_PATH, 'Start Postgres').env
+      findParsedStep(STRIPE_HOSTED_WORKFLOW_PATH, 'Pull Postgres').env
         ?.POSTGRES_IMAGE_DIGEST,
     ).toBe(PINNED_POSTGRES_16_DIGEST);
     expect(workflow).toContain(`uses: ${PINNED_SETUP_NODE}`);

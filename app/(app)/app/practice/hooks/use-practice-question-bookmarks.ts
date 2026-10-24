@@ -8,11 +8,11 @@ import type {
   BookmarkableQuestion,
   BookmarkRequestToken,
 } from '@/app/(app)/app/shared/bookmark-toggle';
-import { reportClientError } from '@/lib/report-client-error';
 import {
   getBookmarkQuestionIds,
   setBookmark,
-} from '@/src/adapters/controllers/bookmark-actions';
+} from '@/app/(app)/app/shared/client-actions';
+import { reportClientError } from '@/lib/report-client-error';
 
 export type UsePracticeQuestionBookmarksInput = {
   question: BookmarkableQuestion | null;

@@ -1,7 +1,10 @@
 import Stripe from 'stripe';
 import { describe, expect, it } from 'vitest';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
-import { constructStripeWebhookEvent } from './stripe-webhook-signature';
+import {
+  constructStripeWebhookEvent,
+  webhookSignatureFailureReason,
+} from './stripe-webhook-signature';
 
 // The real SDK signs and verifies offline (an HMAC over the payload), so these
 // cases prove real signatures, not a double's.
@@ -69,5 +72,64 @@ describe('constructStripeWebhookEvent', () => {
     expect(() => construct(stale, NEXT_SECRET)).toThrow(
       /Timestamp outside the tolerance zone/,
     );
+  });
+});
+
+// BUG-325: the log keeps a fixed reason, which tells a misconfigured secret
+// or a stale delivery from a forgery, but never Stripe's free text.
+describe('webhookSignatureFailureReason', () => {
+  function reasonFor(signature: string, secret = CURRENT_SECRET): string {
+    try {
+      constructStripeWebhookEvent({
+        webhooks: stripe.webhooks,
+        rawBody: payload,
+        signature,
+        secret,
+      });
+    } catch (error) {
+      return webhookSignatureFailureReason(error);
+    }
+    throw new Error('Expected verification to fail');
+  }
+
+  it.each([
+    {
+      name: 'a forged signature',
+      signature: () => signedBy('whsec_forged'),
+      reason: 'no_matching_signature',
+    },
+    {
+      name: 'a stale delivery',
+      signature: () =>
+        stripe.webhooks.generateTestHeaderString({
+          payload,
+          secret: CURRENT_SECRET,
+          timestamp: Math.floor(Date.now() / 1000) - 3600,
+        }),
+      reason: 'timestamp_outside_tolerance',
+    },
+    {
+      name: 'an unparseable header',
+      signature: () => 'not-a-stripe-header',
+      reason: 'unparseable_header',
+    },
+    {
+      name: 'a header without the v1 scheme',
+      signature: () => 't=1,v0=abc',
+      reason: 'unparseable_header',
+    },
+  ])('names $name as $reason', ({ signature, reason }) => {
+    expect(reasonFor(signature())).toBe(reason);
+  });
+
+  it('names a missing signing secret as missing_secret', () => {
+    expect(reasonFor(signedBy(CURRENT_SECRET), '')).toBe('missing_secret');
+  });
+
+  it('names any other failure as other, without its text', () => {
+    expect(webhookSignatureFailureReason(new Error('whsec_secret_text'))).toBe(
+      'other',
+    );
+    expect(webhookSignatureFailureReason('not an error')).toBe('other');
   });
 });

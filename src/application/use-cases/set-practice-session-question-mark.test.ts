@@ -41,6 +41,15 @@ describe('SetPracticeSessionQuestionMarkUseCase', () => {
 
   it.each([0, 1])(
     'refuses a mark %i ms after expiry without finalizing the exam',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/application/use-cases/set-practice-session-question-mark.test.ts',
+          title:
+            'refuses a mark %i ms after expiry without finalizing the exam',
+        },
+      },
+    },
     async (afterDeadlineMs) => {
       const session = createPracticeSession({
         id: 'exam',

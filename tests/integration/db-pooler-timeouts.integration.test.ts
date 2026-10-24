@@ -2,13 +2,16 @@ import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createConnection, createServer, type Socket } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import migrationJournal from '@/db/migrations/meta/_journal.json';
 import { POSTGRES_CONNECTION_PARAMETERS } from '@/lib/db-connection-options';
-import { resolveLocalTestTarget } from '@/scripts/resolve-local-test-target';
+import { resolveLocalTestTarget } from '@/scripts/test-lanes/resolve-local-test-target';
 import { resolveIntegrationDatabaseUrl } from '@/tests/shared/resolve-integration-database-url';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
@@ -33,13 +36,23 @@ function connectionUrl(pooled: boolean, user = role): string {
 
 async function migrateThroughManagedRunner(
   databaseUrl = connectionUrl(true),
+  cwd = process.cwd(),
 ): Promise<void> {
   try {
     await execFileAsync(
       process.execPath,
-      ['--import', 'tsx', 'scripts/internal/run-managed-db-migrate.ts'],
+      [
+        '--import',
+        import.meta.resolve('tsx'),
+        resolve('scripts/internal/run-managed-db-migrate.ts'),
+      ],
       {
-        env: { ...process.env, DATABASE_URL: databaseUrl },
+        cwd,
+        env: {
+          ...process.env,
+          DATABASE_URL: databaseUrl,
+          PATH: `${resolve('node_modules/.bin')}:${process.env.PATH ?? ''}`,
+        },
         timeout: 8_000,
       },
     );
@@ -324,6 +337,7 @@ describe('application bounds through a transaction pooler', () => {
 
   it('records all three bounds inside the actual managed Drizzle migration transaction', async () => {
     const sql = postgres(connectionUrl(false), { max: 1 });
+    const scratch = await mkdtemp(join(tmpdir(), 'migration-bounds-probe-'));
     try {
       await sql`create table migration_bounds_receipt (role_name text, statement_bound text, lock_bound text, idle_bound text)`;
       await sql.unsafe(`create function capture_migration_bounds() returns trigger language plpgsql as $$
@@ -332,13 +346,39 @@ describe('application bounds through a transaction pooler', () => {
           return new;
         end $$`);
       await sql`create trigger capture_migration_bounds before insert on drizzle.__drizzle_migrations for each row execute function capture_migration_bounds()`;
-      const entry = migrationJournal.entries.find(
-        ({ tag }) => tag === '0052_bug345_role_timeouts',
+      // A future, idempotent migration exercises the unchanged managed entry
+      // point. Deleting 0052's receipt stops working as soon as a newer
+      // migration exists: Drizzle compares only the greatest applied date.
+      await mkdir(join(scratch, 'migrations', 'meta'), { recursive: true });
+      await writeFile(join(scratch, 'package.json'), '{}');
+      await writeFile(
+        join(scratch, 'drizzle.config.ts'),
+        "export default { out: './migrations', dialect: 'postgresql', dbCredentials: { url: process.env.DATABASE_URL } };\n",
       );
-      if (!entry) throw new Error('Timeout migration must be in the journal');
-      // Rerun only the idempotent role-default migration in this disposable DB.
-      await sql`delete from drizzle.__drizzle_migrations where created_at = ${entry.when}`;
-      await migrateThroughManagedRunner();
+      await writeFile(
+        join(scratch, 'migrations', '0000_bounds_probe.sql'),
+        migrationSql,
+      );
+      await writeFile(
+        join(scratch, 'migrations', 'meta', '_journal.json'),
+        JSON.stringify({
+          version: '7',
+          dialect: 'postgresql',
+          entries: [
+            {
+              idx: 0,
+              version: '7',
+              when:
+                Math.max(
+                  ...migrationJournal.entries.map((entry) => entry.when),
+                ) + 1,
+              tag: '0000_bounds_probe',
+              breakpoints: true,
+            },
+          ],
+        }),
+      );
+      await migrateThroughManagedRunner(connectionUrl(true), scratch);
       expect(await sql`select * from migration_bounds_receipt`).toEqual([
         {
           role_name: role,
@@ -349,6 +389,7 @@ describe('application bounds through a transaction pooler', () => {
       ]);
     } finally {
       await sql.end();
+      await rm(scratch, { recursive: true, force: true });
     }
   });
 

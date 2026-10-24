@@ -484,7 +484,18 @@ describe('describeFrontendApiAnswer', () => {
         status: 429,
         body: 'Too Many Requests',
       }),
-    ).toBe('POST /v1/client/sessions/x/tokens 429');
+    ).toBe('POST /v1/client/sessions/…/tokens 429');
+  });
+
+  it("names a segment outside Clerk's route words as …", () => {
+    expect(
+      describeFrontendApiAnswer({
+        method: 'GET',
+        url: 'https://clerk.example.test/v1/client/opaque-secret-value',
+        status: 200,
+        body: undefined,
+      }),
+    ).toBe('GET /v1/client/… 200');
   });
 
   it('names Clerk IDs in a path by their kind only, as teardown names statuses only', () => {

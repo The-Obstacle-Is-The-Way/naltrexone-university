@@ -84,8 +84,8 @@ Source: `lib/content/draft-taxonomy.ts`
 
 ### Step A — Draft authoring (`content/drafts/questions/**/*.md`)
 
-- Question blocks are split on `^---\nqid:` by
-  `splitDraftQuestionsFile()` in `scripts/draft-question-import.ts`.
+- The line-based `splitDraftQuestionsFile()` in `scripts/draft-question-import.ts`
+  scans `---` delimiter lines and requires `qid:` on the next line of each block.
 - Draft frontmatter provides `substances[]`, `topics[]`, optional
   `treatments[]`, optional `diagnoses[]`, plus `qid`, `source`, `difficulty`,
   `type`, and `choices[]` (label, text, `correct`, and an explanation on each
@@ -151,7 +151,7 @@ Behavior:
 
 - `readSeedQuestionFiles()` reads `content/questions/**/*.mdx`.
 - Placeholder files under `content/questions/placeholder/**/*.mdx` are excluded
-  unless `SEED_INCLUDE_PLACEHOLDERS=true`.
+  unless the seed is given `--include-placeholders`.
 - When placeholders are excluded, `archivePlaceholderQuestions()` archives
   the ten committed fixtures' rows, by exact QID (BUG-315). Like the rest of
   the seed, it refuses a database with an active content release.
@@ -176,7 +176,7 @@ Files:
 Flow:
 
 - Tags persist in `tags` and `question_tags`.
-- Questions persist `reference_md` separately from `explanation_md`.
+- Question revisions persist `reference_md` separately from `explanation_md` in `question_revisions`.
 - The tag controller returns all stored kinds:
   `topic | substance | treatment | diagnosis`.
 - Consumers decide which kinds are visible in the UI.

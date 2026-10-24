@@ -8,6 +8,7 @@ import type {
   PortalSessionInput,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { StripeCallBudget } from './stripe-call-budget';
 import { resolvePortalConfigurationId } from './stripe-portal-configurations';
 import { callStripeWithRetry } from './stripe-retry';
 
@@ -16,11 +17,13 @@ export async function createStripePortalSession({
   input,
   options,
   logger,
+  budget,
 }: {
   stripe: StripeClient;
   input: PortalSessionInput;
   options?: PaymentGatewayRequestOptions | undefined;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
 }): Promise<{ url: string }> {
   // DEBT-414 F05: every session names the app's configuration for its
   // profile, never the Dashboard's default.
@@ -28,6 +31,7 @@ export async function createStripePortalSession({
     stripe,
     profile: input.profile,
     logger,
+    budget,
   });
   const params = {
     customer: input.externalCustomerId,
@@ -45,6 +49,7 @@ export async function createStripePortalSession({
         ? stripe.billingPortal.sessions.create(params, requestOptions)
         : stripe.billingPortal.sessions.create(params),
     logger,
+    budget,
   });
 
   if (!session.url) {

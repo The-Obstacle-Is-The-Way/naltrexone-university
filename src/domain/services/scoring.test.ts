@@ -59,6 +59,15 @@ describe('countsTowardScore', () => {
     [true, null, false],
   ] as const)(
     'with a fair chance %s, counts an item whose question is %s: %s',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/domain/services/scoring.test.ts',
+          title:
+            'with a fair chance %s, counts an item whose question is %s: %s',
+        },
+      },
+    },
     (fairChanceAtEnd, availability, counts) => {
       expect(countsTowardScore({ fairChanceAtEnd, availability })).toBe(counts);
     },
@@ -189,6 +198,14 @@ describe('countsIfEndedNow', () => {
     ['tutor', false, 'available', true],
   ] as const)(
     'in %s mode, answered: %s, question %s: counts %s',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/domain/services/scoring.test.ts',
+          title: 'in %s mode, answered: %s, question %s: counts %s',
+        },
+      },
+    },
     (mode, answered, availability, counts) => {
       expect(
         countsIfEndedNow({ mode, answered, availability, keyCorrected: false }),

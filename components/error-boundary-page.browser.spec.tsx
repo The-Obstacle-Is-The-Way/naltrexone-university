@@ -124,7 +124,7 @@ describe('ErrorBoundaryPage (browser)', () => {
 
     await expect
       .poll(() => consoleError.mock.calls)
-      .toEqual([['PracticeError:', error]]);
+      .toEqual([['PracticeError:', { name: 'Error' }]]);
   });
 
   it('logs with the default prefix when the boundary names none', async () => {
@@ -134,7 +134,7 @@ describe('ErrorBoundaryPage (browser)', () => {
 
     await expect
       .poll(() => consoleError.mock.calls)
-      .toEqual([['ErrorBoundaryPage:', error]]);
+      .toEqual([['ErrorBoundaryPage:', { name: 'Error' }]]);
   });
 
   // Sentry's Next.js SDK does not see errors an error page catches; without

@@ -19,7 +19,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-003](./adr-003-testing-strategy.md) | Testing Strategy | Accepted (amended 2026-08-23, 2026-09-24 and 2026-10-12) | 2026-01-31 |
 | [ADR-004](./adr-004-authentication-boundary.md) | Authentication Boundary | Accepted (amended 2026-10-07 and 2026-10-13) | 2026-01-31 |
 | [ADR-005](./adr-005-payment-boundary.md) | Payment Boundary | Accepted (amended 2026-10-13) | 2026-01-31 |
-| [ADR-006](./adr-006-error-handling-strategy.md) | Error Handling Strategy | Accepted | 2026-01-31 |
+| [ADR-006](./adr-006-error-handling-strategy.md) | Error Handling Strategy | Accepted (amended 2026-10-19) | 2026-01-31 |
 | [ADR-007](./adr-007-dependency-injection.md) | Dependency Injection | Accepted | 2026-01-31 |
 | [ADR-008](./adr-008-logging-observability.md) | Logging & Observability | Accepted | 2026-01-31 |
 | [ADR-009](./adr-009-security-hardening.md) | Security Hardening | Accepted | 2026-01-31 |
@@ -31,11 +31,11 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-015](./adr-015-idempotency-strategy.md) | Idempotency Strategy | Accepted (amended 2026-08-14, 2026-08-15, 2026-08-17 and 2026-10-13) | 2026-02-07 |
 | [ADR-016](./adr-016-rate-limiting.md) | Rate Limiting and Abuse Prevention | Accepted (amended 2026-10-13) | 2026-02-07 |
 | [ADR-017](./adr-017-webhook-processing-lifecycle.md) | Webhook Processing Lifecycle | Accepted (amended 2026-10-13) | 2026-02-07 |
-| [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
+| [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted (amended 2026-10-18 and 2026-10-19) | 2026-02-07 |
 | [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Accepted (amended 2026-10-03 and 2026-10-12) | 2026-08-13 |
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
-| [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted (amended 2026-10-03 and 2026-10-18) | 2026-09-27 |
-| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03 and 2026-10-05) | 2026-10-03 |
+| [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted (amended 2026-10-03, 2026-10-18 and 2026-10-19) | 2026-09-27 |
+| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03, 2026-10-05, 2026-10-18 and 2026-10-19) | 2026-10-03 |
 | [ADR-023](./adr-023-documentation-organisation.md) | Documentation Organisation | Accepted (amended 2026-10-11) | 2026-10-11 |
 | [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted (amended 2026-10-16) | 2026-10-11 |
 | [ADR-025](./adr-025-test-doubles-by-shape-or-behaviour.md) | Test Doubles by Shape or Behaviour | Accepted | 2026-10-11 |
@@ -196,7 +196,7 @@ Generic `retry()` with exponential backoff for transient external errors. Only r
 
 ### ADR-019: Test Quality Practices (CRAP, Mutation, Acceptance, UI QA)
 
-Practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, and a register of scripted UI QA procedures (in `docs/guides/qa/` since 2026-10-12), run before the production bootstrap and before releases that change their flows. The 2026-10-03 amendment does not adopt the proposed Gherkin acceptance harness: its rules are already proven by mutation-tested unit tests and real-Postgres and E2E tests, so a plain-language rule-to-test register replaces it. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/guides/testing/` and `docs/guides/qa/`.
+Practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/quality/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, and a register of scripted UI QA procedures (in `docs/guides/qa/` since 2026-10-12), run before the production bootstrap and before releases that change their flows. The 2026-10-03 amendment does not adopt the proposed Gherkin acceptance harness: its rules are already proven by mutation-tested unit tests and real-Postgres and E2E tests, so a plain-language rule-to-test register replaces it. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/guides/testing/` and `docs/guides/qa/`.
 
 ### ADR-020: Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold
 
@@ -228,7 +228,7 @@ Sentry is the error and alert channel, with a browser project on the public key 
 
 ### ADR-027: Free Trial, Renewal Consent and Renewal Notices
 
-Proposed until counsel's review. A first checkout gets a 7-day trial that needs no card and ends without charge if none is added; a trial's first card comes only through a consented add-card flow. Every path to a paid subscription takes a separate, unchecked renewal opt-in to versioned text, kept as evidence for three years or one year after termination, and acknowledged by email. Renewal notices go out 35 to 30 days before renewal for both plans, through a durable Resend delivery that is never repeated while its outcome is unknown and is revalidated before sending. A scheduled cancellation keeps access to period end and stops notices.
+Proposed until counsel's review. A first checkout gets a 7-day trial that needs no card and ends without charge if none is added; a trial's first card comes only through a consented add-card flow. Every path to a paid subscription takes a separate, unchecked renewal opt-in to versioned text, kept as evidence for three years or one year after termination, and acknowledged by email. Renewal notices go out 39 to 30 days before renewal for both plans, through a durable Resend delivery that is never repeated while its outcome is unknown and is revalidated before sending. A scheduled cancellation keeps access to period end and stops notices.
 
 ---
 

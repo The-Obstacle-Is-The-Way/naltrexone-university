@@ -6,18 +6,13 @@
 import { resolve } from 'node:path';
 import postgres from 'postgres';
 import { vi } from 'vitest';
+import { integrationDatabaseHostProblem } from '../shared/integration-database-host';
 import { loadDotenvFileOrThrow } from '../shared/load-dotenv-file';
 
 // Load .env.test from project root
 loadDotenvFileOrThrow(resolve(__dirname, '../../.env.test'));
 
 vi.mock('server-only', () => ({}));
-
-function isLocalDatabaseHost(hostname: string): boolean {
-  return (
-    hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
-  );
-}
 
 function getDatabaseName(url: URL): string | null {
   const raw = url.pathname.replace(/^\//, '');
@@ -63,11 +58,8 @@ try {
   );
 }
 
-if (!allowNonLocal && !isLocalDatabaseHost(url.hostname)) {
-  throw new Error(
-    `Refusing to run integration tests against non-local DATABASE_URL host "${url.hostname}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
-  );
-}
+const hostProblem = integrationDatabaseHostProblem(url.hostname, allowNonLocal);
+if (hostProblem) throw new Error(hostProblem);
 
 const port = url.port || '5432';
 const dbName = getDatabaseName(url) ?? 'addiction_boards_test';
