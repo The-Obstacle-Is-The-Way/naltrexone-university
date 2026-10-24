@@ -142,3 +142,46 @@ describe('projectSafeErrorDiagnostics', () => {
     });
   });
 });
+
+describe('vendor diagnostics allow-list', () => {
+  it('retains safe Stripe diagnostics through an application cause without raw text', () => {
+    const cause = Object.assign(new Error('private Stripe response'), {
+      type: 'StripeInvalidRequestError',
+      code: 'resource_missing',
+      requestId: 'req_synthetic123',
+      statusCode: 404,
+    });
+    const diagnostics = projectSafeErrorDiagnostics(
+      new ApplicationError('STRIPE_ERROR', 'private wrapper', undefined, {
+        cause,
+      }),
+    );
+    expect(diagnostics).toMatchObject({
+      code: 'STRIPE_ERROR',
+      vendorType: 'StripeInvalidRequestError',
+      vendorCode: 'resource_missing',
+      requestId: 'req_synthetic123',
+      statusCode: 404,
+    });
+    expect(JSON.stringify(diagnostics)).not.toContain('private');
+  });
+  it('drops unreviewed vendor strings and malformed request identifiers', () => {
+    expect(
+      projectSafeErrorDiagnostics(
+        Object.assign(new Error('private'), {
+          type: 'private',
+          code: 'customer_supplied_text',
+          requestId: 'req_token?secret=private',
+          statusCode: 999,
+        }),
+      ),
+    ).toEqual({ name: 'Error' });
+  });
+  it('reports a five-letter network code as a network code, not a SQLSTATE', () => {
+    expect(
+      projectSafeErrorDiagnostics(
+        Object.assign(new Error('private'), { code: 'EPIPE' }),
+      ),
+    ).toEqual({ name: 'Error', networkCode: 'EPIPE' });
+  });
+});

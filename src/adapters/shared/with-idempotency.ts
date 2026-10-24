@@ -11,12 +11,12 @@ import {
 } from '@/src/application/ports/repositories';
 import { DAY_MS } from '@/src/domain/services';
 import { PRUNE_BATCH_LIMIT } from './prune-constants';
+import { projectSafeErrorDiagnostics } from './safe-error-diagnostics';
 import { toIdempotencyPublicError } from './to-idempotency-public-error';
 
 const DEFAULT_TTL_MS = DAY_MS;
 const DEFAULT_MAX_WAIT_MS = 2_000;
 const DEFAULT_POLL_INTERVAL_MS = 50;
-const ERROR_MESSAGE_LIMIT = 1000;
 
 /**
  * Owner-selected handling after execute has succeeded but the cache outcome
@@ -27,20 +27,6 @@ const ERROR_MESSAGE_LIMIT = 1000;
 export type IdempotencyOutcomeStoreFailurePolicy =
   | 'return-result'
   | 'cache-error-and-throw';
-
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    const message = error.message || error.name;
-    return message.length > ERROR_MESSAGE_LIMIT
-      ? `${message.slice(0, ERROR_MESSAGE_LIMIT)}…`
-      : message;
-  }
-
-  const message = String(error);
-  return message.length > ERROR_MESSAGE_LIMIT
-    ? `${message.slice(0, ERROR_MESSAGE_LIMIT)}…`
-    : message;
-}
 
 function safeLogError(
   logger: Logger,
@@ -94,12 +80,8 @@ async function abortClaimPreservingOriginalError(
         userId: input.userId,
         action: input.action,
         key: input.key,
-        abortError:
-          abortError instanceof Error ? abortError.message : String(abortError),
-        originalError:
-          originalError instanceof Error
-            ? originalError.message
-            : String(originalError),
+        abortError: projectSafeErrorDiagnostics(abortError),
+        originalError: projectSafeErrorDiagnostics(originalError),
       },
       message,
     );
@@ -139,7 +121,7 @@ export async function withIdempotency<T>(input: {
         userId: input.userId,
         action: input.action,
         key: input.key,
-        error: error instanceof Error ? error.message : String(error),
+        error: projectSafeErrorDiagnostics(error),
       },
       'Idempotency prune failed',
     );
@@ -201,12 +183,8 @@ export async function withIdempotency<T>(input: {
               userId: input.userId,
               action: input.action,
               key: input.key,
-              storeError:
-                storeError instanceof Error
-                  ? storeError.message
-                  : String(storeError),
-              originalError:
-                error instanceof Error ? error.message : String(error),
+              storeError: projectSafeErrorDiagnostics(storeError),
+              originalError: projectSafeErrorDiagnostics(error),
             },
             'Failed to persist idempotency error record',
           );
@@ -255,7 +233,7 @@ export async function withIdempotency<T>(input: {
                 userId: input.userId,
                 action: input.action,
                 key: input.key,
-                storeResultError: toErrorMessage(storeResultError),
+                storeResultError: projectSafeErrorDiagnostics(storeResultError),
               },
               'Idempotency outcome write failed after committed success; cached indeterminate error',
             );
@@ -266,8 +244,8 @@ export async function withIdempotency<T>(input: {
                 userId: input.userId,
                 action: input.action,
                 key: input.key,
-                storeError: toErrorMessage(storeError),
-                storeResultError: toErrorMessage(storeResultError),
+                storeError: projectSafeErrorDiagnostics(storeError),
+                storeResultError: projectSafeErrorDiagnostics(storeResultError),
               },
               'Failed to persist indeterminate idempotency outcome',
             );
@@ -281,7 +259,7 @@ export async function withIdempotency<T>(input: {
             userId: input.userId,
             action: input.action,
             key: input.key,
-            storeResultError: toErrorMessage(storeResultError),
+            storeResultError: projectSafeErrorDiagnostics(storeResultError),
           },
           'Idempotency outcome write failed after committed success',
         );

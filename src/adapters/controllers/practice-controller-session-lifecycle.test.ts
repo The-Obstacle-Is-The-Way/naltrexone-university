@@ -66,7 +66,7 @@ describe('practice-controller', () => {
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([]);
     });
 
-    it('returns UNSUBSCRIBED when not entitled', async () => {
+    it('returns UNSUBSCRIBED from startPracticeSession when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
       const result = await startPracticeSession(
@@ -358,7 +358,7 @@ describe('practice-controller', () => {
       expect(deps.endPracticeSessionUseCase.inputs).toEqual([]);
     });
 
-    it('returns UNSUBSCRIBED when not entitled', async () => {
+    it('returns UNSUBSCRIBED from endPracticeSession when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
       const result = await endPracticeSession(
@@ -503,7 +503,7 @@ describe('practice-controller', () => {
       expect(deps.discardPracticeSessionUseCase.inputs).toEqual([]);
     });
 
-    it('returns UNSUBSCRIBED when not entitled', async () => {
+    it('returns UNSUBSCRIBED from discardPracticeSession when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
       const result = await discardPracticeSession(
@@ -679,7 +679,7 @@ describe('practice-controller', () => {
       expect(deps.finalizeExamAnswersUseCase.inputs).toEqual([]);
     });
 
-    it('returns UNSUBSCRIBED when not entitled', async () => {
+    it('returns UNSUBSCRIBED from finalizeExamAnswers when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
       const result = await finalizeExamAnswers(

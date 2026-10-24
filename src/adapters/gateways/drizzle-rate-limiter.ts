@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { rateLimits } from '@/db/schema';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   RateLimiter,
@@ -95,7 +96,7 @@ export class DrizzleRateLimiter implements RateLimiter {
             key: input.key,
             limit: input.limit,
             windowMs: input.windowMs,
-            error: error instanceof Error ? error.message : String(error),
+            error: projectSafeErrorDiagnostics(error),
           },
           'Rate-limit window pruning failed',
         );

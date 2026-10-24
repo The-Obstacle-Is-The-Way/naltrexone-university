@@ -38,6 +38,11 @@ export function isStripeOutage(error: unknown): boolean {
   );
 }
 
+/** The SDK's class for a lost connection, a timeout or a cut-off body. */
+export function isStripeConnectionError(error: unknown): boolean {
+  return getStringProp(error, 'type') === 'StripeConnectionError';
+}
+
 export function isAlreadyCanceledError(error: unknown): boolean {
   const rawType = getStringProp(error, 'rawType');
   if (rawType !== 'invalid_request_error') {

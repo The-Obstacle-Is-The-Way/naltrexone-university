@@ -1,0 +1,137 @@
+import { describe, expect, it, vi } from 'vitest';
+import { runCommandPlan } from '../lib/command-plan';
+import {
+  createLocalTestDbCommandPlan,
+  runLocalTestDbCommand,
+} from './run-local-test-db';
+
+describe('createLocalTestDbCommandPlan', () => {
+  const env = {
+    LOCAL_TEST_INSTANCE: 'dbcli',
+    DB_TEST_PORT: '55438',
+  };
+
+  it('builds an isolated Compose up command', () => {
+    expect(
+      createLocalTestDbCommandPlan({ action: 'up', env, cwd: '/repo/a' }),
+    ).toEqual([
+      {
+        label: 'Start isolated local test database',
+        command: 'docker',
+        args: [
+          'compose',
+          '-p',
+          'naltrexone-test-dbcli',
+          'up',
+          '-d',
+          '--wait',
+          '--wait-timeout',
+          '60',
+          'db',
+          'pgbouncer',
+        ],
+        env: {
+          COMPOSE_PROJECT_NAME: 'naltrexone-test-dbcli',
+          DB_TEST_PORT: '55438',
+          DB_TEST_POOLER_PORT: expect.any(String),
+          DATABASE_URL:
+            'postgresql://postgres:postgres@127.0.0.1:55438/addiction_boards_test',
+          LOCAL_TEST_INSTANCE: 'dbcli',
+          NEXT_PUBLIC_APP_URL: expect.stringMatching(
+            /^http:\/\/127\.0\.0\.1:\d+$/,
+          ),
+          PORT: expect.any(String),
+        },
+      },
+    ]);
+  });
+
+  it('builds isolated Compose down and reset commands', () => {
+    expect(
+      createLocalTestDbCommandPlan({ action: 'down', env, cwd: '/repo/a' }).map(
+        (step) => step.args,
+      ),
+    ).toEqual([['compose', '-p', 'naltrexone-test-dbcli', 'down']]);
+    expect(
+      createLocalTestDbCommandPlan({
+        action: 'reset',
+        env,
+        cwd: '/repo/a',
+      }).map((step) => step.args),
+    ).toEqual([
+      ['compose', '-p', 'naltrexone-test-dbcli', 'down', '-v'],
+      [
+        'compose',
+        '-p',
+        'naltrexone-test-dbcli',
+        'up',
+        '-d',
+        '--wait',
+        '--wait-timeout',
+        '60',
+        'db',
+        'pgbouncer',
+      ],
+    ]);
+  });
+});
+
+describe('runLocalTestDbCommand', () => {
+  it('propagates a failed readiness command without including environment values', async () => {
+    const result = runLocalTestDbCommand({
+      argv: ['node', 'scripts/test-lanes/run-local-test-db.ts', 'up'],
+      env: {
+        LOCAL_TEST_INSTANCE: 'readiness',
+        PRIVATE_VALUE: 'must-not-appear',
+      },
+      cwd: '/repo/a',
+      runPlan: async (plan, options) =>
+        runCommandPlan(
+          plan.map((step) => ({
+            ...step,
+            command: process.execPath,
+            args: ['-e', 'process.exit(1)'],
+          })),
+          options,
+        ),
+    });
+    await expect(result).rejects.toThrow('exit code 1');
+    await expect(result).rejects.not.toThrow('must-not-appear');
+  });
+
+  it('runs the requested isolated DB command plan', async () => {
+    const runPlan = vi.fn(async () => {});
+
+    await runLocalTestDbCommand({
+      argv: ['node', 'scripts/test-lanes/run-local-test-db.ts', 'up'],
+      env: { LOCAL_TEST_INSTANCE: 'dbcli', DB_TEST_PORT: '55438' },
+      cwd: '/repo/a',
+      runPlan,
+    });
+
+    expect(runPlan).toHaveBeenCalledWith(
+      createLocalTestDbCommandPlan({
+        action: 'up',
+        env: { LOCAL_TEST_INSTANCE: 'dbcli', DB_TEST_PORT: '55438' },
+        cwd: '/repo/a',
+      }),
+      {
+        env: { LOCAL_TEST_INSTANCE: 'dbcli', DB_TEST_PORT: '55438' },
+      },
+    );
+  });
+
+  it('rejects unknown actions before running commands', async () => {
+    const runPlan = vi.fn(async () => {});
+
+    await expect(
+      runLocalTestDbCommand({
+        argv: ['node', 'scripts/test-lanes/run-local-test-db.ts', 'destroy'],
+        env: {},
+        cwd: '/repo/a',
+        runPlan,
+      }),
+    ).rejects.toThrow('Unknown local test DB action "destroy".');
+    expect(runPlan).not.toHaveBeenCalled();
+  });
+});

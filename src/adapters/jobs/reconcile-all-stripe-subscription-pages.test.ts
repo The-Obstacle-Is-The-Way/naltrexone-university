@@ -256,7 +256,7 @@ describe('reconcileAllStripeSubscriptionPages', () => {
       context: expect.objectContaining({
         reason: 'page_rejected',
         nextOffset: 10,
-        error: 'Stripe unavailable',
+        error: { name: 'Error' },
       }),
       msg: 'Stripe subscription reconciliation stopped before full coverage; resume at offset 10',
     });

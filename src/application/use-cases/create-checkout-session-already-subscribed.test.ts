@@ -120,8 +120,6 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
         context: {
           userId: 'user-1',
           errorCode: null,
-          errorMessage: null,
-          errorName: 'Error',
         },
       },
     ]);
@@ -130,9 +128,8 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
     ]);
   });
 
-  // The log names which of the app's own failures it was, so each one can be
-  // explained; the message is app-written and holds no provider data.
-  it("logs the app's reason when the sync refuses what Stripe listed", async () => {
+  // The log retains the application code without the raw diagnostic text.
+  it('logs the application code when the sync refuses what Stripe listed', async () => {
     const { logger, useCase } = await refusedCheckout({
       blockingCustomerSubscriptions: [{ ...held, userId: 'user-2' }],
     });
@@ -143,9 +140,6 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
     expect(logger.errorCalls[0]?.context).toEqual({
       userId: 'user-1',
       errorCode: 'CONFLICT',
-      errorMessage:
-        "A subscription on this customer is not the signed-in user's",
-      errorName: 'ApplicationError',
     });
   });
 

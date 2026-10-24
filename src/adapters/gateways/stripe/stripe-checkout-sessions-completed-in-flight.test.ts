@@ -86,6 +86,15 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
     ['a returning customer', input, 'active'],
   ] as const)(
     'refuses %s with ALREADY_SUBSCRIBED and leaves no open Session when the first Checkout completes after the subscription check',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts',
+          title:
+            'refuses %s with ALREADY_SUBSCRIBED and leaves no open Session when the first Checkout completes after the subscription check',
+        },
+      },
+    },
     async (_label, checkoutInput, status) => {
       const stripe = createFake();
       const first = sessionIdOf(

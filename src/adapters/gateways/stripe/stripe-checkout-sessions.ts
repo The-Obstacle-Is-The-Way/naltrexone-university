@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import {
   type CheckoutSessionCreateParams,
   isValidStripeSubscriptionStatus,
@@ -19,6 +20,7 @@ import type {
 import type { Logger } from '@/src/application/ports/logger';
 import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 import { MS_PER_SECOND } from '@/src/domain/services';
+import type { StripeCallBudget } from './stripe-call-budget';
 import { createStripeConsentStateSignature } from './stripe-consent-state';
 import { callStripeWithRetry } from './stripe-retry';
 
@@ -141,10 +143,12 @@ async function findUniqueNewestMatchingCheckoutSession({
   stripe,
   input,
   logger,
+  budget,
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
 }): Promise<StripeCheckoutSession | null> {
   function logFallback(reason: string, errorName?: string): null {
     logger.warn(
@@ -189,6 +193,7 @@ async function findUniqueNewestMatchingCheckoutSession({
             ...(startingAfter ? { starting_after: startingAfter } : {}),
           }),
         logger,
+        budget,
       });
     } catch (error) {
       return logFallback(
@@ -250,11 +255,13 @@ export async function createStripeTrialPaymentMethodSetupSession({
   stripe,
   input,
   logger,
+  budget,
   stateSecret,
 }: {
   stripe: StripeClient;
   input: TrialPaymentMethodSetupSessionInput;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   stateSecret: string;
 }): Promise<{ sessionId: string; url: string }> {
   const metadata = {
@@ -306,6 +313,7 @@ export async function createStripeTrialPaymentMethodSetupSession({
           idempotencyKey,
         }),
       logger,
+      budget,
     });
   }
 
@@ -335,6 +343,7 @@ export async function createStripeTrialPaymentMethodSetupSession({
     stripe,
     session: await createWithParameterRecovery(primaryIdempotencyKey),
     logger,
+    budget,
     policy: 'require-verified-status',
   });
   for (
@@ -362,6 +371,7 @@ export async function createStripeTrialPaymentMethodSetupSession({
       stripe,
       session: await createSession(recoveryIdempotencyKey),
       logger,
+      budget,
       policy: 'require-verified-status',
     });
   }
@@ -427,10 +437,12 @@ async function expireCheckoutSession({
   stripe,
   sessionId,
   logger,
+  budget,
 }: {
   stripe: StripeClient;
   sessionId: string;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
 }): Promise<EndedCheckoutSession> {
   try {
     await callStripeWithRetry({
@@ -440,6 +452,7 @@ async function expireCheckoutSession({
           idempotencyKey: `expire_checkout_session:${sessionId}`,
         }),
       logger,
+      budget,
     });
     return { status: 'expired' };
   } catch (error) {
@@ -456,6 +469,7 @@ async function expireCheckoutSession({
         operation: 'checkout.sessions.retrieve',
         fn: () => stripe.checkout.sessions.retrieve(sessionId),
         logger,
+        budget,
       });
     } catch {
       // The read only settles the refused expire; the expire's own error is
@@ -625,18 +639,20 @@ async function expireSupersededCheckoutSession({
   stripe,
   sessionId,
   logger,
+  budget,
 }: {
   stripe: StripeClient;
   sessionId: string;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
 }): Promise<void> {
   try {
-    await expireCheckoutSession({ stripe, sessionId, logger });
+    await expireCheckoutSession({ stripe, sessionId, logger, budget });
   } catch (error) {
     logger.error(
       {
         sessionId,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: projectSafeErrorDiagnostics(error),
       },
       'Failed to expire superseded checkout session',
     );
@@ -664,6 +680,7 @@ async function reconcileOpenCheckoutSessionsAfterCreate({
   input,
   createdSession,
   logger,
+  budget,
   nowMs,
   ignoredSessionIds,
 }: {
@@ -671,6 +688,7 @@ async function reconcileOpenCheckoutSessionsAfterCreate({
   input: CheckoutSessionInput;
   createdSession: StripeCheckoutSession;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   nowMs: () => number;
   ignoredSessionIds: ReadonlySet<string>;
 }): Promise<StripeCheckoutSession> {
@@ -683,6 +701,7 @@ async function reconcileOpenCheckoutSessionsAfterCreate({
         limit: OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT,
       }),
     logger,
+    budget,
   });
 
   const reconciliationNowMs = nowMs();
@@ -721,6 +740,7 @@ async function reconcileOpenCheckoutSessionsAfterCreate({
         stripe,
         sessionId: session.id,
         logger,
+        budget,
       }),
     ),
   );
@@ -750,11 +770,13 @@ async function retrieveLiveCheckoutSessionAfterCreate({
   stripe,
   session,
   logger,
+  budget,
   policy,
 }: {
   stripe: StripeClient;
   session: StripeCheckoutSession;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   policy: CheckoutSessionLiveRetrievalPolicy;
 }): Promise<StripeCheckoutSession> {
   let retrievedSession: StripeCheckoutSession;
@@ -763,6 +785,7 @@ async function retrieveLiveCheckoutSessionAfterCreate({
       operation: 'checkout.sessions.retrieve',
       fn: () => stripe.checkout.sessions.retrieve(session.id),
       logger,
+      budget,
     });
   } catch (error) {
     if (policy === 'require-verified-status') {
@@ -771,7 +794,7 @@ async function retrieveLiveCheckoutSessionAfterCreate({
     logger.warn(
       {
         sessionId: session.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: projectSafeErrorDiagnostics(error),
       },
       'Falling back to created checkout session snapshot after live retrieval failed',
     );
@@ -820,10 +843,12 @@ async function listBlockingSubscriptions({
   stripe,
   input,
   logger,
+  budget,
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
 }): Promise<BlockingSubscription[]> {
   const subscriptions = await callStripeWithRetry({
     operation: 'subscriptions.list',
@@ -834,6 +859,7 @@ async function listBlockingSubscriptions({
         limit: SUBSCRIPTION_LIST_LIMIT,
       }),
     logger,
+    budget,
   });
   const blocking: BlockingSubscription[] = [];
   for (const subscription of subscriptions.data) {
@@ -856,24 +882,31 @@ async function refuseIfSubscriptionAppeared({
   input,
   session,
   logger,
+  budget,
   operationalAlerts,
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
   session: StripeCheckoutSession;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   operationalAlerts: Pick<OperationalAlerts, 'raise'>;
 }): Promise<void> {
   let blocking: BlockingSubscription[];
   try {
-    blocking = await listBlockingSubscriptions({ stripe, input, logger });
+    blocking = await listBlockingSubscriptions({
+      stripe,
+      input,
+      logger,
+      budget,
+    });
   } catch (error) {
     logger.error(
       {
         userId: input.userId,
         externalCustomerId: input.externalCustomerId,
         sessionId: session.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: projectSafeErrorDiagnostics(error),
       },
       'Failed to re-check subscriptions before handing back a checkout session',
     );
@@ -897,6 +930,7 @@ async function refuseIfSubscriptionAppeared({
       stripe,
       sessionId: session.id,
       logger,
+      budget,
     });
     if (ended.status === 'expired') {
       logger.warn(
@@ -927,7 +961,7 @@ async function refuseIfSubscriptionAppeared({
     logger.error(
       {
         ...context,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: projectSafeErrorDiagnostics(error),
       },
       'Failed to expire checkout session after a subscription appeared',
     );
@@ -957,6 +991,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
   stripe,
   input,
   logger,
+  budget,
   operationalAlerts,
 }: {
   stripe: StripeClient;
@@ -966,6 +1001,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
     createdBefore?: Date | undefined;
   };
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   operationalAlerts: Pick<OperationalAlerts, 'raise'>;
 }): Promise<void> {
   const listContext = {
@@ -999,12 +1035,13 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
             ...(startingAfter ? { starting_after: startingAfter } : {}),
           }),
         logger,
+        budget,
       });
     } catch (error) {
       logger.error(
         {
           ...listContext,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: projectSafeErrorDiagnostics(error),
         },
         'Failed to list open checkout sessions after a completion',
       );
@@ -1043,12 +1080,13 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
           stripe,
           sessionId: session.id,
           logger,
+          budget,
         });
       } catch (error) {
         logger.error(
           {
             ...context,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: projectSafeErrorDiagnostics(error),
           },
           'Failed to expire another open subscription checkout session',
         );
@@ -1088,6 +1126,7 @@ export async function createStripeCheckoutSession({
   input,
   priceIds,
   logger,
+  budget,
   operationalAlerts,
   nowMs = Date.now,
 }: {
@@ -1095,6 +1134,7 @@ export async function createStripeCheckoutSession({
   input: CheckoutSessionInput;
   priceIds: StripePriceIds;
   logger: Logger;
+  budget?: StripeCallBudget | undefined;
   operationalAlerts: Pick<OperationalAlerts, 'raise'>;
   nowMs?: (() => number) | undefined;
 }): Promise<{ url: string }> {
@@ -1105,6 +1145,7 @@ export async function createStripeCheckoutSession({
     stripe,
     input,
     logger,
+    budget,
   });
   if (blocking) {
     logger.warn(
@@ -1131,6 +1172,7 @@ export async function createStripeCheckoutSession({
         limit: 1,
       }),
     logger,
+    budget,
   });
 
   const existingSession = existing.data[0];
@@ -1151,13 +1193,13 @@ export async function createStripeCheckoutSession({
             expand: ['line_items'],
           }),
         logger,
+        budget,
       });
       retrievedSession = session;
       existingPriceId = session.line_items?.data?.[0]?.price?.id;
       existingCheckoutVariant = getRetrievedCheckoutSessionVariant(session);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = projectSafeErrorDiagnostics(error);
       if (trialRequested) {
         replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
           input,
@@ -1168,7 +1210,7 @@ export async function createStripeCheckoutSession({
         {
           sessionId: existingSession.id,
           error: errorMessage,
-          cause: error,
+          cause: projectSafeErrorDiagnostics(error),
         },
         'Failed to inspect existing checkout session',
       );
@@ -1191,6 +1233,7 @@ export async function createStripeCheckoutSession({
           input,
           session: existingSession,
           logger,
+          budget,
           operationalAlerts,
         });
         return { url: existingUrl };
@@ -1276,11 +1319,11 @@ export async function createStripeCheckoutSession({
           stripe,
           sessionId: existingSession.id,
           logger,
+          budget,
         });
         ignoredOpenSessionIdsAfterCreate.add(existingSession.id);
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage = projectSafeErrorDiagnostics(error);
         if (expireFailureIsFatal) {
           logger.error(
             {
@@ -1363,6 +1406,7 @@ export async function createStripeCheckoutSession({
           idempotencyKey,
         }),
       logger,
+      budget,
     });
   }
 
@@ -1403,13 +1447,14 @@ export async function createStripeCheckoutSession({
       primaryIdempotencyKey,
     ),
     logger,
+    budget,
     policy: 'fallback-to-created',
   });
 
   let sessionIsInactive = isSessionInactive(session, nowMs);
   if (sessionIsInactive) {
     const newestMatchingSession = await findUniqueNewestMatchingCheckoutSession(
-      { stripe, input, logger },
+      { stripe, input, logger, budget },
     );
     if (newestMatchingSession) {
       session =
@@ -1418,6 +1463,7 @@ export async function createStripeCheckoutSession({
               stripe,
               session: newestMatchingSession,
               logger,
+              budget,
               policy: 'fallback-to-created',
             })
           : newestMatchingSession;
@@ -1462,6 +1508,7 @@ export async function createStripeCheckoutSession({
         recoveryIdempotencyKey,
       ),
       logger,
+      budget,
       policy: 'fallback-to-created',
     });
     sessionIsInactive = isSessionInactive(session, nowMs);
@@ -1473,6 +1520,7 @@ export async function createStripeCheckoutSession({
       input,
       createdSession: session,
       logger,
+      budget,
       nowMs,
       ignoredSessionIds: ignoredOpenSessionIdsAfterCreate,
     });
@@ -1481,6 +1529,7 @@ export async function createStripeCheckoutSession({
     input,
     session: canonicalRecoveredSession,
     logger,
+    budget,
     operationalAlerts,
   });
 
