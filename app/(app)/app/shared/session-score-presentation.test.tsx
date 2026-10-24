@@ -60,6 +60,14 @@ describe('session score presentation', () => {
     ),
   )(
     'agrees across the session screens for $mode with $name',
+    {
+      meta: {
+        ruleProof: {
+          file: 'app/(app)/app/shared/session-score-presentation.test.tsx',
+          title: 'agrees across the session screens for $mode with $name',
+        },
+      },
+    },
     ({ mode, answered, scored, correct, accuracy, label }) => {
       const row = createSessionHistoryRow({
         mode,
