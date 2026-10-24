@@ -48,7 +48,12 @@ Found on 2026-10-24 while assessing DEBT-503 item 4. The finding was kept privat
 
 Options 3 then 1, under the owner's decision of 2026-10-24.
 
-- **Containment.** The owner's firewall rule was live before this record or its fix was pushed. It denies the header everywhere except `/api/cron/`, and it stays as defense in depth after the fix.
+- **Containment.** At the owner's request, two Vercel firewall rules, applied through the CLI and checked against production:
+  - **15:21:45Z:** deny the header on every path that does not start with `/api/cron/`.
+  - **15:34:32Z:** on `/api/cron/`, deny a header holding a JWT (any `.`) or a value starting with `ak_`, `mt_` or `oat_`, with or without `Bearer`. Until this fix deploys, the proxy still runs Clerk on the cron routes, so the first rule's exception was a way round it.
+
+    This PR was opened at about 15:28Z, describing that exception, so it was public for about six minutes. `CRON_SECRET` is 64 hexadecimal characters (`openssl rand -hex 32`, in the environments guide), so it never matches the second rule.
+  - Both rules cover every hostname of the project and stay as defense in depth after the fix.
 - **The fix.**
   - `proxy.ts` sends `CRON_ROUTE_PATHS` (`lib/public-routes.ts`) on without Clerk.
   - It answers 401 to every other request that carries an `Authorization` header, before BUG-323's limiter and before Clerk.
@@ -69,6 +74,13 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - the same token in the session cookie still reaches Clerk's refresh, which shows the harness reaches Clerk.
 
   All four refusal cases failed on the previous `proxy.ts`.
+- [x] **The firewall, 2026-10-24.** These all got 403:
+  - with the header: `/`, `/pricing` (no scheme) and `/api/health`;
+  - on the cron routes: `ak_`, `mt_` and `oat_` values and a JWT-shaped value;
+  - on another `/api/cron/` path: an `ak_` value;
+  - with the header, on `www`, the `vercel.app` alias and a deployment URL.
+
+  Requests without the header got 200. A wrong, 64-hex secret on either cron route reached the route's own 401.
 - [ ] In production, after release: a request to the app with a dummy `Authorization` header gets 401 or the firewall's 403, and the next runs of both crons succeed. Due 2026-10-31.
 
 ## Related
