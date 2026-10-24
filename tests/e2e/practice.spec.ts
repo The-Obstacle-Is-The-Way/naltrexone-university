@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Frame, type Locator, type Page } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
   signInWithClerkPassword,
@@ -76,21 +76,43 @@ async function expectBottomActionBarBelowFold(page: Page): Promise<void> {
 }
 
 async function scrollPageToBottom(page: Page): Promise<void> {
-  await expect
-    .poll(() =>
-      page.evaluate(() => {
-        const scrollingElement =
-          document.scrollingElement || document.documentElement;
-        window.scrollTo({
-          top: scrollingElement.scrollHeight,
-          behavior: 'auto',
-        });
-        return Math.round(
-          scrollingElement.scrollHeight - (window.scrollY + window.innerHeight),
-        );
-      }),
-    )
-    .toBeLessThanOrEqual(2);
+  // BUG-362: once, the first evaluate here did not return within the poll's
+  // 5 seconds. A failure names any main-frame navigation during the wait, by
+  // path only, so the next occurrence shows whether the page navigated.
+  const navigations: string[] = [];
+  const recordNavigation = (frame: Frame) => {
+    if (frame === page.mainFrame())
+      navigations.push(new URL(frame.url()).pathname);
+  };
+  page.on('framenavigated', recordNavigation);
+  try {
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const scrollingElement =
+            document.scrollingElement || document.documentElement;
+          // 'auto' would follow the page's scroll-behavior: smooth, and the
+          // measurement below would run before the animation ends.
+          window.scrollTo({
+            top: scrollingElement.scrollHeight,
+            behavior: 'instant',
+          });
+          return Math.round(
+            scrollingElement.scrollHeight -
+              (window.scrollY + window.innerHeight),
+          );
+        }),
+      )
+      .toBeLessThanOrEqual(2);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `${message}\nMain-frame navigations while scrolling to the bottom: ${navigations.join(', ') || 'none'}`,
+      { cause: error },
+    );
+  } finally {
+    page.off('framenavigated', recordNavigation);
+  }
 }
 
 async function expectFocusedLocatorInViewport(locator: Locator): Promise<void> {
