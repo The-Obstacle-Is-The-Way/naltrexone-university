@@ -9,7 +9,7 @@
 |---------|---------------|
 | **Authentication** | Every action calls `authGateway.requireUser()` via `requireEntitledUserId()` |
 | **Authorization** | Every action checks subscription entitlement via `checkEntitlementUseCase` |
-| **`Authorization` header** | Only the cron routes take it: [Clerk's middleware](integrations/clerk.md#middleware-proxyts) (BUG-369) |
+| **`Authorization` header** | Only the cron routes take it; see [Clerk's middleware](integrations/clerk.md#middleware-proxyts) (BUG-369) |
 | **User scoping** | All repository queries include `userId` in WHERE clauses — no cross-user data access |
 | **Row-level security** | None, by decision. No browser or third-party client connects to Postgres: browsers reach the server through pages and server actions, and providers through signed webhooks. Request handlers reach user data through repositories, so authorization is the auth gate plus `userId`-scoped WHERE clauses. Two server paths read the database directly: the scheduled reconcile job, behind `CRON_SECRET`, lists `stripe_subscriptions` across users (`app/api/cron/reconcile-stripe-subscriptions/route.ts`), and the health check runs `SELECT 1`. Revisit if a direct database API (PostgREST, Hasura), a data path that bypasses the repositories, or a SOC 2 requirement appears (DEBT-332). |
 | **Input validation** | All controller inputs validated with strict Zod schemas (UUIDs, bounded pagination, mode enums) |

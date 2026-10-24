@@ -1,6 +1,6 @@
 # BUG-369: An Authorization Header Lets Requests Spend Clerk's Backend API Allowance Uncounted
 
-**Status:** Verifying — in production, the proxy answers a header the firewall lets through with 401, and both crons still run; due 2026-10-31
+**Status:** Verifying — the proxy's 401 in production and the next runs of both crons; due 2026-10-31
 **Priority:** P2
 **Date:** 2026-10-24
 
@@ -10,12 +10,12 @@
 
 BUG-323's limiter counts the requests that make Clerk's middleware call its Backend API through a cookie or a handshake value. But Clerk's middleware also reads a token from the `Authorization` header, and two header shapes reached a Backend API call that the proxy never counted and the firewall never matched:
 
-1. **A genuine, expired session token in the header, on a GET with any `__refresh_<suffix>` cookie.** Clerk verifies the signature, finds the token expired, and calls `sessions.refreshSession`. This needs one free account, once. The signature never expires, and Clerk calls refresh even for an ended session.
+1. **A genuine, expired session token in the header, on a GET with any `__refresh_<suffix>` cookie.** Clerk verifies the signature, finds the token expired, and calls `sessions.refreshSession`. This needs one free account, once. The token's signature stays valid for as long as the instance's signing key does, and Clerk calls refresh even for an ended session.
 2. **A value shaped like an API key or machine token (`ak_`, `mt_`, `oat_`), on any method.** Clerk verifies it through a Backend API call. No account is needed.
 
-Each request was one Backend API call that none of our limits counted: per address, per session or site-wide. That allowance (1,000 calls per 10 seconds in production) also serves every signed-in visitor's server-side refresh and handshake, and the provisioning of new users. Draining it signs returning visitors out, and stops new users being provisioned, for as long as it lasts.
+Each request was one Backend API call that none of our limits counted: per address, per session or site-wide. The refreshes certainly draw on the instance's Backend API allowance (1,000 calls per 10 seconds in production). That allowance also serves every signed-in visitor's server-side refresh and handshake, and the provisioning of new users, so draining it signs returning visitors out and stops new users being provisioned for as long as it lasts. Whether the machine-token verifications draw on the same allowance is not verified (see Evidence).
 
-Found on 2026-10-24 while assessing DEBT-503 item 4. The finding was kept private until the owner's firewall rule (below) was live.
+Found on 2026-10-24 while assessing DEBT-503 item 4. The finding was kept private until the first firewall rule (below) was live.
 
 ## Evidence
 
@@ -24,7 +24,7 @@ Found on 2026-10-24 while assessing DEBT-503 item 4. The finding was kept privat
   - Whenever an `Authorization` header exists, Clerk takes the header path, with or without a `Bearer` scheme.
   - The signature is checked before the authorized party and the expiry, and `authorizedParties` is unset. An expired token is then eligible for refresh on a GET with a refresh cookie, and the refresh uses the header's token when there is no session cookie.
   - Machine tokens are verified through the Backend API.
-  - The proxy read only `__session*` cookies and handshake values (`lib/clerk-backend-call-limit.ts`). The firewall rule matches only `__clerk_handshake_nonce`.
+  - The proxy read only `__session*` cookies and handshake values (`lib/clerk-backend-call-limit.ts`). BUG-323's firewall rule matches only `__clerk_handshake_nonce`.
 - **The real middleware.** A private test ran Clerk's middleware over a stubbed fetch:
   - a genuine expired token in the header, with a made-up refresh cookie, reached `/v1/sessions/<sid>/refresh` for both page and JSON requests, and `triggersClerkBackendCall` returned false;
   - a forged token made no call;
@@ -34,9 +34,9 @@ Found on 2026-10-24 while assessing DEBT-503 item 4. The finding was kept privat
 
 ## Impact
 
-- **Before the first live sale:** no subscriber is affected. The site is public, so signed-in testing would have been.
-- **After launch:** a script without an account, or with one free account, could have made Clerk refuse the calls every returning visitor needs.
-- **Alerts:** none would have shown the drain. DEBT-503 item 3's alert counts only failed refreshes, more than 10 a minute, and a successful refresh using the attacker's own refresh value is not a failure.
+- **Before the first live sale:** no subscriber is affected, but a drain would still have signed out the owner's and testers' sessions.
+- **After launch:** a script with one free account could have made Clerk refuse the calls every returning visitor needs. A script without an account could have done the same only if machine-token verification draws on that allowance, which is not verified.
+- **Alerts:** DEBT-503 item 3's alert counts failed refreshes and raises past 10 a minute. A made-up refresh value fails at Clerk, so a drain using one would alert, except on a protected route's non-page request, whose combined auth reason the counter's prefix check misses (read from code). A refresh using the attacker's own genuine refresh value succeeds and never counts, and the machine-token shapes are not refreshes at all, so neither would alert.
 
 ## Options
 
