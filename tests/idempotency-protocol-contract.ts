@@ -1,6 +1,6 @@
 import path from 'node:path';
 import ts from '@typescript/typescript6';
-import { declaredTestTitles } from '../scripts/rule-to-test-register';
+import { declaredTestTitles } from './rule-to-test-register-source-scan.mts';
 
 export const PROTOCOL_CONTRACT_PATH =
   'app/(app)/app/practice/shared/idempotency-protocol-contract.md';
