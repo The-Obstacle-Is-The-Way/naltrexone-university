@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { submitAnswerForQuestion as submitPracticeSessionAnswer } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { submitAnswerForQuestion as submitQuickPracticeAnswer } from '@/app/(app)/app/practice/practice-page-logic';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 import type { RetryProvenance } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { submitSelectedAnswer } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { setBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
@@ -134,6 +135,7 @@ type SubmitSurface = (input: {
 const submitQuickPracticeSurface: SubmitSurface = async (input) => {
   let submitted: SubmitAnswerOutput | null = null;
   await submitQuickPracticeAnswer({
+    ...createRequestSequencing(),
     question: nextQuestion,
     selectedChoiceId: input.choiceId,
     questionLoadedAtMs: 0,
@@ -156,6 +158,7 @@ function createPracticeSessionSurface(sessionId: string): SubmitSurface {
   return async (input) => {
     let submitted: SubmitAnswerOutput | null = null;
     await submitPracticeSessionAnswer({
+      ...createRequestSequencing(),
       sessionId,
       question: nextQuestion,
       selectedChoiceId: input.choiceId,

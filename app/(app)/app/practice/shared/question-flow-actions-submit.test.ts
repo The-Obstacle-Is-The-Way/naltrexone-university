@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { runSubmitAnswerFlow } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -16,6 +17,7 @@ describe('question-flow-actions', () => {
     let submitResult: SubmitAnswerOutput | null = null;
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -66,6 +68,7 @@ describe('question-flow-actions', () => {
     }));
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -87,6 +90,7 @@ describe('question-flow-actions', () => {
     const rotateIdempotencyKey = vi.fn();
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -107,8 +111,37 @@ describe('question-flow-actions', () => {
     expect(rotateIdempotencyKey).not.toHaveBeenCalled();
   });
 
+  it('rejects a submit with neither sequencing hook before starting the request', async () => {
+    const submitAnswerFn = vi.fn(async () =>
+      ok({
+        attemptId: fixtureAttempt1Id,
+        isCorrect: true,
+        correctChoiceId: fixtureChoice1Id,
+        explanationMd: null,
+        referenceMd: null,
+        choiceExplanations: [],
+      }),
+    );
+    await expect(
+      // @ts-expect-error Intentionally omit the required sequencing pair.
+      runSubmitAnswerFlow({
+        question: { questionId: fixtureQuestion1Id },
+        selectedChoiceId: fixtureChoice1Id,
+        questionLoadedAtMs: 1000,
+        submitIdempotencyKey: null,
+        submitAnswerFn,
+        buildSubmitInput: () => ({}),
+        nowMs: () => 3500,
+        setLoadState: () => undefined,
+        setSubmitResult: () => undefined,
+      }),
+    ).rejects.toThrow('Request sequencing hooks must be provided together');
+    expect(submitAnswerFn).not.toHaveBeenCalled();
+  });
+
   it('throws when request sequencing hooks are partially provided for submit flow', async () => {
     await expect(
+      // @ts-expect-error Intentionally provide only half the required pair.
       runSubmitAnswerFlow({
         question: { questionId: fixtureQuestion1Id },
         selectedChoiceId: fixtureChoice1Id,
@@ -139,6 +172,7 @@ describe('question-flow-actions', () => {
     const rotateIdempotencyKey = vi.fn();
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -164,6 +198,7 @@ describe('question-flow-actions', () => {
     const rotateIdempotencyKey = vi.fn();
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -186,6 +221,7 @@ describe('question-flow-actions', () => {
     const rotateIdempotencyKey = vi.fn();
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -224,6 +260,7 @@ describe('question-flow-actions', () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'ready' };
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: null,
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -248,6 +285,7 @@ describe('question-flow-actions', () => {
     let submitResult: SubmitAnswerOutput | null = null;
 
     const promise = runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,

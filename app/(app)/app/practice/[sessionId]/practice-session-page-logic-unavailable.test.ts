@@ -3,6 +3,7 @@ import {
   loadNextQuestion,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 
@@ -33,6 +34,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
       const setUnavailableItem = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () =>
           ok({
@@ -79,6 +81,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
       const setUnavailableItem = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () =>
           ok({
@@ -119,6 +122,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
       const setUnavailableItem = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => ok(createFixtureNextQuestion()),
         nowMs: () => 1234,
@@ -169,6 +173,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
     return {
       setUnavailableItem,
       reload: {
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         getNextQuestionFn: vi.fn(getNextQuestionFn),
         nowMs: () => 0,
@@ -190,6 +195,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
     message = 'Question not found',
   ) {
     return submitAnswerForQuestion({
+      ...createRequestSequencing(),
       sessionId: fixtureSession1Id,
       question: createFixtureNextQuestion(),
       selectedChoiceId: fixtureChoice1Id,
@@ -263,6 +269,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
       const { reload } = reloadWith(async () => ok(withdrawnItem));
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         sessionId: fixtureSession1Id,
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,

@@ -1,6 +1,6 @@
 # DEBT-529: The Per-Screen Request Protocols Rely on a Contract Nothing Checks, and Their Safe Defaults Are Opt-In
 
-**Status:** Open — anchor the protocol contract by symbol and test that each exists; make the cache policy and stale-response guard required
+**Status:** Verifying — promotion to main; due 2026-10-31
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -16,23 +16,25 @@ Each practice screen owns its own request lifecycle:
 
 The family has needed repeated fixes: BUG-289–291, BUG-295 and BUG-298–303 in July, after BUG-085, BUG-194, BUG-231 and BUG-264 earlier.
 
-On 2026-07-23 the owner ruled DEBT-461's runtime consolidation NO-GO. The accepted design keeps the per-surface implementations, and requires `app/(app)/app/practice/shared/idempotency-protocol-contract.md` for every surface. This record does not reopen that ruling. It finds that the safeguards the accepted design relies on are not enforced:
+On 2026-07-23 the owner ruled DEBT-461's runtime consolidation NO-GO. The accepted design keeps the per-surface implementations, and requires `app/(app)/app/practice/shared/idempotency-protocol-contract.md` for every surface. This record does not reopen that ruling. The reference guard, required cache policies and required sequencing hooks are built. The original gaps were:
 
-1. **The contract's line links have drifted.** It has 119 `#L` links: 48 to code and 71 to tests. Against the commit that wrote them (`e808225a`), 13 code links and 55 test links no longer point at their original line. Eighteen test lines are gone from the linked file: 16 tests moved to split files, and two titles no longer exist.
+1. **The contract's line links had drifted.** At baseline `134b0578`, it had 119 `#L` links: 48 to code and 71 to tests. Against the commit that wrote them (`e808225a`), 13 code links and 55 test links no longer point at their original line. Eighteen test lines are gone from the linked file: 16 tests moved to split files, and two titles no longer exist.
    - `question-flow-actions.test.ts` has 492 lines, yet links point to #L660/#L781; those tests moved to `question-flow-actions-submit.test.ts:163,284`.
    - A #L1013 test link into `practice-session-page-logic.test.ts` now belongs to `practice-session-page-logic-end-session.test.ts:380`.
    - Code examples: `submitAnswerForQuestion` #L118 is now 139, `endSession` #L210 is now 275, and `commitChoice` #L412 is now 425.
 
-   The anchors originated with the contract (`e808225a`, 2026-07-21). No check validates its symbol/test references. The document already points to moved tests as well as stale lines.
-2. **The server caches errors thrown by `execute()` when a caller passes no policy.** Admission/claim failures have separate behavior. ADR-015's 2026-10-13 amendment records this default and the rule "every keyed action therefore passes a policy".
-   - All twelve current callers do, but nothing fails if the thirteenth does not.
+   The anchors originated with the contract (`e808225a`, 2026-07-21). No check then validated its symbol/test references. The contract now names declarations and running test titles, including the moved tests. `tests/idempotency-protocol-contract.test.ts` rejects missing files, declarations and proofs, plus line anchors and unnamed source links.
+2. **The server cached errors thrown by `execute()` when a caller passed no policy.** Admission/claim failures have separate behavior. ADR-015's 2026-10-13 amendment records this default and the rule "every keyed action therefore passes a policy".
+   - All twelve callers did, but nothing failed if a thirteenth did not.
    - BUG-278 and BUG-289 were this default: a transient execution error cached for 24 hours under a key that never changed.
-3. **The stale-response guard is optional.** The shared question-flow helpers take an optional `isLatestRequest`, and default to "latest" when a caller passes neither sequencing hook. They throw only when a caller passes one hook without the other (`assertRequestSequencingHooks`).
+3. **The stale-response guard was optional.** The shared question-flow helpers took an optional `isLatestRequest`, and defaulted to "latest" when a caller passed neither sequencing hook. They threw only when a caller passed one hook without the other (`assertRequestSequencingHooks`).
    - BUG-194 was a submit path with only the unmount guard, while its sibling load path checked for the latest request.
 
 ## Evidence
 
-**The anchors:** the contract's matrix links `#Lnn` line anchors. `submitAnswerForQuestion` is now at `app/(app)/app/practice/practice-page-logic.ts:139` and `[sessionId]/practice-session-page-logic.ts:197`; `submitSelectedAnswer` at `app/(app)/app/questions/[slug]/question-page-logic.ts:229`; `endSession` at `practice-session-page-logic.ts:275`; `commitChoice` at `use-practice-session-question-flow.ts:425`. No later commit changed a code or test link.
+The locations below describe baseline `134b0578`, before these changes.
+
+**The anchors at baseline `134b0578`:** the contract's matrix linked `#Lnn` line anchors. `submitAnswerForQuestion` is now at `app/(app)/app/practice/practice-page-logic.ts:139` and `[sessionId]/practice-session-page-logic.ts:197`; `submitSelectedAnswer` at `app/(app)/app/questions/[slug]/question-page-logic.ts:229`; `endSession` at `practice-session-page-logic.ts:275`; `commitChoice` at `use-practice-session-question-flow.ts:425`. Before this fix, no later commit had changed a code or test link.
 
 **The default cache policy:**
 - `src/adapters/controllers/shared/execute-idempotent.ts:40` makes the policy optional; `:64-65` caches when it is absent (`!== false`).
@@ -62,7 +64,7 @@ On 2026-07-23 the owner ruled DEBT-461's runtime consolidation NO-GO. The accept
 
 ## Impact
 
-The contract references are already wrong. All twelve current keyed-controller callers supply policies, and no current product failure from an omitted sequencing pair was established. The permissive defaults can admit an unsafe future caller. P3 for these enforcement gaps.
+The contract references had drifted. The reference guard now checks their targets. All twelve current keyed-controller callers supply policies, and no current product failure from an omitted sequencing pair was established. The former permissive defaults could admit an unsafe future caller. P3 for these enforcement gaps.
 
 ## Options
 
@@ -71,18 +73,21 @@ The contract references are already wrong. All twelve current keyed-controller c
    - Require `shouldCacheError` on every keyed action, and both sequencing hooks on the shared flow helpers. Each action keeps its own cache decisions. That enforces ADR-015's rule and the existing hook-pair invariant.
 2. **Reopen runtime consolidation only under DEBT-461's full criteria.** A new owner direction must explicitly reference the July 23 NO-GO. Show at least two live surfaces with identical complete transitions, no surface-mode flags or strategy callbacks, no weakened tests and net deletion of production branches, state and comments. BUG-304, the only later defect, does not meet them.
 
-## Resolution (proposed)
+## Resolution (decided)
 
-Option 1, red first:
-- the symbol check fails on today's contract;
-- the type change fails to compile at a caller that omits a policy.
+Option 1. The reference check failed on the original contract and now passes with declaration and test-name links.
+
+`executeIdempotent` and `withIdempotency` require an explicit `shouldCacheError`, and ADR-015's 2026-10-21 amendment records it. The twelve controller callers retain their policies, including Zod-error caching and the action-aware rules. A throwing policy still preserves the original error and caches it.
+
+Both shared question flows require the complete sequencing pair, and their page helpers carry that requirement to callers. They reject an absent or partial pair before starting a request. Four type assertions, two for the cache policy and two for the sequencing pair, failed before those inputs became required, and the two absent-pair tests failed before the runtime guard changed. Existing stale-response, key-binding, replay, rotation and recovery cases remain.
 
 Another defect alone neither satisfies option 2 nor authorizes it. Option 1 leaves the NO-GO intact. Reference-existence tests do not prove behavior; retain the production-shaped protocol tests and documented per-surface exceptions.
 
 ## Verification
 
-- [ ] A test fails when a contract entry names a symbol or test that no longer exists in its file.
-- [ ] Keyed actions require a cache policy; shared flow helpers require the complete sequencing pair. Behavioral protocol cases remain in place.
+- [x] A test fails when a contract entry names a declaration or running test that no longer exists in its file. The guard failed on the original contract; its missing, moved, renamed, commented-out and skipped proof cases pass.
+- [x] Keyed actions require a cache policy; shared flow helpers require the complete sequencing pair. Behavioral protocol cases remain in place.
+- [ ] Promote the fix to main.
 
 ## Related
 

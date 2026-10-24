@@ -3,7 +3,7 @@ import {
   auditDocumentation,
   auditRecordLifecycle,
   REGISTER_INDEX_BUDGET_BYTES,
-} from '../scripts/documentation-archive';
+} from '../scripts/records/documentation-archive';
 
 type Files = Record<string, string>;
 const exists = (files: Files) => (file: string) => Object.hasOwn(files, file);
