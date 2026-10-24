@@ -1,6 +1,6 @@
 # BUG-369: An Authorization Header Lets Requests Spend Clerk's Backend API Allowance Uncounted
 
-**Status:** Verifying — in production, a request with an `Authorization` header gets 401 and both crons still run; due 2026-10-31
+**Status:** Verifying — in production, the proxy answers a header the firewall lets through with 401, and both crons still run; due 2026-10-31
 **Priority:** P2
 **Date:** 2026-10-24
 
@@ -58,7 +58,7 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - `proxy.ts` sends `CRON_ROUTE_PATHS` (`lib/public-routes.ts`) on without Clerk.
   - It answers 401 to every other request that carries an `Authorization` header, public resources included, before BUG-323's limiter and before Clerk.
   - The cron routes' public-route patterns come from the same list.
-- **Docs.** `docs/architecture/integrations/clerk.md` and `docs/architecture/security.md` state the rule.
+- **Docs.** `docs/architecture/integrations/clerk.md` states the rule, and `docs/architecture/security.md` links to it.
 - **Follow-up.** Tell Clerk about both shapes with DEBT-503 item 2's report (option 3). That is the owner's action.
 
 ## Verification
@@ -81,7 +81,9 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - with the header, on `www`, the `vercel.app` alias and a deployment URL.
 
   Requests without the header got 200. A wrong, 64-hex secret on either cron route reached the route's own 401.
-- [ ] In production, after release: a request to the app with a dummy `Authorization` header gets 401 or the firewall's 403, and the next runs of both crons succeed. Due 2026-10-31.
+- [ ] In production, after release, two checks; due 2026-10-31.
+  - A plain `Authorization` value on an unknown `/api/cron/` path, which both firewall rules let through, gets the proxy's 401. On 2026-10-24, before the fix, Clerk ran and the route answered 404.
+  - The next runs of both crons succeed.
 
 ## Related
 
