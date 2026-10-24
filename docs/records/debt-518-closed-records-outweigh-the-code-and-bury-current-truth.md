@@ -86,7 +86,7 @@ Measured 2026-10-11 on `dev` after #1464.
    - A fix that is already proven and lands in one pull request uses that PR's description as its record. The description has the same sections as a record: evidence, options, decision and verification.
    - If a check outlives that pull request, such as its promotion, it needs a record, so the weekly due check sees it.
 2. **Write first, and challenge on the branch.**
-   - Take the next ID from `scripts/next-record-id.ts`; the guard fails a duplicate that two branches took at once.
+   - Take the next ID with `pnpm record:next bug` (or `debt`); the guard fails a duplicate that two branches took at once.
    - Commit the record first on the work branch, and push the branch without opening a PR.
    - A second agent challenges it there, and corrects it in place with a `Corrected YYYY-MM-DD` note.
    - No CodeRabbit review is spent until there is code.
@@ -207,7 +207,7 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
    - The specs, brainstorming, audits and QA registers are retired: QA procedures move to `docs/guides/qa/`, and ideas to `docs/product/ideas.md`.
    - The 27 Deferred rows become 19 self-contained Waiting rows (two pairs merged) and 2 product ideas; DEBT-472's fired trigger becomes DEBT-519, and 3 rows are dropped as shipped, obsolete or superseded. The three idle brainstorms join the ideas list.
    - The guard requires unique IDs, rejects files left in a retired folder, and rejects links into records outside the index.
-   - `scripts/next-record-id.ts` computes IDs.
+   - `scripts/records/next-record-id.ts` computes IDs.
    - `AGENTS.md`'s records sections become a pointer.
    - ADR-023 lands here.
 2. **Agent instructions** (this record's third pull request):
@@ -267,3 +267,5 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
 - [ADR-023](../adr/adr-023-documentation-organisation.md): the layout, names and content rules this migration follows.
 - [How records work](./README.md#how-records-work): the records rules that replace `AGENTS.md`'s "Closing and Archiving Documentation Records" (DEBT-488, 2026-09-21) and "Register Indexes and Records" (2026-10-05). Those two rounds slimmed the indexes but kept the archive.
 - DEBT-515: CodeRabbit learned lasting rules from record text.
+
+Corrected 2026-10-19: update the current record-ID entry point after DEBT-532; the historical evidence census remains unchanged.
