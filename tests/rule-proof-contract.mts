@@ -24,6 +24,10 @@ export const SHARED_PROOF_CONSUMERS: Readonly<
     'src/application/test-helpers/fakes/fake-attempt-repository-score-contract.test.ts',
     'tests/integration/attempt-score-contract.integration.test.ts',
   ],
+  'tests/shared/renewal-consent-termination-contract.ts': [
+    'src/application/test-helpers/fakes/fake-renewal-consent-record-repository-termination-contract.test.ts',
+    'tests/integration/renewal-consent-records.integration.test.ts',
+  ],
 };
 
 // Playwright runs end-to-end proofs outside every Vitest lane; the register

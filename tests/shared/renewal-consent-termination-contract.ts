@@ -72,6 +72,15 @@ export function runRenewalConsentTerminationContract(
       { name: 'later', replay: '2032-01-01T00:00:00Z' },
     ])(
       'keeps the first observation, retention and updatedAt on $name replay',
+      {
+        meta: {
+          ruleProof: {
+            file: 'tests/shared/renewal-consent-termination-contract.ts',
+            title:
+              'keeps the first observation, retention and updatedAt on $name replay',
+          },
+        },
+      },
       async ({ replay }) => {
         const { record, repository } = await (await createHarness()).seed();
         const externalSubscriptionId = record.externalSubscriptionId;
@@ -100,7 +109,15 @@ export function runRenewalConsentTerminationContract(
       },
     );
 
-    it('keeps the consent floor when it outlasts the termination floor', async () => {
+    it('keeps the consent floor when it outlasts the termination floor', {
+      meta: {
+        ruleProof: {
+          file: 'tests/shared/renewal-consent-termination-contract.ts',
+          title:
+            'keeps the consent floor when it outlasts the termination floor',
+        },
+      },
+    }, async () => {
       const { record, repository } = await (await createHarness()).seed();
       await repository.markSubscriptionTerminated({
         externalSubscriptionId: record.externalSubscriptionId,
@@ -111,7 +128,15 @@ export function runRenewalConsentTerminationContract(
       });
     });
 
-    it('retains a leap-day termination through March 1 of the next year', async () => {
+    it('retains a leap-day termination through March 1 of the next year', {
+      meta: {
+        ruleProof: {
+          file: 'tests/shared/renewal-consent-termination-contract.ts',
+          title:
+            'retains a leap-day termination through March 1 of the next year',
+        },
+      },
+    }, async () => {
       const { record, repository } = await (await createHarness()).seed();
       await repository.markSubscriptionTerminated({
         externalSubscriptionId: record.externalSubscriptionId,
@@ -123,7 +148,15 @@ export function runRenewalConsentTerminationContract(
       });
     });
 
-    it('preserves an existing retention floor longer than either calendar floor', async () => {
+    it('preserves an existing retention floor longer than either calendar floor', {
+      meta: {
+        ruleProof: {
+          file: 'tests/shared/renewal-consent-termination-contract.ts',
+          title:
+            'preserves an existing retention floor longer than either calendar floor',
+        },
+      },
+    }, async () => {
       const retainUntil = new Date('2035-01-01T00:00:00Z');
       const { record, repository } = await (await createHarness()).seed({
         retainUntil,
@@ -150,7 +183,14 @@ export function runRenewalConsentTerminationContract(
       });
     });
 
-    it('records exactly one of two concurrent first observations', async () => {
+    it('records exactly one of two concurrent first observations', {
+      meta: {
+        ruleProof: {
+          file: 'tests/shared/renewal-consent-termination-contract.ts',
+          title: 'records exactly one of two concurrent first observations',
+        },
+      },
+    }, async () => {
       const { record, repository, competingRepository } = await (
         await createHarness()
       ).seed();
