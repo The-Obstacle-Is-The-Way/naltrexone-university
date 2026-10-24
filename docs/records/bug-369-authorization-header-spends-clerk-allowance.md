@@ -56,7 +56,7 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - Both rules cover every hostname of the project and stay as defense in depth after the fix.
 - **The fix.**
   - `proxy.ts` sends `CRON_ROUTE_PATHS` (`lib/public-routes.ts`) on without Clerk.
-  - It answers 401 to every other request that carries an `Authorization` header, before BUG-323's limiter and before Clerk.
+  - It answers 401 to every other request that carries an `Authorization` header, public resources included, before BUG-323's limiter and before Clerk.
   - The cron routes' public-route patterns come from the same list.
 - **Docs.** `docs/architecture/integrations/clerk.md` and `docs/architecture/security.md` state the rule.
 - **Follow-up.** Tell Clerk about both shapes with DEBT-503 item 2's report (option 3). That is the owner's action.
@@ -64,7 +64,7 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
 ## Verification
 
 - [x] `proxy-authorization-header.test.ts`:
-  - the header gets a 401 before Clerk runs on a protected page, a public page, a public API route, and a path that only starts like a cron route, with or without a scheme;
+  - the header gets a 401 before Clerk runs on a protected page, a public page, a public API route, a public resource, and a path that only starts like a cron route, with or without a scheme;
   - each cron route passes without starting Clerk;
   - a request without the header still reaches Clerk.
 

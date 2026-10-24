@@ -62,7 +62,7 @@ export default clerkMiddleware(async (auth, request) => {
 });
 ```
 
-**Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`). The public resources in `PUBLIC_RESOURCE_PATHS` (`security.txt`, `robots.txt`, the sitemap and the Open Graph image) skip Clerk entirely, and so do the two cron routes in `CRON_ROUTE_PATHS`, which check `CRON_SECRET` themselves. Every other route the proxy matches is protected. Any other request that carries an `Authorization` header gets a 401 before Clerk runs, since Clerk's middleware reads a token from that header and can spend its Backend API on it (BUG-369). `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
+**Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`). The public resources in `PUBLIC_RESOURCE_PATHS` (`security.txt`, `robots.txt`, the sitemap and the Open Graph image) skip Clerk entirely, and so do the two cron routes in `CRON_ROUTE_PATHS`, which check `CRON_SECRET` themselves. Every other route the proxy matches is protected. Only the cron routes take an `Authorization` header: any other request that carries one, public resources included, gets a 401 before Clerk runs, since Clerk's middleware reads a token from that header and can spend its Backend API on it (BUG-369). `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
 
 ---
 

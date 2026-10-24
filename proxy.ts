@@ -286,14 +286,6 @@ export function createProxy({
   loadOperationalAlerts,
 }: ProxyDependencies) {
   return async function proxy(request: NextRequest, event: NextFetchEvent) {
-    // These exact public machine resources must not require even Clerk's
-    // anonymous dev-browser handshake, which redirects HTML requests.
-    if (
-      PUBLIC_RESOURCE_PATHS.some((path) => path === request.nextUrl?.pathname)
-    ) {
-      return NextResponse.next();
-    }
-
     // The cron routes check CRON_SECRET themselves and need no Clerk session,
     // so Clerk never reads their Authorization header.
     if (CRON_ROUTE_PATHS.includes(request.nextUrl?.pathname)) {
@@ -304,12 +296,21 @@ export function createProxy({
     // and can spend its Backend API on it, refreshing a genuine expired
     // session token or verifying an API-key or machine token, uncounted by
     // BUG-323's limits. No page or browser request to the app sends the
-    // header, so any other request carrying it is refused before Clerk.
+    // header, so any other request carrying it is refused, before Clerk and
+    // before the public resources too: only the cron routes take it.
     if (request.headers.has('authorization')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: HTTP_UNAUTHORIZED },
       );
+    }
+
+    // These exact public machine resources must not require even Clerk's
+    // anonymous dev-browser handshake, which redirects HTML requests.
+    if (
+      PUBLIC_RESOURCE_PATHS.some((path) => path === request.nextUrl?.pathname)
+    ) {
+      return NextResponse.next();
     }
 
     if (shouldBypassClerkAuth()) {

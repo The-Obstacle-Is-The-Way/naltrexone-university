@@ -60,6 +60,7 @@ describe('the Authorization header', () => {
     ['a protected page', 'https://example.com/app/dashboard'],
     ['a public page', 'https://example.com/pricing'],
     ['a public API route', 'https://example.com/api/health'],
+    ['a public resource', 'https://example.com/robots.txt'],
     [
       'a path that only starts like a cron route',
       `https://example.com${CRON_ROUTE_PATHS[0]}-other`,
