@@ -1,6 +1,6 @@
 # BUG-370: Scheduled Jobs Hide Why a gh Call Failed
 
-**Status:** Open
+**Status:** Verifying — promotion to main, then a passing run of each changed job; due 2026-11-07
 **Priority:** P3
 **Date:** 2026-10-24
 
@@ -47,12 +47,14 @@ Option 2. It restores the cause in each job's own line, and it depends on no par
 
 The catches that report a reason name the error they read, so none of them stays a bare `catch {}`.
 
+Implemented as `withGhFailureReason` and `ghFailureReason` in `scripts/lib/github-cli.mts`. A failure line reads `<fixed line> Cause: <reason>`, and an advisory or repository reads `<ID> (<reason>)`. The pull request also fixes a stale owner in `scripts/README.md` that #1604's review found: content-boundary work stays with BUG-351, which carries DEBT-531's decisions.
+
 ## Verification
 
-- [ ] The helper is tested through `createGhRunner` with a fake `gh`. A REST error, a GraphQL error and a two-line error each give their first line. A timeout, an output overflow and a missing executable each give their code, and the code wins over any output written before it. An error not from `gh` gives nothing, and an overlong line is capped.
-- [ ] Each of the five callers prints the reason after its fixed line for a `gh` failure, and only the fixed line for any other error. The existing value-free tests and the advisory watcher's 404 and rate-limit handling keep passing.
-- [ ] The advisory watcher names the reason beside each advisory or repository it reports.
-- [ ] Promotion to `main`, followed by a passing scheduled or dispatched run of each changed job. A hosted run that prints a failure line is claimed only once one has run.
+- [x] The helper is tested through `createGhRunner` with a fake `gh`. A REST error, a GraphQL error and a two-line error each give their first line. A timeout, an output overflow and a missing executable each give their code, and the code wins over any output written before it. An error not from `gh` gives nothing, and an overlong line is capped (2026-10-24).
+- [x] Each of the five callers prints the reason after its fixed line for a `gh` failure, and only the fixed line for any other error. The existing value-free tests and the advisory watcher's 404 and rate-limit handling keep passing (2026-10-24).
+- [x] The advisory watcher names the reason beside each advisory or repository it reports (2026-10-24).
+- [ ] Promotion to `main`, followed by a passing scheduled or dispatched run of each changed job; due 2026-11-07. A hosted run that prints a failure line is claimed only once one has run.
 
 ## Related
 

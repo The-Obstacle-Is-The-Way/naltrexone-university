@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import { withRecordedCli } from '../../tests/shared/recorded-cli';
+import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
 import {
   checkSecurityTxtRenewal,
   createGithubRenewalIssues,
@@ -220,6 +221,27 @@ describe('renewal command outcome', () => {
     ).toBe(1);
     expect(errors).toEqual([
       'security.txt renewal check failed; inspect the file and GitHub issue access.',
+    ]);
+  });
+
+  it('adds gh’s own line when a gh call fails', async () => {
+    const errors: string[] = [];
+    const output = {
+      log: () => {
+        throw new Error('Unexpected success output');
+      },
+      error: (message: string) => errors.push(message),
+    };
+    const failure = await ghRunnerFailure(
+      'GraphQL: Resource not accessible by integration (createIssue)\n',
+    );
+    expect(
+      await runSecurityTxtRenewal(async () => {
+        throw failure;
+      }, output),
+    ).toBe(1);
+    expect(errors).toEqual([
+      'security.txt renewal check failed; inspect the file and GitHub issue access. Cause: GraphQL: Resource not accessible by integration (createIssue)',
     ]);
   });
 });

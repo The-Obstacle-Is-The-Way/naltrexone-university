@@ -5,6 +5,7 @@ import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '../../tests/shared/process-env';
+import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
 import {
   DEPENDENCY_REPOSITORIES,
   lockfilePackages,
@@ -233,6 +234,35 @@ describe('raising upstream advisories', () => {
     ]);
   });
 
+  it('names gh’s reason beside an issue it could not open and a review it could not read', async () => {
+    const refused = await ghRunnerFailure(
+      'GraphQL: Resource not accessible by integration (createIssue)\n',
+    );
+    const unread = await ghRunnerFailure(
+      'gh: Resource not accessible by integration (HTTP 403)\n',
+    );
+    const issues = new MemoryIssues();
+    issues.create = async () => {
+      throw refused;
+    };
+    expect(
+      await raiseUpstreamAdvisories([advisory()], manifest, issues, {
+        find: async () => {
+          throw unread;
+        },
+      }),
+    ).toEqual({
+      raised: [],
+      failed: [
+        'GHSA-aaaa-bbbb-cccc (GraphQL: Resource not accessible by integration (createIssue))',
+      ],
+      ruledOut: [],
+      unreviewed: [
+        'GHSA-aaaa-bbbb-cccc (gh: Resource not accessible by integration (HTTP 403))',
+      ],
+    });
+  });
+
   it('fails outright when existing issues cannot be listed, since it could not deduplicate', async () => {
     const issues = new MemoryIssues();
     issues.list = async () => {
@@ -343,6 +373,23 @@ describe('watching several repositories', () => {
     );
     expect(read).toEqual(['broken/repo', 'broken/repo']);
     expect(outcome).toMatchObject({ read: 0, unreadable: ['broken/repo'] });
+  });
+
+  it('names gh’s reason beside a repository it could not read', async () => {
+    const failure = await ghRunnerFailure('gh: Server Error (HTTP 502)\n');
+    const outcome = await watchUpstreamAdvisories(
+      { direct: ['broken/repo'], indirect: [] },
+      manifest,
+      new MemoryIssues(),
+      async () => {
+        throw failure;
+      },
+      unreviewed,
+    );
+    expect(outcome).toMatchObject({
+      read: 0,
+      unreadable: ['broken/repo (gh: Server Error (HTTP 502))'],
+    });
   });
 
   // A missing repository stays missing, so it is not asked for twice.
@@ -696,6 +743,19 @@ describe('watch command outcome', () => {
     ).toBe(1);
     expect(errors).toEqual([
       'Upstream advisory watch failed; inspect the advisory source and GitHub issue access.',
+    ]);
+  });
+
+  it('adds gh’s own line when a gh call fails', async () => {
+    const failure = await ghRunnerFailure('gh: Bad credentials (HTTP 401)\n');
+    const { errors, sink } = output();
+    expect(
+      await runUpstreamAdvisoryWatch(async () => {
+        throw failure;
+      }, sink),
+    ).toBe(1);
+    expect(errors).toEqual([
+      'Upstream advisory watch failed; inspect the advisory source and GitHub issue access. Cause: gh: Bad credentials (HTTP 401)',
     ]);
   });
 });
