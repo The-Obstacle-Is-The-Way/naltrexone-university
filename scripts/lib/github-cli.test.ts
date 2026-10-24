@@ -20,6 +20,8 @@ const args = process.argv.slice(2);
 if (args[0] === 'fail') { process.stderr.write('synthetic diagnostic'); process.exit(3); }
 else if (args[0] === 'stderr') { process.stdout.write('{"message":"Not Found"}'); process.stderr.write(args[1]); process.exit(1); }
 else if (args[0] === 'wait') setTimeout(() => {}, 5000);
+else if (args[0] === 'silent') process.exit(1);
+else if (args[0] === 'die') process.kill(process.pid, 'SIGKILL');
 else if (args[0] === 'stall') { process.stderr.write('gh: partial output'); setTimeout(() => {}, 5000); }
 else if (args[0] === 'overflow') process.stdout.write('x'.repeat(4096));
 else process.stdout.write(JSON.stringify({ args, input: fs.readFileSync(0, 'utf8'), utf8: 'é' }));
@@ -115,11 +117,6 @@ describe('withGhFailureReason', () => {
   it.each([
     ['a timeout', () => failure(['wait'], { timeout: 100 }), 'ETIMEDOUT'],
     [
-      'a timeout after partial output',
-      () => failure(['stall'], { timeout: 500 }),
-      'ETIMEDOUT',
-    ],
-    [
       'an output overflow',
       () => failure(['overflow'], { timeout: 1000, maxBuffer: 1024 }),
       'ENOBUFS',
@@ -140,8 +137,30 @@ describe('withGhFailureReason', () => {
     expect(withGhFailureReason(line, fail())).toBe(`${line} Cause: ${code}`);
   });
 
+  it('lets a timeout’s code win over output written before it', () => {
+    const error = failure(['stall'], { timeout: 500 });
+    expect(error).toHaveProperty('stderr', 'gh: partial output');
+    expect(withGhFailureReason(line, error)).toBe(`${line} Cause: ETIMEDOUT`);
+  });
+
+  it.each([
+    ['an exit with no error output', ['silent'], 'exit status 1'],
+    ['a kill by signal', ['die'], 'killed by SIGKILL'],
+  ])('names %s', (_, args, reason) => {
+    expect(withGhFailureReason(line, failure(args))).toBe(
+      `${line} Cause: ${reason}`,
+    );
+  });
+
   it.each([
     ['a plain error', new Error('private fixture detail')],
+    [
+      'an error the runner did not throw, even one shaped like gh’s',
+      Object.assign(new Error('Command failed: git log'), {
+        status: 1,
+        stderr: 'fatal: private detail\n',
+      }),
+    ],
     [
       'a file error',
       Object.assign(new Error('ENOENT: private path'), {

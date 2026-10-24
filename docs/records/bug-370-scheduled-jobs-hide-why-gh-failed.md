@@ -47,13 +47,20 @@ Option 2. It restores the cause in each job's own line, and it depends on no par
 
 The catches that report a reason name the error they read, so none of them stays a bare `catch {}`.
 
-Implemented as `withGhFailureReason` and `ghFailureReason` in `scripts/lib/github-cli.mts`. A failure line reads `<fixed line> Cause: <reason>`, and an advisory or repository reads `<ID> (<reason>)`. The pull request also fixes a stale owner in `scripts/README.md` that #1604's review found: content-boundary work stays with BUG-351, which carries DEBT-531's decisions.
+Implemented as `withGhFailureReason` and `ghFailureReason` in `scripts/lib/github-cli.mts`. The runner marks each error it throws, and the helper reads only a marked error. A rethrown `git` failure or a hand-built error therefore prints no reason, whatever its shape. In order, the reason is:
+
+- the transport code;
+- the signal that killed `gh`;
+- `gh`'s first error line;
+- the exit status, when `gh` wrote no error output.
+
+A failure line reads `<fixed line> Cause: <reason>`, and an advisory or repository reads `<ID> (<reason>)`. A direct repository that GitHub cannot find reads `<repository> (not found)`. An advisory whose review fails both while raising and while closing is named once. The pull request also fixes a stale owner in `scripts/README.md` that #1604's review found: content-boundary work stays with BUG-351, which carries DEBT-531's decisions.
 
 ## Verification
 
-- [x] The helper is tested through `createGhRunner` with a fake `gh`. A REST error, a GraphQL error and a two-line error each give their first line. A timeout, an output overflow and a missing executable each give their code, and the code wins over any output written before it. An error not from `gh` gives nothing, and an overlong line is capped (2026-10-24).
+- [x] The helper is tested through `createGhRunner` with a fake `gh`. A REST error, a GraphQL error and a two-line error each give their first line. A timeout, an output overflow and a missing executable each give their code, and a timeout's code wins over output written before it. A kill by signal and a silent exit give the signal and the exit status. An error the runner did not throw gives nothing, even one shaped like `gh`'s, and an overlong line is capped (2026-10-24).
 - [x] Each of the five callers prints the reason after its fixed line for a `gh` failure, and only the fixed line for any other error. The existing value-free tests and the advisory watcher's 404 and rate-limit handling keep passing (2026-10-24).
-- [x] The advisory watcher names the reason beside each advisory or repository it reports (2026-10-24).
+- [x] The advisory watcher names the reason beside each advisory or repository it reports. It names a missing direct repository as not found, and names an advisory once (2026-10-24).
 - [ ] Promotion to `main`, followed by a passing scheduled or dispatched run of each changed job; due 2026-11-07. A hosted run that prints a failure line is claimed only once one has run.
 
 ## Related

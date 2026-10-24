@@ -259,6 +259,17 @@ function withReason(item: string, error: unknown): string {
   return reason ? `${item} (${reason})` : item;
 }
 
+// An advisory whose review fails both while raising and while closing is
+// named once, with its first reason.
+function oncePerItem(labels: readonly string[]): string[] {
+  const byItem = new Map<string, string>();
+  for (const label of labels) {
+    const item = label.split(' ')[0] ?? label;
+    if (!byItem.has(item)) byItem.set(item, label);
+  }
+  return [...byItem.values()];
+}
+
 export type RaiseOutcome = {
   raised: string[];
   failed: string[];
@@ -896,6 +907,8 @@ export async function watchUpstreamAdvisories(
       // direct dependency's must be noticed and fixed, so it fails the run.
       if (!direct && error instanceof RepositoryNotFound)
         unwatched.push(repository);
+      else if (error instanceof RepositoryNotFound)
+        unreadable.push(`${repository} (not found)`);
       else unreadable.push(withReason(repository, error));
     }
   }
@@ -914,7 +927,7 @@ export async function watchUpstreamAdvisories(
     ...raised,
     failed: [...raised.failed, ...reviewed.failed],
     closed: reviewed.closed,
-    unreviewed: [...new Set([...raised.unreviewed, ...reviewed.unreviewed])],
+    unreviewed: oncePerItem([...raised.unreviewed, ...reviewed.unreviewed]),
     read,
     unreadable,
     unwatched,

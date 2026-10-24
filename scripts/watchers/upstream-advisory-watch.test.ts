@@ -375,6 +375,28 @@ describe('watching several repositories', () => {
     expect(outcome).toMatchObject({ read: 0, unreadable: ['broken/repo'] });
   });
 
+  it('names an advisory once when both of its review lookups fail', async () => {
+    const reasons = [
+      await ghRunnerFailure('gh: Server Error (HTTP 502)\n'),
+      await ghRunnerFailure('gh: Bad Gateway (HTTP 504)\n'),
+    ];
+    const issues = new MemoryIssues();
+    const outcome = await watchUpstreamAdvisories(
+      { direct: ['vercel/next.js'], indirect: [] },
+      manifest,
+      issues,
+      async () => [advisory()],
+      {
+        find: async () => {
+          throw reasons.shift();
+        },
+      },
+    );
+    expect(outcome.unreviewed).toEqual([
+      'GHSA-aaaa-bbbb-cccc (gh: Server Error (HTTP 502))',
+    ]);
+  });
+
   it('names gh’s reason beside a repository it could not read', async () => {
     const failure = await ghRunnerFailure('gh: Server Error (HTTP 502)\n');
     const outcome = await watchUpstreamAdvisories(
@@ -470,7 +492,7 @@ describe('watching several repositories', () => {
       closed: [],
       unreviewed: [],
       read: 0,
-      unreadable: ['gone/direct', 'nodejs/undici'],
+      unreadable: ['gone/direct (not found)', 'nodejs/undici'],
       unwatched: ['substack/node-commondir'],
     });
   });
