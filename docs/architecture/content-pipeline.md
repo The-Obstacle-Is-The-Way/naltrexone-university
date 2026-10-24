@@ -299,7 +299,7 @@ The app selects and shows new questions only when they are **published**: `Drizz
 To exclude placeholders from your runtime database, seed without `--include-placeholders`:
 
 ```bash
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm db:seed
+DATABASE_URL="$TARGET_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm db:seed
 ```
 
 This excludes `content/questions/placeholder/**/*.mdx` from the seed input and archives only the ten committed fixture slugs listed in `scripts/seed/placeholder-archiver.ts`. An authored question is not synthetic merely because its slug starts with `placeholder-` (BUG-315).
@@ -721,5 +721,5 @@ Missing migration tables (for example `rate_limits` or `idempotency_keys`) are o
 If migrations are missing, select the intended target explicitly; a remote target also requires its exact acknowledgment:
 
 ```bash
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm db:migrate
+DATABASE_URL="$TARGET_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 ```

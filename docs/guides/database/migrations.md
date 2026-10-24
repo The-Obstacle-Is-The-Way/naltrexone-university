@@ -155,10 +155,11 @@ This guide is the only place that writes the command out; other documents link
 here.
 
 For any manual fallback or operator-run migration, pass the intended database
-explicitly:
+explicitly and, for a remote target, the `DB_TARGET_ACK` value its refusal
+prints:
 
 ```bash
-DATABASE_URL="<verified target connection string>" pnpm db:migrate
+DATABASE_URL="<verified target connection string>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 ```
 
 Verify the target host without printing credentials before mutating any remote

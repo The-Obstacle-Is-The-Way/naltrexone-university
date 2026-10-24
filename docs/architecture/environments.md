@@ -224,9 +224,9 @@ Only use `.env.local`'s `DATABASE_URL` for an intentional deploy-target E2E chec
 LOCAL_E2E_DATABASE_URL="$(node -e "const parsed = require('dotenv').parse(require('node:fs').readFileSync('.env.local')); const url = parsed.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
 
-# Migrate only the deploy target you just verified, after explicitly supplying
-# the exact DB_TARGET_ACK required for that remote target.
-DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
+# Migrate only the deploy target you just verified. A remote target is refused
+# until DB_TARGET_ACK repeats the exact value that the refusal prints.
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 
 # Then opt into using that existing database for E2E.
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
