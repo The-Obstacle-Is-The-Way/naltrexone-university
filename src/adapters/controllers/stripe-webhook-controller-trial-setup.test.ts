@@ -413,6 +413,116 @@ describe('processStripeWebhook trial payment-method setup', () => {
     expect(harness.renewalNoticeDeliveries.snapshot()).toEqual([]);
   });
 
+  describe('when the subscription changes while Stripe is called', () => {
+    async function completeWhileSubscriptionChanges(
+      sessionId: string,
+      change: (completion: TrialSetupCompletion) => {
+        externalSubscriptionId: string;
+        status: 'inTrial' | 'active';
+        currentPeriodEnd: Date;
+      },
+    ) {
+      const completion = createTestWebhookTrialSetupCompletion({
+        sessionId,
+        userId: crypto.randomUUID(),
+      });
+      let changeSubscription = async () => undefined;
+      class ChangingDuringDefaultGateway extends FakePaymentGateway {
+        override async setTrialSubscriptionDefaultPaymentMethod(
+          input: Parameters<
+            FakePaymentGateway['setTrialSubscriptionDefaultPaymentMethod']
+          >[0],
+        ): Promise<void> {
+          await super.setTrialSubscriptionDefaultPaymentMethod(input);
+          await changeSubscription();
+        }
+      }
+      const paymentGateway = new ChangingDuringDefaultGateway({
+        externalCustomerId: 'cus_123',
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult: {
+          eventId: `evt_${sessionId}`,
+          type: 'checkout.session.completed',
+          trialPaymentMethodSetupCompletion: completion,
+        },
+      });
+      const harness = createStripeWebhookTestHarness({ paymentGateway });
+      await seedTrialOwnership(harness, completion);
+      await seedPendingTrialSetupOperation(harness.setupOperations, completion);
+      changeSubscription = async () => {
+        await harness.subscriptions.upsert({
+          userId: completion.userId,
+          plan: completion.plan,
+          cancelAtPeriodEnd: false,
+          startedAt: new Date('2026-01-22T00:00:00.000Z'),
+          billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
+          ...change(completion),
+          expectedVersion:
+            await harness.subscriptions.findObservationVersionByUserId(
+              completion.userId,
+            ),
+        });
+      };
+
+      await processStripeWebhook(harness.deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      });
+      return { completion, harness, paymentGateway };
+    }
+
+    it('records consent with the billing period read when consent is recorded', async () => {
+      const paidPeriodEnd = new Date('2026-03-01T00:00:00.000Z');
+      const { harness } = await completeWhileSubscriptionChanges(
+        'cs_setup_period_moved',
+        (completion) => ({
+          externalSubscriptionId: completion.externalSubscriptionId,
+          status: 'active',
+          currentPeriodEnd: paidPeriodEnd,
+        }),
+      );
+
+      expect(harness.renewalConsents.snapshot()).toEqual([
+        expect.objectContaining({
+          setupSessionId: 'cs_setup_period_moved',
+          trialEndsAt: null,
+          cancellationDeadline: paidPeriodEnd,
+        }),
+      ]);
+    });
+
+    it('records no consent and detaches the card when the subscription is no longer the one the Session added it to', async () => {
+      const { completion, harness, paymentGateway } =
+        await completeWhileSubscriptionChanges(
+          'cs_setup_subscription_replaced',
+          (current) => ({
+            externalSubscriptionId: 'sub_replacement',
+            status: 'inTrial',
+            currentPeriodEnd: current.trialEndsAt,
+          }),
+        );
+
+      expect(paymentGateway.trialPaymentMethodDetachInputs).toEqual([
+        {
+          sessionId: 'cs_setup_subscription_replaced',
+          externalPaymentMethodId: completion.stripePaymentMethodId,
+          externalCustomerId: completion.externalCustomerId,
+        },
+      ]);
+      await expect(
+        harness.setupOperations.findBySessionId(
+          'cs_setup_subscription_replaced',
+        ),
+      ).resolves.toMatchObject({
+        status: 'terminal',
+        terminalReason: 'billing_ownership_mismatch',
+      });
+      expect(harness.renewalConsents.snapshot()).toEqual([]);
+      expect(harness.renewalNoticeDeliveries.snapshot()).toEqual([]);
+    });
+  });
+
   it('allows only one of two concurrent deliveries for the same Session to perform provider writes', async () => {
     const completion = createTestWebhookTrialSetupCompletion({
       sessionId: 'cs_setup_concurrent',

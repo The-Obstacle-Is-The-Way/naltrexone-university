@@ -36,7 +36,7 @@ import {
   RecordRenewalConsentUseCase,
   SendRenewalAcknowledgmentUseCase,
 } from '@/src/application/use-cases';
-import type { RenewalConsentRecord } from '@/src/domain/entities';
+import type { RenewalConsentRecord, Subscription } from '@/src/domain/entities';
 import { DAY_MS } from '@/src/domain/services';
 import { isEntitledStatus } from '@/src/domain/value-objects';
 
@@ -239,6 +239,28 @@ async function endTrialPaymentMethodSetup(
   );
 }
 
+// The trial the Session added its card to: the user's subscription, on the
+// Session's plan, Stripe subscription and customer. Otherwise null.
+async function findSetupSubscription(
+  {
+    subscriptions,
+    stripeCustomers,
+  }: Pick<StripeWebhookTransaction, 'subscriptions' | 'stripeCustomers'>,
+  completion: TrialPaymentMethodSetupCompletion,
+): Promise<Subscription | null> {
+  const [subscription, externalSubscriptionId, customer] = await Promise.all([
+    subscriptions.findByUserId(completion.userId),
+    subscriptions.findExternalSubscriptionIdByUserId(completion.userId),
+    stripeCustomers.findByUserId(completion.userId),
+  ]);
+  return subscription !== null &&
+    subscription.plan === completion.plan &&
+    externalSubscriptionId === completion.externalSubscriptionId &&
+    customer?.stripeCustomerId === completion.externalCustomerId
+    ? subscription
+    : null;
+}
+
 async function processTrialPaymentMethodSetupWebhook(
   deps: StripeWebhookDeps,
   event: StripeWebhookEvent,
@@ -285,17 +307,10 @@ async function processTrialPaymentMethodSetupWebhook(
         return null;
       }
 
-      const [subscription, externalSubscriptionId, customer] =
-        await Promise.all([
-          subscriptions.findByUserId(completion.userId),
-          subscriptions.findExternalSubscriptionIdByUserId(completion.userId),
-          stripeCustomers.findByUserId(completion.userId),
-        ]);
-      const ownershipMatches =
-        subscription !== null &&
-        subscription.plan === completion.plan &&
-        externalSubscriptionId === completion.externalSubscriptionId &&
-        customer?.stripeCustomerId === completion.externalCustomerId;
+      const subscription = await findSetupSubscription(
+        { subscriptions, stripeCustomers },
+        completion,
+      );
 
       const result = await trialPaymentMethodSetupOperations.claim({
         sessionId: completion.sessionId,
@@ -311,14 +326,14 @@ async function processTrialPaymentMethodSetupWebhook(
           'Trial payment-method setup is already being processed',
         );
       }
-      return { claimed: result, subscription, ownershipMatches };
+      return { claimed: result, subscription };
     },
   );
 
   if (!claimResult) return;
-  const { claimed, subscription, ownershipMatches } = claimResult;
+  const { claimed, subscription } = claimResult;
 
-  if (!ownershipMatches || !subscription) {
+  if (!subscription) {
     await endTrialPaymentMethodSetup(deps, {
       event,
       completion,
@@ -381,15 +396,18 @@ async function processTrialPaymentMethodSetupWebhook(
   const consentOutcome = await deps.transaction(async (transaction) => {
     const {
       stripeEvents,
-      subscriptions,
       trialPaymentMethodSetupOperations,
       renewalConsentRecords,
     } = transaction;
-    // BUG-364: the cancellation can be recorded while Stripe is called
-    // above, so the transaction that records consent checks it again.
-    const current = await subscriptions.findByUserId(claimed.userId);
-    if (current?.cancelAtPeriodEnd) {
-      return { cancellationScheduled: true } as const;
+    // BUG-364: the subscription can change while Stripe is called above, so
+    // the transaction that records consent repeats the claim's checks and
+    // takes the consent's dates from what it reads now.
+    const current = await findSetupSubscription(transaction, completion);
+    if (!current) {
+      return { terminalReason: 'billing_ownership_mismatch' } as const;
+    }
+    if (current.cancelAtPeriodEnd) {
+      return { terminalReason: 'trial_cancellation_scheduled' } as const;
     }
     const consent = await new RecordRenewalConsentUseCase(
       renewalConsentRecords,
@@ -409,10 +427,8 @@ async function processTrialPaymentMethodSetupWebhook(
       // the trial end and deadline come from the live subscription, since
       // the snapshot's dates can drift (DEBT-414).
       trialEndsAt:
-        subscription.status === 'inTrial'
-          ? subscription.currentPeriodEnd
-          : null,
-      cancellationDeadline: subscription.currentPeriodEnd,
+        current.status === 'inTrial' ? current.currentPeriodEnd : null,
+      cancellationDeadline: current.currentPeriodEnd,
       cancellationMethod: claimed.cancellationMethod,
       disclosureSnapshot: claimed.disclosureSnapshot,
       disclosureVersion: claimed.disclosureVersion,
@@ -436,14 +452,14 @@ async function processTrialPaymentMethodSetupWebhook(
       completedAt: deps.now(),
     });
     await stripeEvents.markProcessed(event.eventId);
-    return { cancellationScheduled: false, deliveryId } as const;
+    return { terminalReason: null, deliveryId } as const;
   });
-  if (consentOutcome.cancellationScheduled) {
+  if (consentOutcome.terminalReason) {
     await endTrialPaymentMethodSetup(deps, {
       event,
       completion,
       claimId,
-      reason: 'trial_cancellation_scheduled',
+      reason: consentOutcome.terminalReason,
     });
     return;
   }
