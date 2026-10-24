@@ -245,7 +245,7 @@ Option B is implemented locally in #1560, with the retained boundaries below. Th
 - Keep the Stripe provider wrapper. Replacing it with a reporter still needs an outer supervisor for the local five-minute process-tree deadline, environment gate, database-variable removal and sanitized failure summary. That leaves two layers for the same single caller, with no smaller equivalent design demonstrated.
 - Keep script-specific workflow/package wiring assertions beside their script tests; they prove those commands' deployment contracts. Whole-repository scans live in `tests/`. Keep the content suite groupings that intentionally test several commands; a filename without one matching source is not by itself a defect.
 - Keep human, managed and test-lane remote authorization distinct. A common host predicate does not authorize changing `DB_TARGET_ACK`, managed automation's URL contract or the explicit existing-target opt-ins. Keep `E2E_INSTANCE` and `E2E_APP_PORT`: source searches cannot establish whether an operator still sets them, and no deprecation/migration has been agreed.
-- Keep the seed tag validator, newline normalization and seed/release write-side structure with BUG-351 and DEBT-531. A deletion must prove schema/validator equivalence on admitted inputs; the eventual planner boundary must preserve source freshness, immutable revisions, normalization and hold scope. These are content-contract changes, not prerequisites for grouping the other families. After those records establish the contract, their implementation can place pure policy inward and persistence behind ports. Do not infer that moving files implements that contract.
+- Keep the seed tag validator, newline normalization and seed/release write-side structure with BUG-351, which carries DEBT-531's decisions. A deletion must prove schema/validator equivalence on admitted inputs; the eventual planner boundary must preserve source freshness, immutable revisions, normalization and hold scope. These are content-contract changes, not prerequisites for grouping the other families. After those records establish the contract, their implementation can place pure policy inward and persistence behind ports. Do not infer that moving files implements that contract.
 - Keep environment seeding and corpus preparation until a replacement supports every required target and BUG-351's source/plan contract, with DEBT-483's owner-approved per-target bootstrap. A protected dispatch job is declined here, not a substitute for those invariants. Keep the upstream-fix watcher while its Stryker watch / #1500 remains pending; DEBT-500's Waiting trigger owns removal once the patch is gone and no watch remains.
 - **Evidence retained deliberately:**
   - `database/migration-ledger.ts` keeps its `E2E_PREFLIGHT:` error codes. They are a diagnostic contract that E2E output and runbooks search for; renaming them is its own change.
@@ -261,11 +261,11 @@ Corrected 2026-10-19: record the implemented boundaries, family moves and config
 - [x] One native `gh` runner serves eight callers; two list adapters share page transport without merging lifecycle policies. No test mocks `node:child_process`; the source guard has rejection controls.
 - [x] Both scheduled jobs retain native zero-install execution; entry detection, the test-lane runner and loopback classification are shared with their real callers.
 - [x] Every deletion candidate above is removed, retained with a source-level reason, or left with its named existing owner/prerequisite.
-- [x] Non-content families moved one at a time with passing directory and family tests; content paths remain with BUG-351 and DEBT-531.
+- [x] Non-content families moved one at a time with passing directory and family tests; content paths remain with BUG-351.
 - [x] Configuration replacements are implemented locally or explicitly declined above; hosted behavior is not claimed from local tests.
 - [x] Merge policy and command runner split; further record/advisory splits are declined with their dependency reasons.
 - [x] The dispatched seed job is declined; no new CI production credential or external setting is required.
-- [ ] Move the content families (`seed/`, `content-release/` and the root content commands) once BUG-351's source admission and DEBT-531's planner settle their boundary. Neither record takes this move on.
+- [ ] Move the content families (`seed/`, `content-release/` and the root content commands) once BUG-351's source admission and planner settle their boundary. BUG-351 does not take this move on.
 - [ ] Integrate #1559 and current `dev`, then pass the full gate, standalone audit and coordinated E2E on the final head.
 - [ ] Record independent final challenge, review/CI and promotion evidence before closure under the index rules.
 
@@ -275,11 +275,13 @@ Corrected 2026-10-20: the criteria above were narrowed during implementation wit
 - "Declined by the owner" became "retained with a source-level reason" under the owner's 2026-10-19 delegation (Decisions). On 2026-10-20 the owner chose to land the work in one pull request, #1560, accepting Option C's concern that one review then covers many files.
 - "The layout complete" covered every family. The content families remain, and BUG-351 and DEBT-531 do not take them on, so their item above stays open here.
 
+Corrected 2026-10-24: DEBT-531 closed on 2026-10-23, and BUG-351 carries its decisions, so the content families' move now waits only for BUG-351.
+
 ## Related
 
 - **Defects found by the review and challenge:** BUG-353 through BUG-361.
 - **Closed prerequisite:** BUG-352 shipped the pooler's registry failover and the shared `ci/pull-image.sh` in #1552 (closed in #1555); its remaining owner/watch follow-ups do not block evaluating the Compose consolidation.
-- **Content writers:** BUG-351 owns the planner and input freshness, DEBT-531 normalization and hold scope, and DEBT-483 the bootstrap.
+- **Content writers:** BUG-351 owns the planner and input freshness, and DEBT-483 the bootstrap. DEBT-531 decided normalization and hold scope before it closed on 2026-10-23.
 - **Scripts touched by open records:**
   - BUG-329: the local target that changes in child processes;
   - DEBT-500's Waiting row (the record is closed): the upstream fix watch;
