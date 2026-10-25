@@ -50,19 +50,28 @@ The app sets neither. `@clerk/backend` sends the version it supports (`SUPPORTED
 ### Middleware (proxy.ts)
 
 ```typescript
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-import { PUBLIC_ROUTE_PATTERNS } from '@/lib/public-routes';
-
+// Simplified from proxy.ts: the checks run in this order, each can return
+// early, and only the last one runs Clerk.
 const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+async function proxy(request: NextRequest, event: NextFetchEvent) {
+  const path = request.nextUrl.pathname;
+  // The cron routes check CRON_SECRET themselves.
+  if (CRON_ROUTE_PATHS.includes(path)) return NextResponse.next();
+  // BUG-369: no other route takes an Authorization header.
+  if (request.headers.has('authorization')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-});
+  if (PUBLIC_RESOURCE_PATHS.includes(path)) return NextResponse.next();
+  // Then the NEXT_PUBLIC_SKIP_CLERK bypass, which production ignores, and
+  // BUG-323's limiter, which can refuse the request.
+  return clerkMiddleware(async (auth, request) => {
+    if (!isPublicRoute(request)) await auth.protect();
+  })(request, event);
+}
 ```
 
-**Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`). The public resources in `PUBLIC_RESOURCE_PATHS` (`security.txt`, `robots.txt`, the sitemap and the Open Graph image) skip Clerk entirely, and every other route the proxy matches is protected. `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
+**Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`), and every route outside them is protected. The public resources in `PUBLIC_RESOURCE_PATHS` (`security.txt`, `robots.txt`, the sitemap and the Open Graph image) skip Clerk entirely, and so do the two cron routes in `CRON_ROUTE_PATHS`, which check `CRON_SECRET` themselves. Only the cron routes take an `Authorization` header: any other request that carries one, public resources included, gets a 401 before Clerk runs, since Clerk's middleware reads a token from that header and can spend its Backend API on it (BUG-369). `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
 
 ---
 

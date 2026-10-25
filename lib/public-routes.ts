@@ -26,6 +26,13 @@ export const PUBLIC_PAGE_POLICY = {
   { matchScope: 'exact' | 'prefix'; indexable: boolean }
 >;
 
+// The only routes that take an Authorization header: Vercel Cron sends
+// CRON_SECRET in it, and each route checks it itself, with no Clerk session.
+export const CRON_ROUTE_PATHS: readonly string[] = [
+  '/api/cron/reconcile-stripe-subscriptions',
+  '/api/cron/send-renewal-notices',
+];
+
 // /checkout/success stays protected, so Clerk's middleware restores the session
 // after Stripe's redirect before the page syncs the subscription. Its
 // session_id must survive Clerk's sign-in and handshake redirects, which
@@ -35,8 +42,7 @@ export const PUBLIC_ROUTE_PATTERNS = [
   ...Object.entries(PUBLIC_PAGE_POLICY).map(([path, policy]) =>
     policy.matchScope === 'exact' ? path : `${path}(.*)`,
   ),
-  '/api/cron/reconcile-stripe-subscriptions(.*)',
-  '/api/cron/send-renewal-notices(.*)',
+  ...CRON_ROUTE_PATHS.map((path) => `${path}(.*)`),
   '/api/health(.*)',
   '/api/stripe/webhook(.*)',
   '/api/webhooks/clerk(.*)',
