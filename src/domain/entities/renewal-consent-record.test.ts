@@ -241,7 +241,7 @@ describe('renewal consent record', () => {
     expect(terminated.retainUntil).toEqual(new Date('2031-02-01T00:00:00Z'));
   });
 
-  it('moves termination to a later one when the contract ends again', () => {
+  it('keeps the first termination when a later observation is replayed', () => {
     const record = terminateRenewalConsentRecord(
       newRenewalConsentRecord(createInitialOfferInput()),
       new Date('2027-01-01T00:00:00Z'),
@@ -252,10 +252,7 @@ describe('renewal consent record', () => {
       new Date('2030-02-01T00:00:00Z'),
     );
 
-    expect(later.subscriptionTerminatedAt).toEqual(
-      new Date('2030-02-01T00:00:00Z'),
-    );
-    expect(later.retainUntil).toEqual(new Date('2031-02-01T00:00:00Z'));
+    expect(later).toEqual(record);
   });
 
   it('does not shorten retention when an older termination is replayed', () => {

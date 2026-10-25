@@ -143,7 +143,10 @@ export class FakeRenewalConsentRecordRepository
   }): Promise<number> {
     let count = 0;
     for (const [id, record] of this.records) {
-      if (record.externalSubscriptionId !== input.externalSubscriptionId) {
+      if (
+        record.externalSubscriptionId !== input.externalSubscriptionId ||
+        record.subscriptionTerminatedAt !== null
+      ) {
         continue;
       }
       this.records.set(id, {

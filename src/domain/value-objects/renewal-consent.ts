@@ -25,9 +25,16 @@ export const CONSENT_RETENTION_YEARS = 3;
 export const POST_TERMINATION_RETENTION_YEARS = 1;
 
 export function computeRenewalConsentRetainUntil(
-  acceptedAt: Date,
-  subscriptionTerminatedAt: Date | null,
+  ...[acceptedAt, subscriptionTerminatedAt]:
+    | [acceptedAt: Date, subscriptionTerminatedAt: Date | null]
+    | [acceptedAt: null, subscriptionTerminatedAt: Date]
 ): Date {
+  if (acceptedAt === null) {
+    return addUtcYears(
+      subscriptionTerminatedAt,
+      POST_TERMINATION_RETENTION_YEARS,
+    );
+  }
   const consentFloor = addUtcYears(acceptedAt, CONSENT_RETENTION_YEARS);
   if (!subscriptionTerminatedAt) return consentFloor;
 
