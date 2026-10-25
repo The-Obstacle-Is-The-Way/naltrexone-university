@@ -135,6 +135,23 @@ describe('requests that make Clerk call its Backend API', () => {
       'https://example.com/pricing',
       { cookie: `__session_abc=${expired}; __refresh_abc=x` },
     ],
+    // Clerk reads cookies with the `cookie` package, which Next's parser
+    // does not match: it trims names, and keeps a value that will not decode.
+    [
+      'a handshake nonce cookie that does not percent-decode',
+      'https://example.com/pricing',
+      { cookie: '__clerk_handshake_nonce=%' },
+    ],
+    [
+      'a handshake nonce cookie with a space before its equals sign',
+      'https://example.com/pricing',
+      { cookie: '__clerk_handshake_nonce =x' },
+    ],
+    [
+      'an expired session after a tab',
+      'https://example.com/pricing',
+      { cookie: `__client_uat=1;\t__session=${expired}; __refresh_abc=x` },
+    ],
   ])('recognizes %s', (_kind, url, init) => {
     expect(triggersClerkBackendCall(request(url, init), NOW_SECONDS)).toBe(
       true,

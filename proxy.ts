@@ -292,7 +292,6 @@ const REFUSAL_ALERTS: Partial<
 > = {
   site: 'clerk_site_limit_reached',
   'signed-in-address': 'clerk_signed_in_limit_reached',
-  'signed-in-session': 'clerk_signed_in_limit_reached',
 };
 
 export type ProxyDependencies = {
@@ -333,10 +332,11 @@ export function createProxy({
         },
         (limit) => {
           // DEBT-503 item 3: each refusal is logged for diagnosis. The owner
-          // hears of two, after the response: the site-wide limit, and
-          // (item 4) a limit only real accounts can fill, which turned away
-          // real people. One client over its own limit is the limit working,
-          // and needs no one.
+          // hears of two, after the response: the site-wide limit, and (item
+          // 4) one address's refreshes of sessions Clerk signed, which turned
+          // away people on a shared network. One client over its own limit,
+          // a signed-in session's included, is the limit working, and needs
+          // no one.
           console.warn({ event: 'clerk_backend_call_refused', limit });
           const kind = REFUSAL_ALERTS[limit];
           if (kind) {

@@ -25,12 +25,47 @@ const HANDSHAKE_NAMES = [
 type ClerkRequest = {
   method: string;
   nextUrl: { searchParams: Pick<URLSearchParams, 'has'> };
-  cookies: {
-    has(name: string): boolean;
-    getAll(): { name: string; value: string }[];
-  };
   headers: Pick<Headers, 'get'>;
 };
+
+// Clerk reads cookies with the `cookie` package (1.1.1, bundled in
+// `@clerk/backend`), not Next's parser: the first of two cookies with one
+// name wins, names and values lose surrounding spaces and tabs, and a value
+// that does not percent-decode is kept as sent. Read any other way, a cookie
+// Clerk acts on could go uncounted, or a genuine session read as another.
+function cookiesAsClerkReadsThem(request: ClerkRequest): Map<string, string> {
+  const header = request.headers.get('cookie') ?? '';
+  const cookies = new Map<string, string>();
+  const trimmed = (start: number, end: number) =>
+    header.slice(start, end).replace(/^[ \t]+|[ \t]+$/g, '');
+  let index = 0;
+  while (index < header.length) {
+    const equals = header.indexOf('=', index);
+    if (equals === -1) break;
+    const semicolon = header.indexOf(';', index);
+    const end = semicolon === -1 ? header.length : semicolon;
+    if (equals > end) {
+      index = header.lastIndexOf(';', equals - 1) + 1;
+      continue;
+    }
+    const name = trimmed(index, equals);
+    if (!cookies.has(name)) {
+      cookies.set(name, percentDecoded(trimmed(equals + 1, end)));
+    }
+    index = end + 1;
+  }
+  return cookies;
+}
+
+function percentDecoded(value: string): string {
+  if (!value.includes('%')) return value;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    // As Clerk's parser does, a value that does not decode is kept as sent.
+    return value;
+  }
+}
 
 // Reads only the claims; Clerk verifies the token itself.
 function claims(token: string): { exp?: unknown; sid?: unknown } | undefined {
@@ -54,13 +89,14 @@ type ExpiredSession = { id: string; token: string };
 // it decides. A session's ID keys the per-session limit.
 function expiredSessions(
   request: ClerkRequest,
+  cookies: Map<string, string>,
   nowSeconds: number,
 ): ExpiredSession[] {
   if (request.method !== 'GET') return [];
-  const cookies = request.cookies.getAll();
-  if (!cookies.some(({ name }) => name.startsWith('__refresh_'))) return [];
+  if (![...cookies.keys()].some((name) => name.startsWith('__refresh_')))
+    return [];
   const sessions: ExpiredSession[] = [];
-  for (const { name, value } of cookies) {
+  for (const [name, value] of cookies) {
     if (name !== '__session' && !name.startsWith('__session_')) continue;
     const payload = claims(value);
     if (
@@ -75,10 +111,12 @@ function expiredSessions(
   return sessions;
 }
 
-function carriesHandshake(request: ClerkRequest): boolean {
+function carriesHandshake(
+  request: ClerkRequest,
+  cookies: Map<string, string>,
+): boolean {
   return HANDSHAKE_NAMES.some(
-    (name) =>
-      request.nextUrl.searchParams.has(name) || request.cookies.has(name),
+    (name) => request.nextUrl.searchParams.has(name) || cookies.has(name),
   );
 }
 
@@ -86,37 +124,35 @@ export function triggersClerkBackendCall(
   request: ClerkRequest,
   nowSeconds = Math.floor(Date.now() / 1000),
 ): boolean {
+  const cookies = cookiesAsClerkReadsThem(request);
   return (
-    carriesHandshake(request) || expiredSessions(request, nowSeconds).length > 0
+    carriesHandshake(request, cookies) ||
+    expiredSessions(request, cookies, nowSeconds).length > 0
   );
 }
 
 // DEBT-503 item 4: whether Clerk signed a session token, checked with item
 // 5's key, as Clerk checks it before refreshing. Clerk signs session tokens
-// with RS256 only; a token in any other algorithm, or one this cannot read,
-// is left unchecked. Clerk decodes base64url strictly but for padding, and
-// Node more loosely, so a token Clerk verifies reads the same here: a
-// mismatch can only count a token Clerk rejects, never miss one it refreshes.
-type Signature = 'genuine' | 'forged' | 'unchecked';
-
-function signatureOf(token: string, key: KeyObject): Signature {
+// with RS256 only. Clerk decodes base64url strictly but for padding, and
+// Node more loosely, so a token Clerk verifies verifies here too.
+function signedByClerk(token: string, key: KeyObject): boolean {
   const [header = '', payload = '', signature = ''] = token.split('.');
   try {
     const { alg } = JSON.parse(
       Buffer.from(header, 'base64url').toString('utf8'),
     );
-    if (alg !== 'RS256') return 'unchecked';
-    return verify(
-      'RSA-SHA256',
-      Buffer.from(`${header}.${payload}`),
-      key,
-      Buffer.from(signature, 'base64url'),
-    )
-      ? 'genuine'
-      : 'forged';
+    return (
+      alg === 'RS256' &&
+      verify(
+        'RSA-SHA256',
+        Buffer.from(`${header}.${payload}`),
+        key,
+        Buffer.from(signature, 'base64url'),
+      )
+    );
   } catch {
-    // An unreadable header: counted as before.
-    return 'unchecked';
+    // An unreadable header: not one Clerk signed.
+    return false;
   }
 }
 
@@ -186,38 +222,41 @@ function bucketsFor(
   jwtKey: string | undefined,
 ): Bucket[] {
   const address = getClientIp(request.headers);
-  const sessions = expiredSessions(request, Math.floor(Date.now() / 1000));
-  // DEBT-503 item 4, step 2: with Clerk's key, a refresh Clerk would make is
-  // one of a session it signed. A handshake, which only Clerk can check,
-  // keeps the narrow per-address limit.
-  const key = jwtKey && !carriesHandshake(request) && publicKey(jwtKey);
-  if (key && sessions.length > 0) {
-    const signatures = sessions.map((session) => ({
-      ...session,
-      signature: signatureOf(session.token, key),
-    }));
-    const signed = signatures.find(({ signature }) => signature === 'genuine');
-    if (signed) {
-      return [
-        ...(address === 'unknown'
-          ? []
-          : [
-              {
-                limit: 'signed-in-address' as const,
-                key: `clerk-backend-call:signed-in:${address}`,
-                rate: CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
-              },
-            ]),
-        {
-          limit: 'signed-in-session',
-          key: `clerk-backend-call:session:${signed.id}`,
-          rate: CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
-        },
-        SITE_BUCKET,
-      ];
-    }
-    // Clerk rejects a forged token without calling its Backend API.
-    if (signatures.every(({ signature }) => signature === 'forged')) return [];
+  const cookies = cookiesAsClerkReadsThem(request);
+  const sessions = expiredSessions(
+    request,
+    cookies,
+    Math.floor(Date.now() / 1000),
+  );
+  // DEBT-503 item 4, step 2: with Clerk's key, a refresh of a session Clerk
+  // signed counts in buckets of its own, which no other request can fill. A
+  // handshake, which only Clerk can check, keeps the narrow per-address
+  // limit, and so does every other request, a forged token's included: it
+  // costs Clerk nothing, but counting it keeps any request the proxy misreads
+  // within today's limits.
+  const key =
+    jwtKey && !carriesHandshake(request, cookies) && publicKey(jwtKey);
+  const signed = key
+    ? sessions.find(({ token }) => signedByClerk(token, key))
+    : undefined;
+  if (signed) {
+    return [
+      ...(address === 'unknown'
+        ? []
+        : [
+            {
+              limit: 'signed-in-address' as const,
+              key: `clerk-backend-call:signed-in:${address}`,
+              rate: CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
+            },
+          ]),
+      {
+        limit: 'signed-in-session',
+        key: `clerk-backend-call:signed-in-session:${signed.id}`,
+        rate: CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
+      },
+      SITE_BUCKET,
+    ];
   }
   const [session] = sessions;
   return [
@@ -246,8 +285,8 @@ function bucketsFor(
 /**
  * Limits these requests per client address, per refreshing session, then
  * site-wide, before they reach Clerk. With Clerk's signing key (`jwtKey`), a
- * refresh counts only if Clerk signed its session token, and then per
- * address in a wider bucket of its own (DEBT-503 item 4). Returns the 429
+ * refresh of a session Clerk signed counts per address in a wider bucket of
+ * its own, and per session in another (DEBT-503 item 4). Returns the 429
  * response, or null to continue. A limiter failure, including one while
  * loading it, lets the request through: failing closed would break every
  * real session refresh while the database is down, and the firewall rule
@@ -262,7 +301,6 @@ export async function limitClerkBackendCalls(
   jwtKey?: string,
 ): Promise<NextResponse | null> {
   const buckets = bucketsFor(request, jwtKey);
-  if (buckets.length === 0) return null;
   try {
     const limiter = await loadLimiter();
     for (const { limit, key, rate } of buckets) {

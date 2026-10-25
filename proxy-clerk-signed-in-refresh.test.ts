@@ -104,23 +104,99 @@ describe("limiting a session refresh with Clerk's signing key", () => {
         ...CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
       },
       {
-        key: 'clerk-backend-call:session:sess_real',
+        key: 'clerk-backend-call:signed-in-session:sess_real',
         ...CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
       },
       { key: 'clerk-backend-call:site', ...CLERK_BACKEND_CALL_SITE_RATE_LIMIT },
     ]);
   });
 
-  it('counts nothing for a refresh whose token Clerk did not sign', async () => {
-    const limiter = new FakeRateLimiter([OVER_LIMIT]);
+  // A forged token costs Clerk nothing, but the proxy could misread a cookie
+  // Clerk reads, so a token it cannot tie to Clerk counts as before.
+  it('counts a refresh whose token Clerk did not sign as before', async () => {
+    const limiter = new FakeRateLimiter([
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+    ]);
 
-    expect(
-      await limitWithKey(
-        refreshFrom(`__session=${forged('sess_forged')}; __refresh_abc=x`),
-        limiter,
-      ),
-    ).toBeNull();
-    expect(limiter.inputs).toEqual([]);
+    await limitWithKey(
+      refreshFrom(`__session=${forged('sess_forged')}; __refresh_abc=x`),
+      limiter,
+    );
+
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:203.0.113.7',
+      'clerk-backend-call:session:sess_forged',
+      'clerk-backend-call:site',
+    ]);
+  });
+
+  // Requests that name a session without Clerk's signature cannot fill that
+  // session's signed-in bucket.
+  it("keeps a forged token's count apart from the signed-in session it names", async () => {
+    const limiter = new FakeRateLimiter([
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+    ]);
+
+    await limitWithKey(
+      refreshFrom(`__session=${forged('sess_victim')}; __refresh_abc=x`),
+      limiter,
+    );
+    await limitWithKey(
+      refreshFrom(`__session=${genuine('sess_victim')}; __refresh_abc=x`),
+      limiter,
+    );
+
+    const sessionKeys = limiter.inputs
+      .map(({ key }) => key)
+      .filter((key) => key.includes('sess_victim'));
+    expect(sessionKeys).toEqual([
+      'clerk-backend-call:session:sess_victim',
+      'clerk-backend-call:signed-in-session:sess_victim',
+    ]);
+  });
+
+  // Clerk keeps the first of two cookies with one name, and trims spaces and
+  // tabs, where Next's parser keeps the last and trims nothing.
+  it.each([
+    [
+      'a genuine session before a forged one of the same name',
+      () =>
+        `__session=${genuine('sess_real')}; __session=${forged('sess_forged')}; __refresh_abc=x`,
+    ],
+    [
+      'a genuine session after a space',
+      () => `__session= ${genuine('sess_real')}; __refresh_abc=x`,
+    ],
+    [
+      'a genuine session after a tab',
+      () =>
+        `__client_uat=1;\t__session=${genuine('sess_real')}; __refresh_abc=x`,
+    ],
+    [
+      'a refresh cookie that does not percent-decode',
+      () => `__session=${genuine('sess_real')}; __refresh_abc=%`,
+    ],
+  ])('reads %s as Clerk does', async (_kind, cookie) => {
+    const limiter = new FakeRateLimiter([
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+    ]);
+
+    await limitWithKey(refreshFrom(cookie()), limiter);
+
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:signed-in:203.0.113.7',
+      'clerk-backend-call:signed-in-session:sess_real',
+      'clerk-backend-call:site',
+    ]);
   });
 
   // Clerk reads the suffixed cookie or the plain one, as it decides; a forged
@@ -141,7 +217,7 @@ describe("limiting a session refresh with Clerk's signing key", () => {
 
     expect(limiter.inputs.map(({ key }) => key)).toEqual([
       'clerk-backend-call:signed-in:203.0.113.7',
-      'clerk-backend-call:session:sess_real',
+      'clerk-backend-call:signed-in-session:sess_real',
       'clerk-backend-call:site',
     ]);
   });
@@ -218,7 +294,7 @@ describe("limiting a session refresh with Clerk's signing key", () => {
   );
 });
 
-describe('proxy with a limit only real accounts can fill', () => {
+describe('proxy with limits only sessions Clerk signed can fill', () => {
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
@@ -244,15 +320,21 @@ describe('proxy with a limit only real accounts can fill', () => {
     };
   }
 
-  // DEBT-503 item 4, step 3: only real accounts can fill the signed-in
-  // bucket, so a refusal there turned away real people; the response is
-  // raising that limit.
+  // DEBT-503 item 4, step 3: only sessions Clerk signed fill an address's
+  // signed-in bucket, so a refusal there turned away people on a shared
+  // network; the response is raising that limit. One session over its own
+  // limit is logged only: any account can trip it at will, and its alert
+  // would spend the cooldown of the address's.
   it.each([
-    ['signed-in-address', [OVER_LIMIT]],
-    ['signed-in-session', [UNDER_LIMIT, OVER_LIMIT]],
+    [
+      'signed-in-address',
+      [OVER_LIMIT],
+      [{ kind: 'clerk_signed_in_limit_reached', count: 1 }],
+    ],
+    ['signed-in-session', [UNDER_LIMIT, OVER_LIMIT], []],
   ] as const)(
-    'logs a %s refusal of a genuine refresh and raises its own alert',
-    async (limit, answers) => {
+    'logs a %s refusal of a genuine refresh, and alerts only for an address',
+    async (limit, answers, raised) => {
       const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const { proxy, alerts } = await proxyWith(
         new FakeRateLimiter([...answers]),
@@ -270,9 +352,7 @@ describe('proxy with a limit only real accounts can fill', () => {
         event: 'clerk_backend_call_refused',
         limit,
       });
-      expect(alerts.raised).toEqual([
-        { kind: 'clerk_signed_in_limit_reached', count: 1 },
-      ]);
+      expect(alerts.raised).toEqual(raised);
     },
   );
 });
