@@ -55,7 +55,7 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
     This PR was opened at about 15:28Z, describing that exception, so it was public for about six minutes. `CRON_SECRET` is 64 hexadecimal characters (`openssl rand -hex 32`, in the environments guide), so it never matches the second rule.
   - Both rules cover every hostname of the project. On 2026-10-25 at 11:40:43Z they became one rule with the same conditions, "BUG-369 refuse Clerk-readable Authorization", to make room for DEBT-503's rule within the Hobby plan's three, and were checked again on every hostname.
 
-    *Changed 2026-10-25:* the rule comes out after the production check, instead of staying as defense in depth. Once production's proxy answers 401 itself and never runs Clerk on a cron route, the cron checks protect nothing, yet they still bind `CRON_SECRET`'s shape, and the rule holds one of three slots another containment may need. The live rules are listed under Edge Rules in `docs/architecture/security.md`.
+    *Corrected 2026-10-25: the rule comes out after the production check instead of staying as defense in depth, since its cron checks then protect nothing but still bind `CRON_SECRET`'s shape and hold one of three rule slots (Edge Rules in `docs/architecture/security.md`).*
 - **The fix.**
   - `proxy.ts` sends `CRON_ROUTE_PATHS` (`lib/public-routes.ts`) on without Clerk.
   - It answers 401 to every other request that carries an `Authorization` header, public resources included, before BUG-323's limiter and before Clerk.
