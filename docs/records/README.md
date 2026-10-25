@@ -2,8 +2,8 @@
 
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
-**Now** — 2026-10-23.
-- **Verifying, by due date.** BUG-323 10-24; BUG-353 10-25; BUG-336, BUG-338, BUG-350, BUG-354, BUG-355, BUG-356, BUG-357, BUG-358, BUG-359, BUG-361 and BUG-366 10-26; BUG-365 10-29; BUG-364 and BUG-367 10-30; BUG-346, BUG-349 and DEBT-529 10-31; DEBT-505 11-05; BUG-368 11-07.
+**Now** — 2026-10-24.
+- **Verifying, by due date.** BUG-323 10-24; BUG-353 10-25; BUG-336, BUG-338, BUG-350, BUG-354, BUG-355, BUG-356, BUG-357, BUG-358, BUG-359, BUG-361 and BUG-366 10-26; BUG-365 10-29; BUG-364 and BUG-367 10-30; BUG-346, BUG-349, DEBT-529 and BUG-369 10-31; DEBT-505 11-05; BUG-368 11-07.
 - **In progress.** DEBT-518, the documentation revamp: records, agent instructions, layout and archive removal are done; the four splits and the pilot follow.
 - **Next.** DEBT-503 item 4, due 11-06. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520. BUG-363's investigation, due 11-04. DEBT-525 sets a performance baseline before choosing optimizations.
 - **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund, its receipt checked as Massachusetts' monthly notice (DEBT-501 item 7, DEBT-414 F19c), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription's correction (BUG-343: the re-check, sweep and alerts ship; its option 4 needs the owner's refund decision, follow-up due 10-30). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 39 days before the first live renewal: the identity resolver (DEBT-502), DEBT-511 on it, and Massachusetts' annual notice if it applies (DEBT-414 F19a).
@@ -44,6 +44,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[BUG-366](./bug-366-playwright-install-failover-misses-the-runner-mirror-list.md)|The Playwright install's mirror failover misses the runner's mirror list|P2|Verifying — promotion to `main`, where the scheduled Checkout smoke runs the script; due 2026-10-26|
 |[BUG-367](./bug-367-ci-pgbouncer-stand-in-lacks-six-cve-fixes.md)|CI's PgBouncer stand-in lacks six CVE fixes|P3|Verifying — promotion to main, whose CI pulls the new digest; due 2026-10-30|
 |[BUG-368](./bug-368-a-stripe-call-can-start-with-a-sliver-of-its-budget.md)|A Stripe call can start with only a sliver of its caller's budget left|P3|Verifying — two weeks of CI after the merge without the call-budget refusal test failing; due 2026-11-07|
+|[BUG-369](./bug-369-authorization-header-spends-clerk-allowance.md)|Authorization header spends Clerk's allowance|P2|Verifying — the proxy's 401 in production and the next runs of both crons; due 2026-10-31|
 |[DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)|Public legal pages, renewal consent, and security-program closure|P1|Open — F21 needs engineering, and F22's fix is Verifying in BUG-364; F23 shipped, awaiting the owner's provider verification; owner, counsel and tax decisions remain|
 |[DEBT-501](./debt-501-billing-operations-resilience.md)|Billing operations can leave payers without access as the service grows or changes|P2|Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items|
 |[DEBT-502](./debt-502-account-identity-and-action-hardening.md)|Rare account states can lock a person out, and payment actions expose test seams|P3|Open — decided per item|
