@@ -1,6 +1,6 @@
 # DEBT-503: Clerk's Shared Backend API Allowance Is a Single Point of Failure
 
-**Status:** In Progress — items 1, 3 and 5 released; item 4's steps 2 and 3 built, step 1 due 2026-11-06, before the first live sale; item 2 waits for its trigger
+**Status:** In Progress — items 1, 3 and 5 released; item 4's steps 2 and 3 built, step 1 and its handshake limits due 2026-11-06; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -132,6 +132,12 @@ This record holds the structural fixes, so that the allowance stops being the on
     - **Contained 2026-10-25 at 11:40:43Z,** with the owner's approval and before this was published: the Vercel firewall rule "DEBT-503 refuse malformed Clerk cookies" refuses a Cookie header with a tab, a space before `=` after one of Clerk's cookie names, or a `%` escape that does not decode in Clerk's refresh or handshake cookie. No browser sends any of these. Of 125,588 fuzzed headers for which Clerk calls its Backend API while the deployed proxy counts nothing, it refused every one, and it refused none of 100,000 browser-shaped headers. On every hostname, each case got 403 and ordinary cookies passed. It comes out once this cookie reading is checked in production, from one address exempted from the rule; the live rules are listed under Edge Rules in `docs/architecture/security.md`.
     - **Proof.** `lib/clerk-backend-call-limit-sdk.test.ts` runs the installed Clerk middleware with the same key beside the limiter. For a token Clerk signed, padded or not, Clerk calls the refresh and the limiter counts it in the signed-in buckets. For a forged one, Clerk calls nothing and the limiter counts it as before. For each cookie header above, Clerk calls its Backend API and the limiter counts the request. `proxy-clerk-signed-in-refresh.test.ts` covers the buckets, a forged token naming a genuine session, and which refusal alerts. Each of the 20 new or changed tests fails on the first version.
     - **Next:** step 1, the daily roll-up reading these buckets, before the first live sale and by 2026-11-06.
+    - **Handshakes on a shared network, decided by reasoning (2026-10-25).** Step 2 counts a refresh by its session, but a handshake cannot be tied to anyone before Clerk resolves it: `@clerk/backend` asks Clerk's Frontend API for `format=nonce` on every handshake redirect (`internal.js`, `buildRedirectToHandshake`), so each return carries an opaque nonce that costs a Backend API lookup, genuine or forged. The token format, which item 5's key could check for free, is not offered. So handshakes stay limited per address, at 30 a minute in the proxy and 30 in BUG-323's firewall rule, and a group returning together on one network can still be told to wait a minute. Step 1 cannot size this before launch, since pre-launch traffic has no such crowds. The options:
+      1. Raise the per-address handshake limit in both places to a shared-network size, leaving the site-wide cap to protect Clerk's allowance. One address could then take a larger share of that cap.
+      2. Over the firewall's limit, challenge instead of refusing (`--rate-limit-action challenge`), so a real browser passes and a script stops, with the proxy's limit raised to at least the firewall's so it does not refuse what the challenge let through.
+      3. Ask Clerk for the token format, or a handshake that does not spend the allowance; then handshakes need no per-address limit.
+
+      **Next:** choose by 2026-11-06, with step 1, and before the first live sale; the firewall's part is the owner's setting. Recommended: option 2, once a test shows a browser completing a handshake through the challenge; ask Clerk about option 3 alongside BUG-323's report. Retune from step 1's numbers after launch.
 
 ### 5. Verify session tokens without Clerk's network (P2)
 
