@@ -183,6 +183,14 @@ describe("limiting a session refresh with Clerk's signing key", () => {
       'a refresh cookie that does not percent-decode',
       () => `__session=${genuine('sess_real')}; __refresh_abc=%`,
     ],
+    [
+      'a genuine session after a cookie with no value',
+      () => `flag; __session=${genuine('sess_real')}; __refresh_abc=x`,
+    ],
+    [
+      'a genuine session before a cookie with no value',
+      () => `__session=${genuine('sess_real')}; __refresh_abc=x; flag`,
+    ],
   ])('reads %s as Clerk does', async (_kind, cookie) => {
     const limiter = new FakeRateLimiter([
       UNDER_LIMIT,
@@ -195,6 +203,63 @@ describe("limiting a session refresh with Clerk's signing key", () => {
     expect(limiter.inputs.map(({ key }) => key)).toEqual([
       'clerk-backend-call:signed-in:203.0.113.7',
       'clerk-backend-call:signed-in-session:sess_real',
+      'clerk-backend-call:site',
+    ]);
+  });
+
+  it('counts a genuine refresh per session and site-wide when the address is unknown', async () => {
+    const limiter = new FakeRateLimiter([UNDER_LIMIT, UNDER_LIMIT]);
+
+    await limitWithKey(
+      new NextRequest('https://example.com/pricing', {
+        headers: {
+          cookie: `__session=${genuine('sess_real')}; __refresh_abc=x`,
+        },
+      }),
+      limiter,
+    );
+
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:signed-in-session:sess_real',
+      'clerk-backend-call:site',
+    ]);
+  });
+
+  // Neither can tie the refresh to a session Clerk signed.
+  it.each([
+    [
+      'a token whose header does not parse',
+      () => {
+        const [, payload, signature] = genuine('sess_garbled').split('.');
+        return {
+          token: `bm90IGpzb24.${payload}.${signature}`,
+          key: CLERK_JWT_KEY,
+        };
+      },
+    ],
+    [
+      'a key that does not parse',
+      () => ({ token: genuine('sess_garbled'), key: 'not a key' }),
+    ],
+  ])('counts a refresh as before for %s', async (_kind, arrange) => {
+    const { token, key } = arrange();
+    const limiter = new FakeRateLimiter([
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+    ]);
+
+    await limitClerkBackendCalls(
+      refreshFrom(`__session=${token}; __refresh_abc=x`),
+      async () => limiter,
+      () => {},
+      () => {},
+      key,
+    );
+
+    expect(limiter.inputs.map(({ key: bucket }) => bucket)).toEqual([
+      'clerk-backend-call:203.0.113.7',
+      'clerk-backend-call:session:sess_garbled',
       'clerk-backend-call:site',
     ]);
   });
