@@ -137,6 +137,15 @@ This is part of the existing pre-sale work, not a separate refactor gate. Item 3
 
   *Corrected 2026-10-06: an exhausted bound now refuses Checkout with a recoverable error, instead of treating a truncated list as absence (#1410).*
 
+### 9. Nothing notices when the daily reconcile stops running (P3)
+
+- **Evidence.** The renewal job checks in with the Sentry cron monitor `send-renewal-notices` on each run, and the daily watcher opens an issue when it has not checked in for 25 hours (`docs/architecture/observability.md`, Watcher). The reconcile route has no monitor, and its one alert, `stripe_reconcile_stopped_early`, comes only from a run. A run refused before the handler, by a firewall rule, a `CRON_SECRET` mismatch (a 401, logged only) or a failed deployment, leaves an hour of Vercel logs and nothing else. Found 2026-10-25 while checking whether BUG-369's firewall rule could stop the crons: Vercel's firewall traffic shows `vercel-cron/1.0` allowed through to the reconcile route in the 08:00 UTC hour, but nothing records how that run ended.
+- **Impact.** Webhooks still sync each subscription, so this is the repair path going quiet: drift between Stripe and the database, and the reconcile's duplicate-subscription check (BUG-343), stop with no signal.
+- **Options.**
+  1. A second Sentry cron monitor, `reconcile-stripe-subscriptions`, through the same `withCronMonitor`, with the watcher reading both. It reuses a tested path, but may cost a monitor on the Sentry plan.
+  2. The monitored renewal job reads the reconcile's last finished run and raises a new kind, `stripe_reconcile_stopped`, past 26 hours, as it already watches GitHub's schedules. No new vendor cost, but a row per run.
+- **Next.** Option 1 if the Sentry plan includes a second monitor, otherwise option 2. Check the plan by 2026-11-01; held by the session that found it.
+
 ## Verification
 
 Criteria to meet before closing: each item shipped with red-first tests, or left as a Waiting row with its trigger in the records index; and item 7's live purchase recorded.

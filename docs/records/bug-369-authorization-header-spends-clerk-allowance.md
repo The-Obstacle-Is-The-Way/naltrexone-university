@@ -53,7 +53,9 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - **15:34:32Z:** on `/api/cron/`, deny a header holding a JWT (any `.`) or a value starting with `ak_`, `mt_` or `oat_`, with or without `Bearer`. Until this fix deploys, the proxy still runs Clerk on the cron routes, so the first rule's exception was a way round it.
 
     This PR was opened at about 15:28Z, describing that exception, so it was public for about six minutes. `CRON_SECRET` is 64 hexadecimal characters (`openssl rand -hex 32`, in the environments guide), so it never matches the second rule.
-  - Both rules cover every hostname of the project and stay as defense in depth after the fix.
+  - Both rules cover every hostname of the project. On 2026-10-25 at 11:40:43Z they became one rule with the same conditions, "BUG-369 refuse Clerk-readable Authorization", to make room for DEBT-503's rule within the Hobby plan's three, and were checked again on every hostname.
+
+    *Changed 2026-10-25:* the rule comes out after the production check, instead of staying as defense in depth. Once production's proxy answers 401 itself and never runs Clerk on a cron route, the cron checks protect nothing, yet they still bind `CRON_SECRET`'s shape, and the rule holds one of three slots another containment may need. The live rules are listed under Edge Rules in `docs/architecture/security.md`.
 - **The fix.**
   - `proxy.ts` sends `CRON_ROUTE_PATHS` (`lib/public-routes.ts`) on without Clerk.
   - It answers 401 to every other request that carries an `Authorization` header, public resources included, before BUG-323's limiter and before Clerk.
@@ -84,6 +86,7 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
 - [ ] In production, after release, two checks; due 2026-10-31.
   - A plain `Authorization` value on an unknown `/api/cron/` path, which both firewall rules let through, gets the proxy's 401. On 2026-10-24, before the fix, Clerk ran and the route answered 404.
   - The next runs of both crons succeed.
+- [ ] After those checks, remove the firewall rule and its row under Edge Rules; due 2026-10-31.
 
 ## Related
 

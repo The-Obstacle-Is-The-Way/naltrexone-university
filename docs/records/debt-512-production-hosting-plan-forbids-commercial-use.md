@@ -15,7 +15,8 @@ Production runs on Vercel's Hobby plan, which [Vercel's terms](https://vercel.co
 The plan also sets several limits the records work around:
 - runtime logs kept for one hour (DEBT-505);
 - cron runs that may fire up to about an hour late (DEBT-511's notice window);
-- no Skew Protection (BUG-319).
+- no Skew Protection (BUG-319);
+- three custom firewall rules, one of them a rate limit, where Pro allows 40 of each: on 2026-10-25 two containment rules were merged into one to make room for a third (Edge Rules in `docs/architecture/security.md`).
 
 ## Evidence
 
