@@ -35,6 +35,7 @@ type ClerkRequest = {
 // Clerk acts on could go uncounted, or a genuine session read as another.
 const SPACE = 0x20;
 const TAB = 0x09;
+const JWT_SEGMENTS = 3;
 
 function cookiesAsClerkReadsThem(request: ClerkRequest): Map<string, string> {
   const header = request.headers.get('cookie') ?? '';
@@ -145,10 +146,13 @@ export function triggersClerkBackendCall(
 
 // DEBT-503 item 4: whether Clerk signed a session token, checked with item
 // 5's key, as Clerk checks it before refreshing. Clerk signs session tokens
-// with RS256 only. Clerk decodes base64url strictly but for padding, and
-// Node more loosely, so a token Clerk verifies verifies here too.
+// with RS256 only, and reads a token as a JWT only with exactly three
+// segments. Clerk decodes base64url strictly but for padding, and Node more
+// loosely, so a token Clerk verifies verifies here too.
 function signedByClerk(token: string, key: KeyObject): boolean {
-  const [header = '', payload = '', signature = ''] = token.split('.');
+  const segments = token.split('.');
+  if (segments.length !== JWT_SEGMENTS) return false;
+  const [header = '', payload = '', signature = ''] = segments;
   try {
     const { alg } = JSON.parse(
       Buffer.from(header, 'base64url').toString('utf8'),

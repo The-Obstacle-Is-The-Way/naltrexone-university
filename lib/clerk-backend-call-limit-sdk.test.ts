@@ -141,6 +141,20 @@ describe("BUG-323's limiter and Clerk's middleware, with Clerk's key", () => {
     expect(counted).toEqual(SIGNED_IN);
   });
 
+  // Clerk reads a token as a JWT only with exactly three segments.
+  it('counts a signed token with an extra segment as before, for which Clerk calls nothing', async () => {
+    const { paths, counted } = await clerkAndLimiterOn(
+      refreshCookies(`${expiredSessionToken(clerkKey.privateKey)}.extra`),
+    );
+
+    expect(paths).toEqual([]);
+    expect(counted).toEqual([
+      'clerk-backend-call:203.0.113.7',
+      'clerk-backend-call:session:sess_sdk',
+      'clerk-backend-call:site',
+    ]);
+  });
+
   // It costs Clerk nothing, but stays within the limits for anonymous traffic.
   it('counts a forged token as before, for which Clerk calls nothing', async () => {
     const { paths, counted } = await clerkAndLimiterOn(
