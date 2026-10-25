@@ -1,6 +1,6 @@
 # DEBT-501: Billing Operations Can Leave Payers Without Access as the Service Grows or Changes
 
-**Status:** Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items
+**Status:** Open — item 9: check the Sentry plan for a second cron monitor, due 2026-11-01; then the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
