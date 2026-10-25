@@ -33,11 +33,23 @@ type ClerkRequest = {
 // name wins, names and values lose surrounding spaces and tabs, and a value
 // that does not percent-decode is kept as sent. Read any other way, a cookie
 // Clerk acts on could go uncounted, or a genuine session read as another.
+const SPACE = 0x20;
+const TAB = 0x09;
+
 function cookiesAsClerkReadsThem(request: ClerkRequest): Map<string, string> {
   const header = request.headers.get('cookie') ?? '';
   const cookies = new Map<string, string>();
-  const trimmed = (start: number, end: number) =>
-    header.slice(start, end).replace(/^[ \t]+|[ \t]+$/g, '');
+  // Scanned, as Clerk's parser does: a trimming regex backtracks
+  // quadratically over a long run of spaces inside a value.
+  const blank = (at: number) =>
+    header.charCodeAt(at) === SPACE || header.charCodeAt(at) === TAB;
+  const trimmed = (start: number, end: number) => {
+    let from = start;
+    let to = end;
+    while (from < to && blank(from)) from += 1;
+    while (to > from && blank(to - 1)) to -= 1;
+    return header.slice(from, to);
+  };
   let index = 0;
   while (index < header.length) {
     const equals = header.indexOf('=', index);
