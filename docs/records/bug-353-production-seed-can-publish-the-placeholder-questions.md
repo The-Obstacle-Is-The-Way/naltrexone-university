@@ -8,7 +8,7 @@
 
 ## Summary
 
-`pnpm db:seed:prod` and `pnpm db:seed:all` seed each target by spawning `scripts/internal/run-managed-db-seed.ts` with a copy of the operator's whole environment. Before the fix, `runSeed` read `SEED_INCLUDE_PLACEHOLDERS` from that environment. So if the operator's shell had `SEED_INCLUDE_PLACEHOLDERS=true` exported, the production seed, while no content release was active, loaded the committed placeholder questions and skipped the step that archives them. Every placeholder is `status: published`, so, when the run succeeds and no recorded withdrawal prevents republishing, synthetic, clinical-looking questions become available for new practice.
+`pnpm db:seed:prod` and `pnpm db:seed:all` seed each target by spawning `scripts/database/managed/run-managed-db-seed.ts` with a copy of the operator's whole environment. Before the fix, `runSeed` read `SEED_INCLUDE_PLACEHOLDERS` from that environment. So if the operator's shell had `SEED_INCLUDE_PLACEHOLDERS=true` exported, the production seed, while no content release was active, loaded the committed placeholder questions and skipped the step that archives them. Every placeholder is `status: published`, so, when the run succeeds and no recorded withdrawal prevents republishing, synthetic, clinical-looking questions become available for new practice.
 
 The root cause is a hidden input: a switch meant for test databases, read from the ambient environment by code that also serves production. The fix removes that input.
 
@@ -27,7 +27,7 @@ Corrected 2026-10-18: separate the E2E reset, qualify active-release and target 
   - All 10 files in `content/questions/placeholder/` are `status: published`.
   - An archived synthetic placeholder source is exempt from the archived-status refusal (`scripts/seed/question-syncer.ts:217-221`; classification in `scripts/seed/question-parser.ts:95`). A recorded withdrawal still refuses republishing (`question-syncer.ts:226-231`).
 - **The flag was in common use.** `AGENTS.md`, the integration and content guides and the content READMEs set it for local and CI seeding, though inline rather than exported.
-- **The managed seed has no acknowledgment.** It authorizes any URL without `DB_TARGET_ACK` (`scripts/internal/database-target-managed.ts`). So the command line the promotion guide prints for CI's seed step, run in a shell whose `DATABASE_URL` pointed at production, could also have published eligible placeholders before this fix, provided no active release or withdrawal refused the run.
+- **The managed seed has no acknowledgment.** It authorizes any URL without `DB_TARGET_ACK` (`scripts/database/managed/database-target-managed.ts`). So the command line the promotion guide prints for CI's seed step, run in a shell whose `DATABASE_URL` pointed at production, could also have published eligible placeholders before this fix, provided no active release or withdrawal refused the run.
 - **Found by** the scripts directory audit (#1560). BUG-351, about the seed's stale input, does not cover it.
 
 ## Impact
@@ -63,8 +63,8 @@ Corrected 2026-10-18: separate the E2E reset, qualify active-release and target 
 The implementation reported red-first runs; their historical execution order
 was not independently reconstructed. This audit reran the current tests.
 
-- [x] Current-branch tests in `scripts/internal/run-managed-db-seed.test.ts` and `scripts/db-seed.test.ts` pass: an inherited `SEED_INCLUDE_PLACEHOLDERS=true` is refused before seeding, the managed entry point refuses placeholders for a remote target, and they are included only with `--include-placeholders`.
-- [x] `scripts/db-seed.test.ts` passes with #1584: the human seed refuses `--include-placeholders` for a remote target, with or without `DB_TARGET_ACK`, before any acknowledgment check, and still seeds an acknowledged remote target without the fixtures.
+- [x] Current-branch tests in `scripts/database/managed/run-managed-db-seed.test.ts` and `scripts/database/db-seed.test.ts` pass: an inherited `SEED_INCLUDE_PLACEHOLDERS=true` is refused before seeding, the managed entry point refuses placeholders for a remote target, and they are included only with `--include-placeholders`.
+- [x] `scripts/database/db-seed.test.ts` passes with #1584: the human seed refuses `--include-placeholders` for a remote target, with or without `DB_TARGET_ACK`, before any acknowledgment check, and still seeds an acknowledged remote target without the fixtures.
 - [x] Current-branch `scripts/seed-environment-runtime.test.ts` passes: an environment seed spawns the managed seed without `--include-placeholders`.
 - [x] Current-branch `tests/ci-workflow.test.ts` passes: both seed steps pass the flag, and no workflow sets the old variable.
 - [x] The fixing pull request's CI and local E2E runs pass with the flag.
@@ -74,8 +74,12 @@ was not independently reconstructed. This audit reran the current tests.
 
 ## Related
 
-- #1560: the scripts directory audit that found this. Its debt record proposes replacing the production seed with a manually dispatched, owner-approved GitHub Actions job that stages and activates a content release.
+- #1560: the scripts directory audit that found this. DEBT-532 retains the operator seed and declines a protected Actions job until the source/plan and bootstrap prerequisites are settled.
 - BUG-351: the production seed's input freshness. Its plan check, `pnpm db:seed:prod --plan`, parses under pnpm 11 since #1567.
 - BUG-315: placeholder archival by exact slug.
 - BUG-360: the separate deploy-target E2E reset and owner decision.
 - DEBT-483: the bootstrap; once a release is active, the seed refuses production.
+
+Corrected 2026-10-20: update seed entry and test paths after DEBT-532’s moves, and replace the superseded production-job proposal with its operator-command decision.
+
+Corrected 2026-10-21: retain #1584’s human-seed remote-placeholder refusal and its verification at the moved test paths.

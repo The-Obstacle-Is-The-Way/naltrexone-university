@@ -19,11 +19,13 @@ import {
 } from '@/lib/clerk-call-failures';
 import { parseClerkJwtKey } from '@/lib/clerk-jwt-key';
 import {
+  CRON_ROUTE_PATHS,
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
 } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
 import { sentryEnvironmentFor } from '@/lib/sentry-data-collection';
+import { HTTP_UNAUTHORIZED } from '@/src/adapters/shared/http-status';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import type {
@@ -304,6 +306,25 @@ export function createProxy({
   loadOperationalAlerts,
 }: ProxyDependencies) {
   return async function proxy(request: NextRequest, event: NextFetchEvent) {
+    // The cron routes check CRON_SECRET themselves and need no Clerk session,
+    // so Clerk never reads their Authorization header.
+    if (CRON_ROUTE_PATHS.includes(request.nextUrl?.pathname)) {
+      return NextResponse.next();
+    }
+
+    // BUG-369: Clerk's middleware reads a token from any Authorization header
+    // and can spend its Backend API on it, refreshing a genuine expired
+    // session token or verifying an API-key or machine token, uncounted by
+    // BUG-323's limits. No page or browser request to the app sends the
+    // header, so any other request carrying it is refused, before Clerk and
+    // before the public resources too: only the cron routes take it.
+    if (request.headers.has('authorization')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_UNAUTHORIZED },
+      );
+    }
+
     // These exact public machine resources must not require even Clerk's
     // anonymous dev-browser handshake, which redirects HTML requests.
     if (

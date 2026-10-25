@@ -1,6 +1,6 @@
 # DEBT-503: Clerk's Shared Backend API Allowance Is a Single Point of Failure
 
-**Status:** In Progress — items 1, 3 and 5 released; item 4's steps 2 and 3 built, step 1 due 2026-11-06 and before the first live sale; item 2 waits for its trigger
+**Status:** In Progress — items 1, 3 and 5 released; item 4's steps 2 and 3 built, step 1 due 2026-11-06, before the first live sale; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —

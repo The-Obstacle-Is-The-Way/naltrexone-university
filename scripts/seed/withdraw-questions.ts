@@ -1,10 +1,10 @@
-import { pathToFileURL } from 'node:url';
 import { asc, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';
 import { lockReleasePointer } from '../content-release/release-activation';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { isMain } from '../lib/entry-point.mts';
 import { parseQidCommandArgs } from './qid-command-args';
 import {
   findUnrecordedWithdrawals,
@@ -89,9 +89,7 @@ export async function runContentWithdrawal(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runContentWithdrawal().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

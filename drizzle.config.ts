@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 import type { Config } from 'drizzle-kit';
+import generation from './drizzle.generate.config';
 
 // Prefer `.env.local` for developer-specific secrets, with `.env` as a fallback.
 // Never override explicitly provided environment variables.
@@ -12,9 +13,7 @@ if (!databaseUrl) {
 }
 
 export default {
-  schema: './db/schema.ts',
-  out: './db/migrations',
-  dialect: 'postgresql',
+  ...generation,
   dbCredentials: {
     url: databaseUrl,
   },
