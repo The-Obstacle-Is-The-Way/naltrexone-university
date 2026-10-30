@@ -1,6 +1,6 @@
 # BUG-369: An Authorization Header Lets Requests Spend Clerk's Backend API Allowance Uncounted
 
-**Status:** Verifying — the proxy's 401 in production and the next runs of both crons; due 2026-10-31
+**Status:** Verifying — the proxy's 401 in production and the next runs of both crons; due 2026-11-06
 **Priority:** P2
 **Date:** 2026-10-24
 
@@ -83,10 +83,11 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - with the header, on `www`, the `vercel.app` alias and a deployment URL.
 
   Requests without the header got 200. A wrong, 64-hex secret on either cron route reached the route's own 401.
-- [ ] In production, after release, two checks; due 2026-10-31.
-  - A plain `Authorization` value on an unknown `/api/cron/` path, which both firewall rules let through, gets the proxy's 401. On 2026-10-24, before the fix, Clerk ran and the route answered 404.
+- [ ] In production, after release, two checks; due 2026-11-06.
+  - A plain `Authorization` value on an unknown `/api/cron/` path, which the firewall rule lets through, gets the proxy's 401. On 2026-10-24, before the fix, Clerk ran and the route answered 404.
   - The next runs of both crons succeed.
-- [ ] After those checks, remove the firewall rule and its row under Edge Rules; due 2026-10-31.
+- [ ] After those checks, remove the firewall rule and its row under Edge Rules; due 2026-11-06.
+  *Re-dated 2026-10-30 from 2026-10-31:* the fix reaches production with the next promotion, which waits on the owner's last billing QA steps.
 
 ## Related
 
