@@ -129,7 +129,7 @@ This record holds the structural fixes, so that the allowance stops being the on
     3. Ask Clerk for the token format, or a handshake that does not spend the allowance; then handshakes need no per-address limit.
 
     **Next:** choose by 2026-11-06, with step 1, and before the first live sale; the firewall's part is the owner's setting. Recommended: option 2, once a test shows a browser completing a handshake through the challenge; ask Clerk about option 3 alongside BUG-323's report. Retune from step 1's numbers after launch.
-  - **Due 2026-11-06** for step 1 and the handshake limits, before the first live sale in any case. Held by the session that built steps 2 and 3.
+  - **Due 2026-11-06** for step 1 and the handshake limits, before the first live sale in any case. Held by clone 2 (`naltrexone-university-2`), whose session built steps 2 and 3; the repository owner reassigns it if that clone stops.
 
     *Re-dated 2026-10-23 from 2026-10-21:* no session held this item, and none of it was built by its date.
   - **Building it.**
