@@ -149,6 +149,8 @@ Vercel stores environment variables per scope. Production, Preview, Development,
 
 **Safe Vercel reset procedure**
 
+While BUG-369's firewall rule is live, the value must also avoid the token shapes listed under [Edge Rules](security.md#edge-rules), or the firewall refuses both crons before they run; this procedure's hex value does.
+
 Generate the replacement only in process memory. Do not print it or write it to a file, ticket, shell history, log, or chat. Rotate immediately before the reviewed production promotion; an environment-store update alone does not update an already-created deployment. Check each command's status and stop on failure.
 
 ```bash

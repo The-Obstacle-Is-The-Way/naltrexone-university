@@ -107,6 +107,33 @@ describe('clerkCallFailure', () => {
     );
   });
 
+  // auth.protect() answers a protected fetch or server action with Clerk's
+  // 404 rewrite, and Clerk joins the request's own reason to the rewrite's.
+  it.each([
+    ['jwk-remote-failed-to-load', 'keys'],
+    ['token-invalid-signature', 'signature'],
+    ['session-token-expired-refresh-too_many_requests', 'refresh'],
+  ])(
+    "names a failure behind auth.protect()'s rewrite (%s)",
+    (reason, failure) => {
+      expect(
+        clerkCallFailure(request(), answer(`protect-rewrite, ${reason}`)),
+      ).toBe(failure);
+    },
+  );
+
+  it('ignores a rewrite whose own reason names no failure', () => {
+    expect(clerkCallFailure(request(), answer('protect-rewrite'))).toBeNull();
+    expect(
+      clerkCallFailure(
+        request(),
+        answer(
+          'protect-rewrite, session-token-expired-refresh-non-eligible-non-get',
+        ),
+      ),
+    ).toBeNull();
+  });
+
   it('ignores an answer with no failure', () => {
     expect(clerkCallFailure(request(), answer())).toBeNull();
     expect(
