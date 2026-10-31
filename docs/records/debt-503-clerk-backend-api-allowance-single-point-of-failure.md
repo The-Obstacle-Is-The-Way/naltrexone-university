@@ -1,6 +1,6 @@
 # DEBT-503: Clerk's Shared Backend API Allowance Is a Single Point of Failure
 
-**Status:** In Progress — items 1, 3 and 5 released; item 4's steps 2 and 3 built, step 1 and its handshake limits due 2026-11-06; item 2 waits for its trigger
+**Status:** In Progress — items 1, 3 and 5 released; item 4's steps 2 and 3 built, step 1 and handshake limits due 2026-11-06; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -78,7 +78,9 @@ This record holds the structural fixes, so that the allowance stops being the on
   *Corrected 2026-10-06: `lib/logger.ts` writes stdout, while `instrumentation.ts` captures exceptions; no pino-to-Sentry forwarding is installed. The account API confirms Developer, not a paid logging assumption.*
 
 - **Built 2026-10-10, test-first.** Three alert kinds, one per impact (see the change below).
-  - **Our caps.** `limitClerkBackendCalls` names the limit that tripped: `address`, `session` or `site`, never the address or session itself. The proxy logs `clerk_backend_call_refused` with that limit. Only `site` raises an alert, `clerk_site_limit_reached`, after the response through `waitUntil`, as the limiter-failure alert does. One client over its own limit is the limit working.
+  - **Our caps.** `limitClerkBackendCalls` names the limit that tripped: `address`, `session` or `site`, or, with item 4's signed-in buckets, `signed-in-session` or `signed-in-address`; never the address or session itself. The proxy logs `clerk_backend_call_refused` with that limit. `site` raises `clerk_site_limit_reached` after the response through `waitUntil`, as the limiter-failure alert does, and `signed-in-address` raises `clerk_signed_in_limit_reached` (item 4, step 3). One client over its own limit is the limit working.
+
+    *Corrected 2026-10-31: item 4 added the two signed-in limits, and an address's signed-in refusals alert.*
   - **Clerk's 429.** The container's `getClerkUserById` is wrapped by `alertWhenClerkRefuses`. It logs `clerk_backend_call_refused` with `limit: clerk`, raises the alert, and rethrows the same error to the caller's retry. An integration test drives the real container against a Clerk SDK stubbed to answer 429, and finds the alert's cooldown row in Postgres.
   - **The bound** is the shared cooldown's, unchanged: one alert per kind per six hours across instances, or one per instance while the limiter errors. DEBT-505's integration tests prove it with eight concurrent instances and across a restart.
   - **The response.** The runbook row in `docs/architecture/observability.md` names Vercel's Attack Challenge Mode for a sustained trip.
@@ -98,7 +100,7 @@ This record holds the structural fixes, so that the allowance stops being the on
     - `clerk_site_limit_reached`: our site-wide limit refused visitors. The response is Attack Challenge Mode.
     - `clerk_backend_calls_refused`: Clerk refused or failed our calls, a lookup's 429 or refreshes and nonce lookups past the threshold.
     - `clerk_signing_keys_unavailable`: a mass sign-out on one instance.
-    - Per-address and per-session refusals are logged and never alert.
+    - Per-address and per-session refusals are logged and never alert, except in an address's signed-in bucket (item 4, step 3).
 
     Kinds are independent downstream too: each kind and window opens its own Sentry issue, and each new issue emails. The rule is in `docs/architecture/observability.md` under Operational alerts.
   - **Still to show after release:** one test event of these kinds reaches the owner through the alerts' workflow, which matches any `alert.kind` tag.
@@ -132,7 +134,7 @@ This record holds the structural fixes, so that the allowance stops being the on
     *Re-dated 2026-10-23 from 2026-10-21:* no session held this item, and none of it was built by its date.
   - **Building it.**
     - **The proxy reads cookies as Clerk does.** Clerk parses the Cookie header with the `cookie` package, not Next's parser: the first of two cookies with one name wins, names and values lose surrounding spaces and tabs, and a value that does not percent-decode is kept. Read through Next, a handshake nonce cookie Clerk resolves (`__clerk_handshake_nonce=%`, or a space before the `=`), a session after a tab, or a refresh cookie that does not decode, reached Clerk uncounted, a BUG-323 gap since its limiter shipped; the nonce cases need no account. A second agent's review of this change found these, and that the first version, which counted nothing for a forged token, let a duplicate or space-padded cookie hide a genuine one, so one account's refreshes went uncounted. Both are fixed before review. A token in the `Authorization` header, which Clerk also reads, gets BUG-369's 401 before this limiter runs.
-    - **Contained 2026-10-25 at 11:40:43Z,** with the owner's approval and before this was published: the Vercel firewall rule "DEBT-503 refuse malformed Clerk cookies" refuses a Cookie header with a tab, a space before `=` after one of Clerk's cookie names, or a `%` escape that does not decode in Clerk's refresh or handshake cookie. No browser sends any of these. Of 125,588 fuzzed headers for which Clerk calls its Backend API while the deployed proxy counts nothing, it refused every one, and it refused none of 100,000 browser-shaped headers. On every hostname, each case got 403 and ordinary cookies passed. It comes out once this cookie reading is checked in production, from one address exempted from the rule; the live rules are listed under Edge Rules in `docs/architecture/security.md`.
+    - **Contained 2026-10-25 at 11:40:43Z,** with the owner's approval and before this was published: the Vercel firewall rule "DEBT-503 refuse malformed Clerk cookies" refuses a Cookie header with a tab, a space before `=` after one of Clerk's cookie names, or a `%` escape that does not decode in Clerk's refresh or handshake cookie. Browsers send none of these, except a tab inside a cookie's value, which they allow and none of the app's or Clerk's cookies holds. Of 125,588 fuzzed headers for which Clerk calls its Backend API while the deployed proxy counts nothing, it refused every one, and it refused none of 100,000 browser-shaped headers. On every hostname, each case got 403 and ordinary cookies passed. It comes out once this cookie reading is checked in production, from one address exempted from the rule; the live rules are listed under Edge Rules in `docs/architecture/security.md`.
     - **Proof.** `lib/clerk-backend-call-limit-sdk.test.ts` runs the installed Clerk middleware with the same key beside the limiter. For a token Clerk signed, padded or not, Clerk calls the refresh and the limiter counts it in the signed-in buckets. For a forged one, Clerk calls nothing and the limiter counts it as before. For each cookie header above, Clerk calls its Backend API and the limiter counts the request. `proxy-clerk-signed-in-refresh.test.ts` covers the buckets, a forged token naming a genuine session, and which refusal alerts. Each of the 20 new or changed tests fails on the first version.
 
 ### 5. Verify session tokens without Clerk's network (P2)
@@ -182,9 +184,9 @@ This record holds the structural fixes, so that the allowance stops being the on
 
 Criteria to meet before closing: each item shipped with red-first tests, or left as a Waiting row with its trigger in the records index.
 
-- [ ] After item 4's steps 2 and 3 reach production: exempt one test address from the malformed-cookie firewall rule, and check from it that, for each shape the rule refuses, 30 requests in a minute and one more get the proxy's own 429, whose body tells it from the edge's. Only then remove the rule and its Edge Rules row; due 2026-11-06.
-  - Refreshes of an expired dummy session token, which cost Clerk nothing: with a tab before a Clerk cookie, with a space before a Clerk cookie's `=`, and with a refresh cookie that does not decode.
-  - A handshake nonce cookie of `%`, each costing Clerk one lookup. The 31st request is a refresh, since BUG-323's rule refuses a 31st nonce at the edge first.
+- [ ] After item 4's steps 2 and 3 reach production: exempt one test address from the malformed-cookie firewall rule, and check from it, within one clock minute per shape, that the proxy counts each shape the rule refuses: the request named below gets the proxy's own 429, whose body tells it from the edge's. Only then remove the rule and its Edge Rules row; due 2026-11-06.
+  - Refreshes of one expired dummy session token, which cost Clerk nothing: with a tab before a Clerk cookie, with a space before a Clerk cookie's `=`, and with a refresh cookie that does not decode. The 7th of each is refused with `limit: session`. Clerk rejects each dummy's signature, so this raises `clerk_session_tokens_rejected` once; tell the owner first, since its six-hour cooldown then mutes a real one.
+  - A handshake nonce cookie of `%`, each costing Clerk one lookup: 30 of them, then a refresh, which is refused with `limit: address`. BUG-323's rule would refuse a 31st nonce at the edge first.
 
 ## Related
 

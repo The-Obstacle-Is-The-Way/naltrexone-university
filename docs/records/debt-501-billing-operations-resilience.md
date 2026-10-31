@@ -1,6 +1,6 @@
 # DEBT-501: Billing Operations Can Leave Payers Without Access as the Service Grows or Changes
 
-**Status:** Open — item 9's watch on the reconcile, due 2026-11-13; then the pre-sale items
+**Status:** Open — item 9's reconcile watch, due 2026-11-13; then the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -14,7 +14,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 ## Items
 
-**Decided 2026-10-08 (AUDIT-015): order.** Quick wins first: item 1's Stripe timeout, item 2's runbook line, items 5 and 6. Then an operational alert (DEBT-505) for a reconcile run that stops early, so item 1 announces its own trigger; once that alert exists, item 1's oldest-first reconcile waits for it. Before the first live sale: item 2's recorded-price design with its unknown-price alert, item 4's add-card recheck (with DEBT-414 F22), and the owner's item 7.
+**Decided 2026-10-08 (AUDIT-015): order.** Quick wins first: item 1's Stripe timeout, item 2's runbook line, items 5 and 6. Then an operational alert (DEBT-505) for a reconcile run that stops early, so item 1 announces its own trigger; once that alert exists, item 1's oldest-first reconcile waits for it. Before the first live sale: item 2's recorded-price design with its unknown-price alert, item 4's add-card recheck (with DEBT-414 F22), the owner's item 7, and, decided 2026-10-30, item 9's reconcile watch.
 
 *Corrected 2026-10-10: the unknown-price alert moved from the alerts step to item 2, whose legacy price-ID list became the recorded-price design.*
 

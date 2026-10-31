@@ -1,6 +1,6 @@
 # BUG-369: An Authorization Header Lets Requests Spend Clerk's Backend API Allowance Uncounted
 
-**Status:** Verifying — the proxy's 401 in production and the next runs of both crons; due 2026-11-06
+**Status:** Verifying — the proxy's 401 and both crons' next runs in production; due 2026-11-07
 **Priority:** P2
 **Date:** 2026-10-24
 
@@ -36,7 +36,9 @@ Found on 2026-10-24 while assessing DEBT-503 item 4. The finding was kept privat
 
 - **Before the first live sale:** no subscriber is affected, but a drain would still have signed out the owner's and testers' sessions.
 - **After launch:** a script with one free account could have made Clerk refuse the calls every returning visitor needs. A script without an account could have done the same only if machine-token verification draws on that allowance, which is not verified.
-- **Alerts:** DEBT-503 item 3's alert counts failed refreshes and raises past 10 a minute. A made-up refresh value fails at Clerk, so a drain using one would alert, except on a protected route's non-page request, whose combined auth reason the counter's prefix check misses (read from code). A refresh using the attacker's own genuine refresh value succeeds and never counts, and the machine-token shapes are not refreshes at all, so neither would alert.
+- **Alerts:** DEBT-503 item 3's alert counts failed refreshes and raises past 10 a minute. A made-up refresh value fails at Clerk, so a drain using one would alert, a protected route's non-page request included, since the counter now reads the reason Clerk appends after `protect-rewrite` (DEBT-503 item 3). A refresh using the attacker's own genuine refresh value succeeds and never counts, and the machine-token shapes are not refreshes at all, so neither would alert.
+
+  *Corrected 2026-10-31: the counter missed that combined reason until DEBT-503 item 3's fix of 2026-10-24.*
 
 ## Options
 
@@ -83,11 +85,12 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - with the header, on `www`, the `vercel.app` alias and a deployment URL.
 
   Requests without the header got 200. A wrong, 64-hex secret on either cron route reached the route's own 401.
-- [ ] In production, after release, two checks; due 2026-11-06.
+- [ ] In production, after release, two checks; due 2026-11-07.
   - A plain `Authorization` value on an unknown `/api/cron/` path, which the firewall rule lets through, gets the proxy's 401. On 2026-10-24, before the fix, Clerk ran and the route answered 404.
   - The next runs of both crons succeed.
-- [ ] After those checks, remove the firewall rule and its row under Edge Rules; due 2026-11-06.
-  *Re-dated 2026-10-30 from 2026-10-31:* the fix reaches production with the next promotion, which waits on the owner's last billing QA steps.
+
+  *Re-dated 2026-10-30 from 2026-10-31:* the fix reaches production with the next promotion, which waits on the owner's last billing QA steps, and the crons run the morning after it.
+- [ ] After those checks, remove the firewall rule and its row under Edge Rules; due 2026-11-07.
 
 ## Related
 
