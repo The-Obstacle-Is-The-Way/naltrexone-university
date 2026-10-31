@@ -24,7 +24,7 @@
 
 ## Edge Rules
 
-Vercel's firewall refuses some requests before the app runs. Its custom rules live in the Vercel dashboard, not in this repository, so this table is their one home: what each refuses, what it constrains, and when it comes out. Change the table in the same change as the rule; `vercel firewall rules list` shows the live set. A Hobby project allows three custom rules, one of them a rate limit (Vercel Pro allows 40, any of them a rate limit; DEBT-512), so a rule that contains a gap until its fix ships names the check that removes it.
+Vercel's firewall refuses some requests before the app runs. Its custom rules live in the Vercel dashboard, not in this repository, so this table is their one home: what each refuses, what it constrains, and when it comes out. Change the table in the same change as the rule; `vercel firewall rules list` shows the rules, marking any change not yet published. A Hobby project allows three custom rules, one of them a rate limit (Vercel Pro allows 40, any of them a rate limit; DEBT-512), so a rule that contains a gap until its fix ships names the check that removes it.
 
 | Rule | Refuses | Constrains | Comes out |
 |---|---|---|---|

@@ -85,7 +85,7 @@ describe("limiting a session refresh with Clerk's signing key", () => {
       CLERK_JWT_KEY,
     );
 
-  it('counts a genuine refresh per address in its own bucket, then per session and site-wide', async () => {
+  it('counts a genuine refresh per session, then per address in its own bucket, then site-wide', async () => {
     const limiter = new FakeRateLimiter([
       UNDER_LIMIT,
       UNDER_LIMIT,
@@ -100,14 +100,31 @@ describe("limiting a session refresh with Clerk's signing key", () => {
     ).toBeNull();
     expect(limiter.inputs).toEqual([
       {
-        key: 'clerk-backend-call:signed-in:203.0.113.7',
-        ...CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
-      },
-      {
         key: 'clerk-backend-call:signed-in-session:sess_real',
         ...CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
       },
+      {
+        key: 'clerk-backend-call:signed-in:203.0.113.7',
+        ...CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
+      },
       { key: 'clerk-backend-call:site', ...CLERK_BACKEND_CALL_SITE_RATE_LIMIT },
+    ]);
+  });
+
+  // Every limiter call counts, a refused one included. A session over its own
+  // limit, such as one tab stuck refreshing, must stop before its address's
+  // bucket, or it would fill that bucket for everyone on its network.
+  it("refuses a session over its own limit without counting it in its address's bucket", async () => {
+    const limiter = new FakeRateLimiter([OVER_LIMIT]);
+
+    const response = await limitWithKey(
+      refreshFrom(`__session=${genuine('sess_looping')}; __refresh_abc=x`),
+      limiter,
+    );
+
+    expect(response?.status).toBe(429);
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:signed-in-session:sess_looping',
     ]);
   });
 
@@ -201,8 +218,8 @@ describe("limiting a session refresh with Clerk's signing key", () => {
     await limitWithKey(refreshFrom(cookie()), limiter);
 
     expect(limiter.inputs.map(({ key }) => key)).toEqual([
-      'clerk-backend-call:signed-in:203.0.113.7',
       'clerk-backend-call:signed-in-session:sess_real',
+      'clerk-backend-call:signed-in:203.0.113.7',
       'clerk-backend-call:site',
     ]);
   });
@@ -281,8 +298,8 @@ describe("limiting a session refresh with Clerk's signing key", () => {
     );
 
     expect(limiter.inputs.map(({ key }) => key)).toEqual([
-      'clerk-backend-call:signed-in:203.0.113.7',
       'clerk-backend-call:signed-in-session:sess_real',
+      'clerk-backend-call:signed-in:203.0.113.7',
       'clerk-backend-call:site',
     ]);
   });
@@ -339,8 +356,8 @@ describe("limiting a session refresh with Clerk's signing key", () => {
   });
 
   it.each([
-    ['signed-in-address', [OVER_LIMIT]],
-    ['signed-in-session', [UNDER_LIMIT, OVER_LIMIT]],
+    ['signed-in-session', [OVER_LIMIT]],
+    ['signed-in-address', [UNDER_LIMIT, OVER_LIMIT]],
     ['site', [UNDER_LIMIT, UNDER_LIMIT, OVER_LIMIT]],
   ] as const)(
     'names the %s limit when it refuses a genuine refresh',
@@ -391,12 +408,12 @@ describe('proxy with limits only sessions Clerk signed can fill', () => {
   // limit is logged only: any account can trip it at will, and its alert
   // would spend the cooldown of the address's.
   it.each([
+    ['signed-in-session', [OVER_LIMIT], []],
     [
       'signed-in-address',
-      [OVER_LIMIT],
+      [UNDER_LIMIT, OVER_LIMIT],
       [{ kind: 'clerk_signed_in_limit_reached', count: 1 }],
     ],
-    ['signed-in-session', [UNDER_LIMIT, OVER_LIMIT], []],
   ] as const)(
     'logs a %s refusal of a genuine refresh, and alerts only for an address',
     async (limit, answers, raised) => {

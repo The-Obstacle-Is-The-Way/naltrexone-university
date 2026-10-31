@@ -116,8 +116,8 @@ describe("BUG-323's limiter and Clerk's middleware, with Clerk's key", () => {
   });
 
   const SIGNED_IN = [
-    'clerk-backend-call:signed-in:203.0.113.7',
     'clerk-backend-call:signed-in-session:sess_sdk',
+    'clerk-backend-call:signed-in:203.0.113.7',
     'clerk-backend-call:site',
   ];
 

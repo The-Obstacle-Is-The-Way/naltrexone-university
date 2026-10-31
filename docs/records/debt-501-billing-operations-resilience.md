@@ -143,7 +143,7 @@ This is part of the existing pre-sale work, not a separate refactor gate. Item 3
 - **Impact.** Webhooks still sync each subscription, so this is the repair path going quiet: drift between Stripe and the database, and the reconcile's duplicate-subscription check (BUG-343), stop with no signal.
 - **Options.**
   1. A second Sentry cron monitor, `reconcile-stripe-subscriptions`, through the same `withCronMonitor`, with the watcher reading both. It reuses a tested path, but needs a paid Sentry plan.
-  2. The monitored renewal job reads the reconcile's last finished run and raises a new kind, `stripe_reconcile_stopped`, past 26 hours, as it already watches GitHub's schedules. No new vendor cost, but a row per run.
+  2. The monitored renewal job raises a new kind, `stripe_reconcile_stopped`, as it already watches GitHub's schedules, when no reconcile run has passed `CRON_SECRET` and started in the past 24 hours, or none has finished in the past 26. Counting starts catches the first missed run at the next 09:00 UTC check: Hobby can start the 08:00 UTC reconcile up to an hour late, so it may still be running then, and a limit on finished runs alone would have to exceed 25 hours and miss that check. No new vendor cost, but a row per run.
 - **Decided 2026-10-30: option 2.** The Sentry organization is on the Developer plan: its one cron monitor is `send-renewal-notices`, with no on-demand budget. Build it by 2026-11-13, before the first live sale; held by the session that found it.
 
 ## Verification

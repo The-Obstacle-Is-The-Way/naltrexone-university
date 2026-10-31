@@ -255,8 +255,19 @@ function bucketsFor(
   const signed = key
     ? sessions.find(({ token }) => signedByClerk(token, key))
     : undefined;
+  // Every limiter call counts, a refused one included, and the first refusal
+  // ends the request. A signed session, which only Clerk can mint, is counted
+  // first, so one over its own limit never fills the bucket its address
+  // shares with a whole network. Other requests count per address first: a
+  // session they name may be made up, and a sender over the address's limit
+  // then stops before writing a counter for each name it invents.
   if (signed) {
     return [
+      {
+        limit: 'signed-in-session',
+        key: `clerk-backend-call:signed-in-session:${signed.id}`,
+        rate: CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
+      },
       ...(address === 'unknown'
         ? []
         : [
@@ -266,11 +277,6 @@ function bucketsFor(
               rate: CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
             },
           ]),
-      {
-        limit: 'signed-in-session',
-        key: `clerk-backend-call:signed-in-session:${signed.id}`,
-        rate: CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
-      },
       SITE_BUCKET,
     ];
   }
@@ -301,8 +307,8 @@ function bucketsFor(
 /**
  * Limits these requests per client address, per refreshing session, then
  * site-wide, before they reach Clerk. With Clerk's signing key (`jwtKey`), a
- * refresh of a session Clerk signed counts per address in a wider bucket of
- * its own, and per session in another (DEBT-503 item 4). Returns the 429
+ * refresh of a session Clerk signed counts per session first, then per
+ * address in a wider bucket of its own (DEBT-503 item 4). Returns the 429
  * response, or null to continue. A limiter failure, including one while
  * loading it, lets the request through: failing closed would break every
  * real session refresh while the database is down, and the firewall rule
