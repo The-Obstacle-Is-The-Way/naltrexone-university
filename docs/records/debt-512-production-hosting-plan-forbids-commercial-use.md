@@ -27,7 +27,7 @@ The plan also sets several limits the records work around:
 ## Impact
 
 - **Terms.** Taking payments on Hobby breaches Vercel's terms, which can lead to the project being limited or suspended.
-- **Operations.** Moving to Pro relaxes the log, cron, Skew Protection and firewall-rule limits above. Each record keeps its own mitigation until it is re-checked on Pro.
+- **Operations.** Moving to Pro relaxes the log, cron and firewall-rule limits above and enables Skew Protection. Each record keeps its own mitigation until it is re-checked on Pro.
 
 ## Resolution
 

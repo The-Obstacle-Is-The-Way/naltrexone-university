@@ -182,7 +182,9 @@ This record holds the structural fixes, so that the allowance stops being the on
 
 Criteria to meet before closing: each item shipped with red-first tests, or left as a Waiting row with its trigger in the records index.
 
-- [ ] After item 4's steps 2 and 3 reach production: exempt one test address from the malformed-cookie firewall rule, and check from it that page loads carrying an expired dummy session token and a refresh cookie that does not decode get the proxy's 429 after 30 in a minute (a dummy token costs Clerk nothing). Only then remove the rule and its Edge Rules row; due 2026-11-06.
+- [ ] After item 4's steps 2 and 3 reach production: exempt one test address from the malformed-cookie firewall rule, and check from it that, for each shape the rule refuses, 30 requests in a minute and one more get the proxy's own 429, whose body tells it from the edge's. Only then remove the rule and its Edge Rules row; due 2026-11-06.
+  - Refreshes of an expired dummy session token, which cost Clerk nothing: with a tab before a Clerk cookie, with a space before a Clerk cookie's `=`, and with a refresh cookie that does not decode.
+  - A handshake nonce cookie of `%`, each costing Clerk one lookup. The 31st request is a refresh, since BUG-323's rule refuses a 31st nonce at the edge first.
 
 ## Related
 
