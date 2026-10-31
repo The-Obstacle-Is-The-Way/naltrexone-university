@@ -304,6 +304,33 @@ describe("limiting a session refresh with Clerk's signing key", () => {
     ]);
   });
 
+  // Each check costs a signature verification before any limit counts the
+  // request, and a browser sends a session cookie or two, so a header packed
+  // with tokens buys at most four checks.
+  it('checks at most four session tokens, and counts a genuine one past them as before', async () => {
+    const limiter = new FakeRateLimiter([
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+    ]);
+    const packed = ['a', 'b', 'c', 'd']
+      .map((suffix) => `__session_${suffix}=${forged(`sess_${suffix}`)}`)
+      .join('; ');
+
+    await limitWithKey(
+      refreshFrom(
+        `${packed}; __session_e=${genuine('sess_real')}; __refresh_abc=x`,
+      ),
+      limiter,
+    );
+
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:203.0.113.7',
+      'clerk-backend-call:session:sess_a',
+      'clerk-backend-call:site',
+    ]);
+  });
+
   // Clerk signs session tokens with RS256 only; any other token is counted
   // as before, since the proxy cannot tell what Clerk would do with it.
   it('counts a token it cannot check as before', async () => {

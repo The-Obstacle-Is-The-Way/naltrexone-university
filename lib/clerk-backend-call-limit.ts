@@ -95,6 +95,12 @@ function claims(token: string): { exp?: unknown; sid?: unknown } | undefined {
 // Clerk treats a session token as current until five seconds past its expiry.
 const CLERK_CLOCK_SKEW_SECONDS = 5;
 
+// Clerk reads one plain and one suffixed session cookie, so a browser sends
+// one or two. Each check is a signature verification before any limit has
+// counted the request, so a header packed with tokens buys only this many; a
+// genuine token past them counts in the narrower buckets, as before.
+const MAX_SESSIONS_CHECKED = 4;
+
 type ExpiredSession = { id: string; token: string };
 
 // The sessions a GET could refresh: expired session tokens alongside a
@@ -253,7 +259,9 @@ function bucketsFor(
   const key =
     jwtKey && !carriesHandshake(request, cookies) && publicKey(jwtKey);
   const signed = key
-    ? sessions.find(({ token }) => signedByClerk(token, key))
+    ? sessions
+        .slice(0, MAX_SESSIONS_CHECKED)
+        .find(({ token }) => signedByClerk(token, key))
     : undefined;
   // Every limiter call counts, a refused one included, and the first refusal
   // ends the request. A signed session, which only Clerk can mint, is counted
