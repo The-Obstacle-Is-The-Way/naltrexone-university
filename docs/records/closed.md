@@ -325,9 +325,20 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-342 · A User-Repository Conflict Test Fails When Its Two Writes Share a Millisecond · Resolved · 2026-10-21 · docs/records/bug-342-user-repository-conflict-test-depends-on-the-clock.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
 - BUG-344 · The Advisory Watcher Fails Every Run While a New Advisory's Issue Is Open · Resolved · 2026-10-16 · docs/records/bug-344-advisory-watcher-fails-while-a-new-advisory-is-open.md · #1540 · d4681072b174b50db088f7dd102d6e2e12920a81
 - BUG-345 · The Database Timeouts Do Not Apply Through Neon's Pooler · Resolved · 2026-10-18 · docs/records/bug-345-database-timeouts-do-not-apply-through-the-pooler.md · #1555 · 93bdef517d55662802ea4c2b2a46d5ac257df29a
+- BUG-346 · One Session Shows 0% in History and a Dash on Its Summary and the Dashboard · Resolved · 2026-11-01 · docs/records/bug-346-session-score-display-rules-disagree-across-screens.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
 - BUG-347 · An Exam's Timing Is Judged on Several Clocks, and Each Reader Decides Whether It Is Over · Resolved · 2026-10-23 · docs/records/bug-347-exam-timing-is-judged-on-several-clocks.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 - BUG-348 · Each Call Site Decides What an Error Logs, So a Billing Failure Goes Unlogged and Raw Error Text Reaches the Logs · Resolved · 2026-10-23 · docs/records/bug-348-each-call-site-decides-what-an-error-logs.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
+- BUG-349 · The Fake Consent Repository Keeps a Later Termination That Postgres Ignores · Resolved · 2026-11-01 · docs/records/bug-349-fake-consent-repository-keeps-a-termination-postgres-ignores.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-350 · The Billing Page States a Scheduled Cancellation as a UTC Date, a Day Late for a US Evening · Resolved · 2026-11-01 · docs/records/bug-350-billing-page-states-a-cancellation-date-in-utc.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
 - BUG-352 · CI's Pooler Image Depends on Docker Hub Alone · Resolved · 2026-10-18 · docs/records/bug-352-ci-pooler-image-depends-on-docker-hub-alone.md · #1555 · 93bdef517d55662802ea4c2b2a46d5ac257df29a
+- BUG-354 · Scripts Exit 0 Without Running When Called Without Their Extension or Through a Symlink · Resolved · 2026-11-01 · docs/records/bug-354-scripts-exit-zero-when-run-without-their-extension.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-355 · The Lockfile Union Check Refuses Correct Bundles Identical to a Source · Resolved · 2026-11-01 · docs/records/bug-355-lockfile-union-check-refuses-a-single-source-bundle.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-356 · The Records Tests Skip Their Ledger-Line, Status and Queue-Review Checks · Resolved · 2026-11-01 · docs/records/bug-356-records-tests-skip-three-of-their-checks.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-357 · The Draft Importer Ignores Unknown Flags · Resolved · 2026-11-01 · docs/records/bug-357-importer-ignores-unknown-flags.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-358 · Integration Setup Rejects IPv6 Loopback · Resolved · 2026-11-01 · docs/records/bug-358-integration-setup-rejects-ipv6-loopback.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-359 · The Ledger CLI Hides Usage and Target Errors · Resolved · 2026-11-01 · docs/records/bug-359-ledger-cli-hides-usage-and-target-errors.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-361 · The Rule Register Counts Unreachable Test Declarations · Resolved · 2026-11-01 · docs/records/bug-361-rule-register-counts-unreachable-tests.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-367 · CI's PgBouncer Stand-In Lacks Six CVE Fixes · Resolved · 2026-11-01 · docs/records/bug-367-ci-pgbouncer-stand-in-lacks-six-cve-fixes.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
 
 ## Debt
 
@@ -842,6 +853,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-523 · A Push to Main That GitHub Drops Has No Way to Run Its Checks · Resolved · 2026-10-23 · docs/records/debt-523-a-dropped-push-to-main-has-no-way-to-run-its-checks.md · #1599 · 95d9f91cb70c029003cc484a49480bb69651db87
 - DEBT-524 · Fixing the Open Records One by One Leaves Their Shared Causes in Place · Decomposed · 2026-10-17 · docs/records/debt-524-the-open-records-share-structural-causes.md · #1549 · 1d2ffa0351a225f85021817e049512f5d972c5da
 - DEBT-527 · Vendor Calls on Request Paths Have No Time Budget, So a Hung Call Outlives Its Request · Resolved · 2026-10-23 · docs/records/debt-527-vendor-calls-outlive-their-request.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
+- DEBT-529 · The Per-Screen Request Protocols Rely on a Contract Nothing Checks, and Their Safe Defaults Are Opt-In · Resolved · 2026-11-01 · docs/records/debt-529-client-request-protocols-rely-on-an-unchecked-contract.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
 - DEBT-531 · Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently · Resolved · 2026-10-23 · docs/records/debt-531-content-changes-have-no-single-planner.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 
 ## Frontend (FE prefix, retired)
