@@ -1,6 +1,6 @@
 # BUG-353: The Production Seed Can Publish the Placeholder Questions
 
-**Status:** Verifying — after promotion, the scheduled Checkout smoke's seed step and the owner's read-only production census of the placeholders; due 2026-10-25
+**Status:** Verifying — the owner's read-only production census of the placeholders, and the SCHEMA.md copy; due 2026-11-08
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -68,9 +68,9 @@ was not independently reconstructed. This audit reran the current tests.
 - [x] Current-branch `scripts/seed-environment-runtime.test.ts` passes: an environment seed spawns the managed seed without `--include-placeholders`.
 - [x] Current-branch `tests/ci-workflow.test.ts` passes: both seed steps pass the flag, and no workflow sets the old variable.
 - [x] The fixing pull request's CI and local E2E runs pass with the flag.
-- [ ] The hosted Checkout smoke's first scheduled run after promotion passes its seed step. The schedule runs from `main`.
-- [ ] A read-only query shows which of the ten placeholder slugs exist in production, and that none is published. This needs the owner, or a session with read access.
-- [ ] The owner copies this fix's corrections to `content/drafts/questions/SCHEMA.md` into the content repository's copy, where that file is edited, so the next copy does not undo them.
+- [x] The hosted Checkout smoke's first scheduled run after promotion passes its seed step. The schedule runs from `main`. *Run 39796835565, 2026-10-22 14:34 UTC:* the first scheduled run after promotion #1590 (`4c84405e`, which carried #1584) passed "Seed DB (placeholder content)".
+- [ ] A read-only query shows which of the ten placeholder slugs exist in production, and that none is published. This needs the owner, or a session with read access. *Re-dated 2026-11-01 from 2026-10-25:* not yet run; it waits for the owner or a session they authorize.
+- [ ] The owner copies this fix's corrections to `content/drafts/questions/SCHEMA.md` into the content repository's copy, where that file is edited, so the next copy does not undo them. *Re-dated 2026-11-01 from 2026-10-25:* not yet done.
 
 ## Related
 
