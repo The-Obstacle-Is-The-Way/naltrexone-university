@@ -11,6 +11,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { withRecordedCli } from '../../tests/shared/recorded-cli';
+import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
 import { MemoryIssues } from '../watchers/github-alert-issues-test-helpers';
 import {
   DUE_CHECKS_ISSUE_TITLE,
@@ -147,6 +148,25 @@ describe('overdue production checks alert', () => {
       }, output),
     ).toBe(1);
     expect(lines.join('\n')).not.toContain('token rejected');
+  });
+
+  it('adds gh’s own line when a gh call fails', async () => {
+    const lines: string[] = [];
+    const output = {
+      log: (line: string) => lines.push(line),
+      error: (line: string) => lines.push(line),
+    };
+    const failure = await ghRunnerFailure(
+      'GraphQL: Resource not accessible by integration (createIssue)\n',
+    );
+    expect(
+      await runDocumentationDueChecks(async () => {
+        throw failure;
+      }, output),
+    ).toBe(1);
+    expect(lines).toEqual([
+      'Overdue production check failed; inspect the records and GitHub issue access. Cause: GraphQL: Resource not accessible by integration (createIssue)',
+    ]);
   });
 
   // A broken queue-review line is the repository's own text, safe to print,

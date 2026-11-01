@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { OPERATIONAL_ALERT_DRILL_INTERVAL_MS } from '@/src/adapters/jobs/operational-alert-drill';
 import { SEND_RENEWAL_NOTICES_MONITOR } from '@/src/adapters/jobs/send-due-renewal-notices';
+import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
 import { MemoryIssues } from './github-alert-issues-test-helpers';
 import {
   createSentryApi,
@@ -536,6 +537,25 @@ describe('running the watcher', () => {
       }, output),
     ).toBe(1);
     expect(lines.join('\n')).not.toContain('secret-token');
+  });
+
+  it('adds gh’s own line when the issue cannot be updated', async () => {
+    const lines: string[] = [];
+    const output = {
+      log: (line: string) => lines.push(line),
+      error: (line: string) => lines.push(line),
+    };
+    const failure = await ghRunnerFailure(
+      'GraphQL: Resource not accessible by integration (createIssue)\n',
+    );
+    expect(
+      await runOperationalAlertWatcher(async () => {
+        throw failure;
+      }, output),
+    ).toBe(1);
+    expect(lines).toEqual([
+      'Operational alert watcher failed; inspect GitHub issue access. Cause: GraphQL: Resource not accessible by integration (createIssue)',
+    ]);
   });
 
   it('watches the cron monitor the renewal job checks in with', () => {
