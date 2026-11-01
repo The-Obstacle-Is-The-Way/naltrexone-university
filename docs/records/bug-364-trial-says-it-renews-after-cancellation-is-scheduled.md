@@ -1,6 +1,6 @@
 # BUG-364: The Trial Says It Renews After Cancellation Is Scheduled
 
-**Status:** Verifying — the dev-preview check, then promotion to main and the production check; due 2026-10-30
+**Status:** Verifying — the owner's no-card production trial check, before the first live sale; due 2026-11-08
 **Priority:** P3
 **Date:** 2026-10-22
 
@@ -84,8 +84,8 @@ The access-end date uses #1570's cutoff formatter, so this lands after #1570. Th
 - [x] The Stripe gateway clears a default the card holds before detaching it, and leaves another card's default and a canceled Subscription alone. The fake's empty-value clear is proven by the contract's ninth scenario against TEST mode.
 - [x] `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: the trial case also asserts that no renewal or add-card copy remains after cancelling. It runs in the observational hosted-Stripe lane.
 - [x] Business rule R11 is reworded to cover in-app renewal statements, not only renewal notices, and names the new proving tests.
-- [ ] Dev preview: cancel a trial in the portal, with and without a card; undo restores the renewal or add-card copy.
-- [ ] Production after promotion.
+- [x] Dev preview: cancel a trial in the portal, with and without a card; undo restores the renewal or add-card copy. *On `5c8c9f2b`, 2026-10-27 and 10-28:* without a card, the cancel at 23:39:09Z removed the add-card offer and the renewal promise from the frame and Billing, which state the access end, and the undo at 23:40:20Z restored the add-card copy. With a saved card, the cancel at 18:58:06Z removed the renewal promise, offered no card and kept the card, and the undo at 19:03:08Z restored the renewal copy. The portal sets `cancel_at` to the trial end with `cancel_at_period_end` false, which the app reads.
+- [ ] Production, before the first live sale: the owner, on their own account, starts a no-card trial; cancels it in the live portal, and the frame and Billing say the cancellation is scheduled with no renewal or add-card copy, and Renew restores the add-card copy (BUG-364); then, with the app open, cancels it immediately in the live Dashboard, and navigating in the app lands on Pricing (BUG-365). The tree is the one verified on the dev preview; this checks the live portal's cancellation mode and the live webhook. Starting a live trial is the owner's decision; if they decline, the record closes with this check as a Waiting row whose trigger is the first live sale. *Re-dated 2026-11-01:* promotion #1613 released the fix on 2026-11-01 (`e701fa8d`, the tree tested on the preview).
 
 ## Related
 

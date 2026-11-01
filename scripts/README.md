@@ -9,7 +9,7 @@ The [directory](#directory) below gives every script one row: what it does and w
   - The check follows package commands, workflow steps' `run` text, and only `vercel.json`'s `buildCommand`, looking for the complete path or a `pnpm` package command that references it. Comments and commands whose first word names `echo` or `printf` (including executable paths) are excluded.
   - It does not interpret shell control flow, command wrappers, variables, heredocs, continued lines or imports, prove that a command executes, or find omitted callers. Those claims and the purpose column need source review; changes to callers update the row.
 
-The non-content families are grouped below. Remaining content-boundary work stays with BUG-351 and DEBT-531; DEBT-532 owns the remaining content-family move as well as the layout decisions and validation.
+The non-content families are grouped below. Remaining content-boundary work stays with BUG-351, which carries DEBT-531's decisions; DEBT-532 owns the remaining content-family move as well as the layout decisions and validation.
 
 ## Conventions
 
@@ -48,7 +48,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | File | What it does | Run by |
 | --- | --- | --- |
 | `lib/github-issues.mts` | Reads and validates paginated repository issue pages; callers validate entries and own issue policy. | Imported by `watchers/security-txt-renewal.mts` and `watchers/upstream-advisory-watch.mts` |
-| `lib/github-cli.mts` | Native Node GitHub CLI transport with caller-owned limits, captured output and optional stdin. | Imported by the merge and promotion commands, alert issues, renewal, advisory, release, learnings and upstream-fix watchers |
+| `lib/github-cli.mts` | Native Node GitHub CLI transport with caller-owned limits, captured output and optional stdin. `withGhFailureReason` adds the reason for a failure the runner threw (its transport code, signal, first error line or exit status) to a job's fixed failure line, and adds nothing for any other error. | Imported by the merge and promotion commands, alert issues, the overdue-check job, and the renewal, operational-alert, advisory, release, learnings and upstream-fix watchers |
 | `lib/command-plan.ts` | Runs sequential test-lane command plans; preserves scoped environments and POSIX process-group interruption/cleanup. | Imported by `test-lanes/e2e-local-orchestrator.ts`, `test-lanes/run-local-e2e.ts`, `test-lanes/run-local-integration.ts` and `test-lanes/run-local-test-db.ts` |
 | `lib/entry-point.mts` | Compares real file paths for guarded entry points, including runtime-resolved extensionless paths and symlinks. Uses only Node built-ins. | Imported by guarded TypeScript commands, including the native scheduled jobs |
 | `lib/loopback-hostname.ts` | Classifies localhost and the exact IPv4/IPv6 loopback hosts, normalizing URL brackets. Callers retain URL validation and authorization policies; human database commands separately retain their 127/8 allowance. | Imported by database target classification, the E2E plan, integration setup and helpers |

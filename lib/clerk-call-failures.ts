@@ -34,6 +34,19 @@ const REFRESH_FAILED_WITHOUT_CLERK = new Set([
   'unexpected-sdk-error',
 ]);
 
+// auth.protect() answers a signed-out protected fetch or server action with
+// Clerk's 404 rewrite, which sets this reason; Clerk then appends the
+// request's own, so the header reads "protect-rewrite, <reason>".
+const PROTECT_REWRITE = 'protect-rewrite';
+
+function clerkAuthReason(response: Response): string {
+  const reasons = (response.headers.get('x-clerk-auth-reason') ?? '')
+    .split(',')
+    .map((reason) => reason.trim())
+    .filter((reason) => reason !== PROTECT_REWRITE);
+  return reasons.at(-1) ?? '';
+}
+
 type AnsweredRequest = {
   nextUrl: { searchParams: Pick<URLSearchParams, 'has'> };
 };
@@ -47,7 +60,7 @@ export function clerkCallFailure(
   request: AnsweredRequest,
   response: Response,
 ): ClerkCallFailure | null {
-  const reason = response.headers.get('x-clerk-auth-reason') ?? '';
+  const reason = clerkAuthReason(response);
   if (reason === 'jwk-remote-failed-to-load') return 'keys';
   if (reason === 'token-invalid-signature') return 'signature';
   if (

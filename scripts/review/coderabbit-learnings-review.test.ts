@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
 import { MemoryIssues } from '../watchers/github-alert-issues-test-helpers';
 import {
   coverageStart,
@@ -324,6 +325,25 @@ describe('weekly learnings issue (DEBT-515)', () => {
     ).toBe(1);
     expect(error).toHaveBeenCalledWith(
       'CodeRabbit learnings review failed; inspect GitHub comment and issue access.',
+    );
+  });
+
+  it('adds gh’s own line when a gh call fails', async () => {
+    const failure = await ghRunnerFailure('gh: Not Found (HTTP 404)\n');
+    const error = vi.fn();
+    expect(
+      await runFromCommandLine(
+        [],
+        { log: vi.fn(), error },
+        NOW,
+        () => {
+          throw failure;
+        },
+        null,
+      ),
+    ).toBe(1);
+    expect(error).toHaveBeenCalledWith(
+      'CodeRabbit learnings review failed; inspect GitHub comment and issue access. Cause: gh: Not Found (HTTP 404)',
     );
   });
 
