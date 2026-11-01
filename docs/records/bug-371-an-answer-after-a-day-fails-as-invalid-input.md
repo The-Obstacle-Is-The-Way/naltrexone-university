@@ -1,6 +1,6 @@
 # BUG-371: An Answer Submitted a Day After Its Question Loaded Fails as Invalid Input
 
-**Status:** Open
+**Status:** Verifying — promotion to main; due 2026-11-15
 **Priority:** P4
 **Date:** 2026-11-01
 
@@ -72,9 +72,13 @@ Option 2, for all three schemas. How long a question was open is the browser's m
 
 ## Verification
 
-- [ ] Red first, through the real use cases against Postgres: a submission with a time over a day stores 86,400 seconds. A draft save over a day stores a day. A finalize whose final draft is over a day finishes the exam. Each fails before the change with `VALIDATION_ERROR`.
-- [ ] The controller and schema tests accept a time over a day and pass it to the use case, and still refuse a negative or fractional one.
-- [ ] The use cases' existing cap tests still pass.
+- [x] Red first, through the real use cases against Postgres:
+  - `controllers.integration.test.ts`: a submission over a day stores 86,400 seconds.
+  - `bug-regression-exam-draft-bounds.integration.test.ts`: a draft save over a day stores a day, and an expired exam whose final draft is over a day finishes, with its attempt timed at 86,400 seconds.
+  - All three returned an error with field errors before the change (2026-11-01).
+- [x] The controller and schema tests accept a time over a day and pass it to the use case: `question-controller.test.ts`, `practice-schemas.test.ts` and `practice-controller-exam-draft.test.ts`. They still refuse a fractional or negative time. These replace the tests that pinned the rejections (2026-11-01).
+- [x] The use cases' existing cap tests and BUG-238's state-table check still pass (2026-11-01).
+- [ ] Promoted to `main`. No production check follows: the failure is not logged (see Impact), and reproducing it takes a question open for a day.
 
 ## Related
 
