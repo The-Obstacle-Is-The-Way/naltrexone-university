@@ -37,9 +37,21 @@ const STORED_KEY_HEAD_LENGTH =
 // SHA-256 digest of the whole key, which keeps keys sharing a head apart. A
 // key that fits is stored as the driver encodes it, which writes a lone UTF-16
 // surrogate as U+FFFD.
+// Whether the column holds a key's characters. Postgres counts each
+// character once, where a string's length counts one outside the BMP twice,
+// so a key is counted by code point, stopping once past the column.
+function fitsKeyColumn(key: string): boolean {
+  if (key.length <= RATE_LIMIT_KEY_MAX_LENGTH) return true;
+  let characters = 0;
+  for (const _ of key) {
+    characters += 1;
+    if (characters > RATE_LIMIT_KEY_MAX_LENGTH) return false;
+  }
+  return true;
+}
+
 function storedKey(key: string): string {
-  if (key.length <= RATE_LIMIT_KEY_MAX_LENGTH && !key.includes('\u0000'))
-    return key;
+  if (fitsKeyColumn(key) && !key.includes('\u0000')) return key;
   const head = key
     .slice(0, STORED_KEY_HEAD_LENGTH)
     .replaceAll('\u0000', '\uFFFD');

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
-import { rateLimits } from '@/db/schema';
+import { RATE_LIMIT_KEY_MAX_LENGTH, rateLimits } from '@/db/schema';
 import { DrizzleRateLimiter } from '@/src/adapters/gateways/drizzle-rate-limiter';
 import { ApplicationError } from '@/src/application/errors';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
@@ -234,10 +234,6 @@ describe('rate-limit keys the key column cannot hold, against real Postgres', ()
     ['longer than the column', 'x'.repeat(1_000)],
     ['one character longer than the column', 'x'.repeat(256)],
     ['holding a NUL', 'a\u0000b'],
-    [
-      'with a character outside the BMP split at its stored head',
-      `${'x'.repeat(203)}\u{1F600}${'y'.repeat(100)}`,
-    ],
   ])('counts a key %s, and refuses it past its limit', async (_shape, tail) => {
     const input = { key: `${family()}${tail}`, limit: 2, windowMs: 60_000 };
 
@@ -276,6 +272,34 @@ describe('rate-limit keys the key column cannot hold, against real Postgres', ()
     const [row] = await stored(prefix);
     expect(row?.key.length).toBeLessThanOrEqual(255);
     expect(row?.key.startsWith(`${prefix}xxxx`)).toBe(true);
+  });
+
+  it('stores a long key whose stored head ends inside a character outside the BMP, the split half written as U+FFFD', async () => {
+    const prefix = family();
+    // Puts a surrogate pair across the stored head's end: the head is the
+    // column's length less `#sha256:` and a 43-character digest.
+    const headLength = RATE_LIMIT_KEY_MAX_LENGTH - '#sha256:'.length - 43;
+    const key = `${prefix}${'x'.repeat(headLength - 1 - prefix.length)}\u{1F600}${'y'.repeat(100)}`;
+
+    await limiter.limit({ key, limit: 5, windowMs: 60_000 });
+
+    const [row] = await stored(prefix);
+    expect(row?.key).toMatch(
+      new RegExp(
+        `^${prefix}x{${headLength - 1 - prefix.length}}\uFFFD#sha256:[A-Za-z0-9_-]{43}$`,
+      ),
+    );
+  });
+
+  it('stores as it is a key that fits the column in characters, however many UTF-16 units it takes', async () => {
+    const prefix = family();
+    const fits = `${prefix}${'\u{1F600}'.repeat(RATE_LIMIT_KEY_MAX_LENGTH - prefix.length)}`;
+
+    await limiter.limit({ key: fits, limit: 5, windowMs: 60_000 });
+
+    await expect(stored(prefix)).resolves.toEqual([
+      { key: fits, windowStart: now, count: 1 },
+    ]);
   });
 
   it('stores a key the column holds as it is', async () => {
