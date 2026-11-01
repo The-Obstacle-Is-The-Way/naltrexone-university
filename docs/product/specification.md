@@ -679,7 +679,7 @@ const SubmitAnswerInputSchema = z.object({
     .optional(),
   retrySessionId: zUuid.optional(),
   idempotencyKey: zUuid.optional(),
-  timeSpentSeconds: z.number().int().min(0).max(86_400).optional(),
+  timeSpentSeconds: z.number().int().min(0).optional(), // the use case stores at most 86,400 (BUG-371)
 }).strict().superRefine((input, ctx) => {
   // A retry (retryOrigin set) must not carry sessionId.
   // retrySessionId is allowed, and required, only when retryOrigin is 'session_review'.
