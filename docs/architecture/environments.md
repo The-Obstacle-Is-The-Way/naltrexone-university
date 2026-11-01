@@ -35,7 +35,7 @@ Do not hard-code branch hostnames, account ids, passwords, or connection strings
 
 ### Per-Preview Database Branches
 
-These are not on (DEBT-445): every Preview shares the `dev` branch and its migration ledger. Before relying on a Preview whose schema differs from `dev`'s, give each Preview its own branch:
+Per-Preview branches are not on yet; DEBT-445 tracks them. Until then every Preview shares the `dev` branch and its migration ledger. Before relying on a Preview whose schema differs from `dev`'s, give each Preview its own branch:
 
 1. Move the project off Neon's Free plan first (DEBT-534). Free allows Preview branching but caps the project at 10 branches, `main` and `dev` included. At least 34 PR branches deployed Previews in each October week, so a busy week or a missed cleanup would stop new Preview branches, failing those Previews' checks.
 2. In the Neon Console, make `dev` the project's default branch. Vercel's integration creates each Preview's branch, `preview/<git-branch>`, from the default branch, so Previews then copy `dev`'s schema and data, not `main`'s. That keeps production data out only while `dev` holds none, so confirm it does not before turning branching on. Production keeps its own branch, `main`, whichever branch is the default.

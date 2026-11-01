@@ -41,8 +41,10 @@ production seed or a data fix, the owner takes a restore point:
      inspect and copy rows back from while `main` keeps serving.
    - A **one-step restore** replaces `main` with the snapshot and keeps its
      connection string. Every write since the snapshot moves to the
-     `main (old)` backup branch it creates: reconcile them as the next section
-     describes, then confirm `/api/health` reports the database.
+     `main (old)` backup branch it creates. Reconcile them with the next
+     section's steps, reading `main (old)` wherever they name Instant
+     Restore's timestamped backup branch, then confirm `/api/health` reports
+     the database.
 
 ## Neon Instant Restore: Recovery-Point Loss and Reconciliation
 
