@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
-import { rateLimits } from '@/db/schema';
+import { RATE_LIMIT_KEY_MAX_LENGTH, rateLimits } from '@/db/schema';
 import { DrizzleRateLimiter } from '@/src/adapters/gateways/drizzle-rate-limiter';
 import { ApplicationError } from '@/src/application/errors';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
@@ -204,5 +204,164 @@ describe('rate-limit guards and triggered cleanup against real Postgres', () => 
     await expect(
       db.select().from(rateLimits).where(eq(rateLimits.key, firstKey)),
     ).resolves.toEqual([{ key: firstKey, windowStart: expired, count: 1 }]);
+  });
+});
+
+// rate_limits.key is varchar(255), and Postgres text holds no NUL. Every key
+// counts, one past either included.
+describe('rate-limit keys the key column cannot hold, against real Postgres', () => {
+  const family = () => {
+    const prefix = `it-rate-keys:${randomUUID()}:`;
+    families.push(prefix);
+    return prefix;
+  };
+  const families: string[] = [];
+  const stored = (prefix: string) =>
+    db
+      .select()
+      .from(rateLimits)
+      .where(drizzleSql`starts_with(${rateLimits.key}, ${prefix})`);
+
+  afterEach(async () => {
+    for (const prefix of families.splice(0)) {
+      await db
+        .delete(rateLimits)
+        .where(drizzleSql`starts_with(${rateLimits.key}, ${prefix})`);
+    }
+  });
+
+  it.each([
+    ['longer than the column', 'x'.repeat(1_000)],
+    ['holding a NUL', 'a\u0000b'],
+  ])('counts a key %s, and refuses it past its limit', async (_shape, tail) => {
+    const input = { key: `${family()}${tail}`, limit: 2, windowMs: 60_000 };
+
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: true,
+    });
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: true,
+    });
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: false,
+    });
+  });
+
+  it('counts a key one character longer than the column, and stores it by its digest', async () => {
+    const prefix = family();
+    const key = `${prefix}${'x'.repeat(RATE_LIMIT_KEY_MAX_LENGTH + 1 - prefix.length)}`;
+
+    await limiter.limit({ key, limit: 5, windowMs: 60_000 });
+
+    const [row] = await stored(prefix);
+    expect(key).toHaveLength(RATE_LIMIT_KEY_MAX_LENGTH + 1);
+    expect(row?.key).toMatch(/#sha256:[A-Za-z0-9_-]{43}$/);
+  });
+
+  it('counts a key written in the stored digest form apart from the long key stored in that form', async () => {
+    const prefix = family();
+    const long = {
+      key: `${prefix}${'x'.repeat(300)}`,
+      limit: 1,
+      windowMs: 60_000,
+    };
+    await limiter.limit(long);
+    const [longRow] = await stored(prefix);
+
+    await expect(
+      limiter.limit({ key: longRow?.key ?? '', limit: 1, windowMs: 60_000 }),
+    ).resolves.toMatchObject({ success: true });
+  });
+
+  it.each([
+    ['short', ''],
+    ['long', 'x'.repeat(300)],
+  ])(
+    'counts %s keys that differ only in a lone surrogate or U+FFFD apart',
+    async (_length, filler) => {
+      const prefix = family();
+      const lone = {
+        key: `${prefix}${filler}\uD800`,
+        limit: 1,
+        windowMs: 60_000,
+      };
+      const replaced = {
+        key: `${prefix}${filler}\uFFFD`,
+        limit: 1,
+        windowMs: 60_000,
+      };
+
+      await expect(limiter.limit(lone)).resolves.toMatchObject({
+        success: true,
+      });
+      await expect(limiter.limit(replaced)).resolves.toMatchObject({
+        success: true,
+      });
+    },
+  );
+
+  it('counts two long keys that share their first 255 characters apart', async () => {
+    const head = `${family()}${'x'.repeat(300)}`;
+    const first = { key: `${head}:first`, limit: 1, windowMs: 60_000 };
+    const second = { key: `${head}:second`, limit: 1, windowMs: 60_000 };
+
+    await expect(limiter.limit(first)).resolves.toMatchObject({
+      success: true,
+    });
+    await expect(limiter.limit(second)).resolves.toMatchObject({
+      success: true,
+    });
+  });
+
+  it("stores a long key under its own first characters, so a key's prefix still names its family", async () => {
+    const prefix = family();
+    await limiter.limit({
+      key: `${prefix}${'x'.repeat(1_000)}`,
+      limit: 5,
+      windowMs: 60_000,
+    });
+
+    const [row] = await stored(prefix);
+    expect(row?.key.length).toBeLessThanOrEqual(255);
+    expect(row?.key.startsWith(`${prefix}xxxx`)).toBe(true);
+  });
+
+  it('stores a long key whose stored head ends inside a character outside the BMP, the split half written as U+FFFD', async () => {
+    const prefix = family();
+    // Puts a surrogate pair across the stored head's end: the head is the
+    // column's length less `#sha256:` and a 43-character digest.
+    const headLength = RATE_LIMIT_KEY_MAX_LENGTH - '#sha256:'.length - 43;
+    const key = `${prefix}${'x'.repeat(headLength - 1 - prefix.length)}\u{1F600}${'y'.repeat(100)}`;
+
+    await limiter.limit({ key, limit: 5, windowMs: 60_000 });
+
+    const [row] = await stored(prefix);
+    expect(row?.key).toMatch(
+      new RegExp(
+        `^${prefix}x{${headLength - 1 - prefix.length}}\uFFFD#sha256:[A-Za-z0-9_-]{43}$`,
+      ),
+    );
+  });
+
+  it('stores as it is a key that fits the column in characters, however many UTF-16 units it takes', async () => {
+    const prefix = family();
+    const fits = `${prefix}${'\u{1F600}'.repeat(RATE_LIMIT_KEY_MAX_LENGTH - prefix.length)}`;
+
+    await limiter.limit({ key: fits, limit: 5, windowMs: 60_000 });
+
+    await expect(stored(prefix)).resolves.toEqual([
+      { key: fits, windowStart: now, count: 1 },
+    ]);
+  });
+
+  it('stores a key the column holds as it is', async () => {
+    const prefix = family();
+    const fits = `${prefix}${'x'.repeat(255 - prefix.length)}`;
+
+    await limiter.limit({ key: fits, limit: 5, windowMs: 60_000 });
+
+    await expect(stored(prefix)).resolves.toEqual([
+      { key: fits, windowStart: now, count: 1 },
+    ]);
   });
 });
