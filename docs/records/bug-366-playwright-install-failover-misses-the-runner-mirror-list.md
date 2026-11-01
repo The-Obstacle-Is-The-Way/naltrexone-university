@@ -1,6 +1,6 @@
 # BUG-366: The Playwright Install's Mirror Failover Misses the Runner's Mirror List
 
-**Status:** Verifying — promotion to `main`, where the scheduled Checkout smoke runs the script; due 2026-10-26
+**Status:** Verifying — the first scheduled Checkout smoke on `main` after promotion #1613; due 2026-11-02
 **Priority:** P2
 **Date:** 2026-10-22
 
@@ -43,7 +43,7 @@ Option 1, test-first, in this record's pull request. The rewrite replaces the Az
 - [x] A source naming a missing mirror list, or a list the script cannot write, still retries and installs Chromium, and the healthy path leaves both the source and the list unchanged. Mutations that strip only `mirror+file://`, drop the list search, or remove either file guard each fail a test (2026-10-22).
 - [x] A copy that fails partway leaves the list whole, with no staged copy behind, and the retry goes ahead. The test fails against the earlier in-place copy, and dropping the staged copy's metadata or its cleanup each fails a test (2026-10-23).
 - [x] A stalled install in CI retries through `archive.ubuntu.com` and passes without a re-run. This record's pull request hit the stall in its own CI on 2026-10-22: at the primary phase's timeout the script rewrote the runner's mirror list (144 bytes to 138, without `azure.`), apt fetched from `archive.ubuntu.com`, a 5.6 MB package that had taken more than two minutes from Azure arrived in about 2 seconds, and the step finished 21 seconds after the switch.
-- [ ] Promoted to `main`, where the daily scheduled Checkout smoke (`stripe-hosted-checkout-smoke.yml`) runs the script.
+- [ ] Promoted to `main`, where the daily scheduled Checkout smoke (`stripe-hosted-checkout-smoke.yml`) runs the script. *Re-dated 2026-11-01 from 2026-10-26:* the promotion waited for the billing QA. #1613 released it on 2026-11-01 (`e701fa8d`), and main's CI run 41312217555 ran the script; the first scheduled smoke on `main` since then runs on 2026-11-02 at 09:23 UTC.
 
 ## Related
 
