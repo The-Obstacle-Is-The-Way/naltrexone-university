@@ -112,6 +112,14 @@ export function runQuestionAvailabilityContract(
   describe(`${adapterName} question availability contract`, () => {
     it.each(questionAvailabilityContractScenarios)(
       '$name, read through either revision',
+      {
+        meta: {
+          ruleProof: {
+            file: 'tests/shared/question-availability-contract.ts',
+            title: '$name, read through either revision',
+          },
+        },
+      },
       async ({ seed, expected }) => {
         const harness = await createHarness();
         const seeded = await harness.seed(seed);
@@ -143,6 +151,14 @@ export function runQuestionAvailabilityContract(
     // (DEBT-493 increment 5).
     it.each(questionAvailabilityContractScenarios)(
       '$name, read by id',
+      {
+        meta: {
+          ruleProof: {
+            file: 'tests/shared/question-availability-contract.ts',
+            title: '$name, read by id',
+          },
+        },
+      },
       async ({ seed, expected }) => {
         const harness = await createHarness();
         const seeded = await harness.seed(seed);

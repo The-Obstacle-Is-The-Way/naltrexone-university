@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import {
+  STRIPE_MIN_REQUEST_MS,
   STRIPE_RETRY_BACKOFF_MS,
   type StripeCallBudget,
 } from '@/src/adapters/gateways/stripe/stripe-call-budget';
@@ -104,7 +105,8 @@ export class StripeBudgetHttpClient {
       if (
         attempt > 0 ||
         !shouldRetry(response) ||
-        this.budget.remainingMs() <= STRIPE_RETRY_BACKOFF_MS
+        this.budget.remainingMs() <=
+          STRIPE_RETRY_BACKOFF_MS + STRIPE_MIN_REQUEST_MS
       ) {
         return response;
       }

@@ -5,7 +5,7 @@ import postgres from 'postgres';
 // but Playwright can start without it and read DATABASE_URL from .env.local,
 // so every connection the E2E code opens passes its URL through here.
 const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
-// The values scripts/resolve-local-test-target.ts treats as an opt-in.
+// The values scripts/test-lanes/resolve-local-test-target.ts treats as an opt-in.
 const TRUTHY_ENV_VALUES = new Set(['1', 'true', 'yes']);
 
 export type E2EDatabaseTargetRefusal = { message: string; fix: string };

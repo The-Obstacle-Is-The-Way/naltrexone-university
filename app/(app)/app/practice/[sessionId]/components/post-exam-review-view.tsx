@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import type { PracticeViewProps } from '@/app/(app)/app/practice/components/practice-view';
+import { formatScorePercentage } from '@/app/(app)/app/shared/score-percentage';
 import { Feedback } from '@/components/question/feedback';
 import { QuestionAvailabilityNotice } from '@/components/question/question-availability-notice';
 import { QuestionCard } from '@/components/question/question-card';
@@ -100,9 +101,7 @@ export function PostExamReviewView({
             </h1>
             {/* ADR-022 Decision 3: over the scored items only. */}
             <div className="mt-1 text-3xl font-bold font-display text-foreground">
-              {summary.totals.scored > 0
-                ? `${Math.round(summary.totals.accuracy * 100)}%`
-                : '—'}
+              {formatScorePercentage(summary.totals)}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {`${summary.totals.correct} of ${summary.totals.scored} correct · Review each question with detailed feedback.`}

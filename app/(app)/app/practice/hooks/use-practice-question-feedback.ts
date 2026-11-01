@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  getQuestionRating,
+  rateQuestion,
+  submitQuestionReport,
+} from '@/app/(app)/app/shared/client-actions';
+import {
   claimRequestKeySlot,
   createRequestKeySlotStore,
 } from '@/app/(app)/app/shared/idempotency-request-key';
@@ -14,11 +19,6 @@ import {
   shouldReportClientError,
 } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
-import {
-  getQuestionRating,
-  rateQuestion,
-  submitQuestionReport,
-} from '@/src/adapters/controllers/question-feedback-actions';
 import type {
   QuestionFeedbackCategory,
   QuestionFeedbackRating,

@@ -746,4 +746,45 @@ describe('app/(app)/app/dashboard', () => {
       false,
     );
   });
+
+  // BUG-365: client navigation keeps the layout, so its gate does not rerun.
+  // Either refused result alone redirects, so neither can drop out of the check.
+  it('sends a learner without a subscription to Pricing instead of a bare refusal', () => {
+    expect(() =>
+      renderDashboard({
+        statsResult: {
+          ok: false,
+          error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
+        },
+        sessionHistoryResult: {
+          ok: true,
+          data: { rows: [], total: 0, limit: 3, offset: 0 },
+        },
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        digest: expect.stringContaining(
+          ';/pricing?reason=subscription_required;',
+        ),
+      }),
+    );
+  });
+
+  it('sends a learner to Pricing when only the session history is refused', () => {
+    expect(() =>
+      renderDashboard({
+        statsResult: { ok: true, data: createUserStatsOutput() },
+        sessionHistoryResult: {
+          ok: false,
+          error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
+        },
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        digest: expect.stringContaining(
+          ';/pricing?reason=subscription_required;',
+        ),
+      }),
+    );
+  });
 });

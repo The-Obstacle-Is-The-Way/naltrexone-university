@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+
+import { redirect } from 'next/navigation';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
@@ -433,6 +435,18 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('Unable to load bookmarks.');
     expect(html).toContain('Internal error');
     expect(html).toContain('Go to Practice');
+  });
+
+  // BUG-365: client navigation keeps the layout, so its gate does not rerun.
+  it('sends a learner without a subscription to Pricing instead of a bare refusal', () => {
+    renderBookmarks({
+      ok: false,
+      error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
+    });
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+      '/pricing?reason=subscription_required',
+    );
   });
 
   it('renders ok state via renderBookmarks', () => {

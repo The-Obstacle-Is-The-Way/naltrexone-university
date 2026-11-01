@@ -250,35 +250,110 @@ describe('StripePaymentGateway', () => {
     expect(stripe.paymentMethods.attachCalls).toEqual([]);
   });
 
-  it('detaches a setup payment method with a Session-derived idempotency key', async () => {
-    const stripe = fakeWithPaymentMethod('cus_unverified');
+  describe('detachTrialPaymentMethod', () => {
+    // The trial the Session added its card to, with the given default.
+    function fakeTrial(input: {
+      customer: string;
+      defaultPaymentMethod: string | null;
+      status?: string;
+    }): FakeStripeCheckoutClient {
+      const stripe = fakeWithPaymentMethod(input.customer);
+      stripe.seedSubscription({
+        ...liveSubscription(),
+        customer: input.customer,
+        status: input.status ?? 'trialing',
+        default_payment_method: input.defaultPaymentMethod,
+      });
+      return stripe;
+    }
 
-    await createGateway(stripe).detachTrialPaymentMethod({
-      sessionId: 'cs_setup_123',
-      externalPaymentMethodId: 'pm_123',
-      externalCustomerId: 'cus_unverified',
-    });
+    function detach(stripe: FakeStripeCheckoutClient, customer: string) {
+      return createGateway(stripe).detachTrialPaymentMethod({
+        sessionId: 'cs_setup_123',
+        externalPaymentMethodId: 'pm_123',
+        externalCustomerId: customer,
+        externalSubscriptionId: 'sub_123',
+      });
+    }
 
-    expect(stripe.paymentMethods.detachCalls).toEqual([
-      {
-        paymentMethodId: 'pm_123',
-        options: {
-          idempotencyKey: 'trial_setup:cs_setup_123:detach_payment_method',
+    it('detaches a setup payment method with a Session-derived idempotency key', async () => {
+      const stripe = fakeTrial({
+        customer: 'cus_unverified',
+        defaultPaymentMethod: null,
+      });
+
+      await detach(stripe, 'cus_unverified');
+
+      expect(stripe.paymentMethods.detachCalls).toEqual([
+        {
+          paymentMethodId: 'pm_123',
+          options: {
+            idempotencyKey: 'trial_setup:cs_setup_123:detach_payment_method',
+          },
         },
-      },
-    ]);
-  });
-
-  it('does not detach a setup payment method owned by a different customer', async () => {
-    const stripe = fakeWithPaymentMethod('cus_other');
-
-    await createGateway(stripe).detachTrialPaymentMethod({
-      sessionId: 'cs_setup_123',
-      externalPaymentMethodId: 'pm_123',
-      externalCustomerId: 'cus_expected',
+      ]);
     });
 
-    expect(stripe.paymentMethods.detachCalls).toEqual([]);
+    it('does not detach a setup payment method owned by a different customer', async () => {
+      const stripe = fakeTrial({
+        customer: 'cus_other',
+        defaultPaymentMethod: null,
+      });
+
+      await detach(stripe, 'cus_expected');
+
+      expect(stripe.paymentMethods.detachCalls).toEqual([]);
+    });
+
+    // BUG-364: Stripe keeps a detached card as the Subscription's default.
+    it('clears the Subscription default the card holds before detaching it', async () => {
+      const stripe = fakeTrial({
+        customer: 'cus_123',
+        defaultPaymentMethod: 'pm_123',
+      });
+
+      await detach(stripe, 'cus_123');
+
+      expect(stripe.subscriptions.updateCalls).toEqual([
+        {
+          subscriptionId: 'sub_123',
+          params: { default_payment_method: '' },
+          options: {
+            idempotencyKey:
+              'trial_setup:cs_setup_123:clear_subscription_default',
+          },
+        },
+      ]);
+      expect(stripe.paymentMethods.detachCalls).toHaveLength(1);
+      await expect(
+        stripe.subscriptions.retrieve('sub_123'),
+      ).resolves.toMatchObject({ default_payment_method: null });
+    });
+
+    it('leaves a Subscription default held by another card', async () => {
+      const stripe = fakeTrial({
+        customer: 'cus_123',
+        defaultPaymentMethod: 'pm_other',
+      });
+
+      await detach(stripe, 'cus_123');
+
+      expect(stripe.subscriptions.updateCalls).toEqual([]);
+      expect(stripe.paymentMethods.detachCalls).toHaveLength(1);
+    });
+
+    it('leaves a canceled Subscription unchanged and still detaches the card', async () => {
+      const stripe = fakeTrial({
+        customer: 'cus_123',
+        defaultPaymentMethod: 'pm_123',
+        status: 'canceled',
+      });
+
+      await detach(stripe, 'cus_123');
+
+      expect(stripe.subscriptions.updateCalls).toEqual([]);
+      expect(stripe.paymentMethods.detachCalls).toHaveLength(1);
+    });
   });
 
   it('rejects an attachment response that is not bound to the verified customer', async () => {

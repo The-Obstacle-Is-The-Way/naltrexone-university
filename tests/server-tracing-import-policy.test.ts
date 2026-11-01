@@ -65,7 +65,8 @@ describe('server tracing import boundary', () => {
     'lib/operational-alert-events-sdk.test.ts',
     // DEBT-505: the check-ins are proven through the real SDK.
     'lib/cron-monitor-sdk.test.ts',
-    'vitest.browser.setup.ts',
+    // BUG-319: the error page's report is proven through the real SDK.
+    'components/error-boundary-page-sentry-sdk.browser.spec.tsx',
   ])('allows the approved SDK boundary at %s', (filePath) => {
     expect(lintSentryImport(filePath).status).toBe(0);
   });

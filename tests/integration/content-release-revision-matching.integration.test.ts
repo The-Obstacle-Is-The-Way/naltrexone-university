@@ -140,6 +140,15 @@ describe('release revision matching', () => {
 
   it.each(['v2', 'v3', 'v4'] as const)(
     'does not reuse a staged %s release that names an older identical revision',
+    {
+      meta: {
+        ruleProof: {
+          file: 'tests/integration/content-release-revision-matching.integration.test.ts',
+          title:
+            'does not reuse a staged %s release that names an older identical revision',
+        },
+      },
+    },
     async (format) => {
       const slug = `it-match-${randomUUID()}`;
       const original = source(slug, { correctLabel: 'A' });

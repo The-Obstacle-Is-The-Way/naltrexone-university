@@ -1,8 +1,9 @@
-import { expect, type Request, test } from '@playwright/test';
+import { expect, type Request } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+import { test } from './helpers/clerk-auth-test';
 import { selectChoiceByLabel } from './helpers/question';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { readServerActionNames } from './helpers/server-actions';

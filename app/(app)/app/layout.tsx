@@ -16,6 +16,8 @@ import type {
   CheckEntitlementUseCase,
   CheckTrialSavedCardUseCase,
 } from '@/src/application/ports/use-cases';
+import { formatRenewalNoticeCutoff } from '@/src/application/shared/renewal-notice-email-format';
+import { classifyTrialEnding, type TrialEnding } from '@/src/domain/services';
 import type {
   SubscriptionPlan,
   SubscriptionStatus,
@@ -36,8 +38,9 @@ export type EntitledAppUser = {
   subscriptionStatus: SubscriptionStatus | null;
   plan: SubscriptionPlan | null;
   trialEndsAt: Date | null;
-  // BUG-308: whether the trial already renews on a card the learner saved.
-  trialCardSaved: boolean;
+  // BUG-308 and BUG-364: whether the trial renews on a saved card, needs one,
+  // or ends because a cancellation is scheduled; null outside a trial.
+  trialEnding: TrialEnding | null;
 };
 
 const getCheckTrialSavedCardUseCase = createDepsResolver<
@@ -65,22 +68,25 @@ export async function enforceEntitledAppUser(
 
   const subscriptionStatus = authState.entitlement.subscriptionStatus ?? null;
   // Only a trial can be waiting for a card, so only a trial pays for the query.
-  const trialCardSaved =
+  const trialEnding =
     subscriptionStatus === 'inTrial'
-      ? (
-          await (
-            await getCheckTrialSavedCardUseCase(
-              deps?.checkTrialSavedCardUseCase,
-            )
-          ).execute({ userId: authState.user.id })
-        ).cardSaved
-      : false;
+      ? classifyTrialEnding({
+          cancelAtPeriodEnd: authState.entitlement.cancelAtPeriodEnd ?? false,
+          cardSaved: (
+            await (
+              await getCheckTrialSavedCardUseCase(
+                deps?.checkTrialSavedCardUseCase,
+              )
+            ).execute({ userId: authState.user.id })
+          ).cardSaved,
+        })
+      : null;
 
   return {
     subscriptionStatus,
     plan: authState.entitlement.plan ?? null,
     trialEndsAt: authState.entitlement.trialEndsAt ?? null,
-    trialCardSaved,
+    trialEnding,
   };
 }
 
@@ -156,15 +162,28 @@ export function AppLayoutShell({
 }
 
 // Pattern Registry F-10: layout-level informational banner (DEBT-410).
+function ManageBillingLink() {
+  return (
+    <Link
+      href={ROUTES.APP_BILLING}
+      className="underline font-medium transition-colors hover:text-foreground"
+    >
+      Manage billing
+    </Link>
+  );
+}
+
 export function TrialCountdownBanner({
   daysLeft,
   plan,
-  cardSaved,
+  trialEndsAt,
+  ending,
   createTrialPaymentMethodActionFn,
 }: {
   daysLeft: number;
   plan: SubscriptionPlan;
-  cardSaved: boolean;
+  trialEndsAt: Date;
+  ending: TrialEnding;
   createTrialPaymentMethodActionFn: (formData: FormData) => Promise<void>;
 }) {
   const countdown =
@@ -175,18 +194,21 @@ export function TrialCountdownBanner({
     <div className="block border-b border-border bg-card px-4 py-3 text-sm text-muted-foreground">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3">
         <span className="font-medium text-foreground">{countdown}</span>
-        {cardSaved ? (
+        {ending === 'cancellationScheduled' ? (
+          <>
+            {/* BUG-364: the trial ends as scheduled, so no card is offered. */}
+            <span className="text-foreground">
+              {`Cancellation scheduled. Your access ends ${formatRenewalNoticeCutoff(trialEndsAt)}.`}
+            </span>
+            <ManageBillingLink />
+          </>
+        ) : ending === 'renewsOnSavedCard' ? (
           <>
             {/* BUG-308: the trial already renews on the learner's card. */}
             <span className="text-foreground">
               {`${pricing.name} renews at ${pricing.price} per ${pricing.frequency} on your saved card when your trial ends.`}
             </span>
-            <Link
-              href={ROUTES.APP_BILLING}
-              className="underline font-medium transition-colors hover:text-foreground"
-            >
-              Manage billing
-            </Link>
+            <ManageBillingLink />
           </>
         ) : (
           <>
@@ -240,16 +262,20 @@ export async function renderAppLayout(input: {
     input.createTrialPaymentMethodActionFn ?? createTrialPaymentMethodAction;
   const nowFn = input.nowFn ?? (() => new Date());
 
-  const [{ subscriptionStatus, plan, trialEndsAt, trialCardSaved }, authNav] =
+  const [{ subscriptionStatus, plan, trialEndsAt, trialEnding }, authNav] =
     await Promise.all([enforceEntitledAppUserFn(), authNavFn()]);
   const banner =
     subscriptionStatus === 'pastDue' ? (
       <PastDueBanner />
-    ) : subscriptionStatus === 'inTrial' && plan && trialEndsAt ? (
+    ) : subscriptionStatus === 'inTrial' &&
+      plan &&
+      trialEndsAt &&
+      trialEnding ? (
       <TrialCountdownBanner
         daysLeft={getTrialDaysLeft(trialEndsAt, nowFn())}
         plan={plan}
-        cardSaved={trialCardSaved}
+        trialEndsAt={trialEndsAt}
+        ending={trialEnding}
         createTrialPaymentMethodActionFn={createTrialPaymentMethodActionFn}
       />
     ) : undefined;

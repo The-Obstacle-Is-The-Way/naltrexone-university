@@ -142,6 +142,7 @@ describe('withIdempotency practice-session conflict caching', () => {
     });
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'practice:finalizeExamAnswers',
@@ -187,6 +188,7 @@ describe('withIdempotency practice-session conflict caching', () => {
 
     const execute = vi.fn(async () => ({ ok: true }));
     const caught = await withIdempotency({
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'practice:finalizeExamAnswers',

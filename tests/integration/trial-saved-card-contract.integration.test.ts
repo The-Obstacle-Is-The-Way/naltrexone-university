@@ -27,7 +27,8 @@ afterAll(async () => {
  * Fake-fidelity contract (BUG-308): the same scenario table runs against the
  * fake and the real Postgres adapter. A trial has a saved card once an
  * add-card operation for that learner and that Stripe subscription has set
- * the card as the subscription's default payment method.
+ * the card as the subscription's default payment method, unless the
+ * operation then ended terminal, which detaches the card (BUG-364).
  */
 type ContractHarness = {
   repo: TrialPaymentMethodSetupOperationRepository;
@@ -92,6 +93,16 @@ const scenarios: {
         stage: 'defaultSet',
       }),
     expected: true,
+  },
+  {
+    name: 'a card set as the default, then detached by a terminal outcome',
+    seed: (repo, { userId }) =>
+      seedTrialSetupOperation(repo, {
+        userId,
+        stripeSubscriptionId: SUBSCRIPTION,
+        stage: 'terminalAfterDefault',
+      }),
+    expected: false,
   },
   {
     name: 'a completed operation',

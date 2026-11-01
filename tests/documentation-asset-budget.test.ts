@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DOCUMENTATION_FILE_BUDGET_BYTES,
   overBudgetDocumentationFiles,
-} from '../scripts/documentation-asset-budget';
+} from './documentation-asset-budget-source-scan';
 
 const KIB = 1024;
 

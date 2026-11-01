@@ -18,13 +18,35 @@ describe('StartPracticeSessionInputSchema', () => {
       difficulties: [],
     }).success;
 
-  it.each([1, 200])('accepts a session of %i questions', (count) => {
-    expect(start(count)).toBe(true);
-  });
+  it.each([1, 200])(
+    'accepts a session of %i questions',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/adapters/controllers/practice-schemas.test.ts',
+          title: 'accepts a session of %i questions',
+        },
+      },
+    },
+    (count) => {
+      expect(start(count)).toBe(true);
+    },
+  );
 
-  it.each([0, 201])('refuses a session of %i questions', (count) => {
-    expect(start(count)).toBe(false);
-  });
+  it.each([0, 201])(
+    'refuses a session of %i questions',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/adapters/controllers/practice-schemas.test.ts',
+          title: 'refuses a session of %i questions',
+        },
+      },
+    },
+    (count) => {
+      expect(start(count)).toBe(false);
+    },
+  );
 });
 
 describe('SaveExamDraftAnswerInputSchema', () => {

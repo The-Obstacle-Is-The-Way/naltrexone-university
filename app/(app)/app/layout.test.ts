@@ -162,7 +162,7 @@ describe('app/(app)/app/layout', () => {
       subscriptionStatus: 'active',
       plan: 'monthly',
       trialEndsAt: null,
-      trialCardSaved: false,
+      trialEnding: null,
     });
     expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
       userId: fixtureUser1Id,
@@ -206,19 +206,23 @@ describe('app/(app)/app/layout', () => {
       subscriptionStatus: 'inTrial',
       plan: 'annual',
       trialEndsAt,
-      trialCardSaved: false,
+      trialEnding: 'needsCard',
     });
     expect(redirectFn).not.toHaveBeenCalled();
   });
 
   // BUG-308: the banner must not ask for a card the learner already saved.
+  // BUG-364 (DEBT-414 F22): nor promise a renewal or offer a card once a
+  // cancellation is scheduled.
   it.each([
-    ['inTrial', true, true],
-    ['inTrial', false, false],
-    ['active', true, false],
+    ['inTrial', true, false, 'renewsOnSavedCard'],
+    ['inTrial', false, false, 'needsCard'],
+    ['inTrial', true, true, 'cancellationScheduled'],
+    ['inTrial', false, true, 'cancellationScheduled'],
+    ['active', true, false, null],
   ] as const)(
-    'reports trialCardSaved for a %s learner with a saved card=%s as %s',
-    async (subscriptionStatus, cardSaved, expected) => {
+    'classifies how the trial of a %s learner ends (saved card=%s, cancellation scheduled=%s) as %s',
+    async (subscriptionStatus, cardSaved, cancelAtPeriodEnd, expected) => {
       const authGateway = new FakeAuthGateway(
         createDomainUser({ id: fixtureUser1Id }),
       );
@@ -232,6 +236,7 @@ describe('app/(app)/app/layout', () => {
             subscriptionStatus === 'inTrial'
               ? new Date('2026-02-08T00:00:00Z')
               : null,
+          cancelAtPeriodEnd,
         }),
       };
 
@@ -242,7 +247,7 @@ describe('app/(app)/app/layout', () => {
           await createCheckTrialSavedCardUseCase(cardSaved),
       });
 
-      expect(result.trialCardSaved).toBe(expected);
+      expect(result.trialEnding).toBe(expected);
     },
   );
 
@@ -280,7 +285,7 @@ describe('app/(app)/app/layout', () => {
       subscriptionStatus: 'pastDue',
       plan: 'monthly',
       trialEndsAt: null,
-      trialCardSaved: false,
+      trialEnding: null,
     });
     expect(redirectFn).not.toHaveBeenCalled();
   });

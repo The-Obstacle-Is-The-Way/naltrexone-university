@@ -28,7 +28,7 @@ export const DOCUMENTED_SKIP_POLICY_ALLOWANCES: readonly SkipPolicyAllowance[] =
     },
     {
       api: 'it',
-      filePath: 'scripts/run-stripe-provider-contracts.test.ts',
+      filePath: 'scripts/test-lanes/run-stripe-provider-contracts.test.ts',
       guardExpression: "process.platform==='win32'",
       kind: 'call',
       method: 'skipIf',
@@ -39,7 +39,8 @@ export const DOCUMENTED_SKIP_POLICY_ALLOWANCES: readonly SkipPolicyAllowance[] =
     },
     {
       api: 'it',
-      filePath: 'scripts/run-stripe-provider-contracts-process.test.ts',
+      filePath:
+        'scripts/test-lanes/run-stripe-provider-contracts-process.test.ts',
       guardExpression: "process.platform==='win32'",
       kind: 'call',
       method: 'skipIf',

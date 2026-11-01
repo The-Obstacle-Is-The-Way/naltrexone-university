@@ -590,6 +590,14 @@ describe('GetPreviousAttemptUseCase', () => {
 
     it.each(states)(
       'reveals nothing for an omitted attempt on a question %s',
+      {
+        meta: {
+          ruleProof: {
+            file: 'src/application/use-cases/get-previous-attempt.test.ts',
+            title: 'reveals nothing for an omitted attempt on a question %s',
+          },
+        },
+      },
       async (_state, overlay) => {
         await expect(arrange(omittedOutcome(), overlay)()).resolves.toBeNull();
       },
@@ -597,6 +605,15 @@ describe('GetPreviousAttemptUseCase', () => {
 
     it.each(states)(
       'still reveals the revision a learner answered on a question %s',
+      {
+        meta: {
+          ruleProof: {
+            file: 'src/application/use-cases/get-previous-attempt.test.ts',
+            title:
+              'still reveals the revision a learner answered on a question %s',
+          },
+        },
+      },
       async (_state, overlay) => {
         await expect(arrange('answered', overlay)()).resolves.toMatchObject({
           kind: 'attempt',

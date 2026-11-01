@@ -3,6 +3,7 @@ import {
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import { createRequestSequencing } from '@/app/(app)/app/practice/shared/request-sequencing-test-helpers';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import {
   PracticeSessionConflictMessages,
@@ -23,6 +24,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     });
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => ({
         ok: false,
@@ -56,6 +58,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     const recoverEndedSessionConflict = vi.fn(async () => true);
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => ({
         ok: false,
@@ -91,6 +94,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     });
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -121,6 +125,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     const recoverEndedSessionConflict = vi.fn(async () => true);
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,

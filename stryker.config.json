@@ -3,7 +3,7 @@
   "plugins": ["@stryker-mutator/vitest-runner"],
   "testRunner": "vitest",
   "vitest": {
-    "configFile": "vitest.config.mts"
+    "configFile": "vitest.stryker.config.mts"
   },
   "mutate": [
     "src/domain/**/*.ts",

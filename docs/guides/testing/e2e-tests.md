@@ -77,14 +77,16 @@ webServer: {
 - Global setup signs in within a 30-second deadline. If an attempt fails, it signs out the session it created within a 20-second deadline (`tests/e2e/helpers/clerk-session-deadlines.ts`). The deadlines matter because Clerk's sign-in and sign-out run `page.evaluate`, which Playwright never times out. Setup reserves both once its preparation ends, which has a 60-second budget; preflight's two Clerk calls share one 30-second deadline within it. The `setup` and `cleanup` projects also bound page waits and navigations at 15 seconds.
 - The stored session's lifecycle (BUG-330):
   - **Testing token.** The setup project runs `clerkSetup()`, and only its sign-in installs the token's route. Signed-in tests restore the stored session without it, as Clerk's guide does; BUG-330 option 4 records why the token stays out of test contexts.
-  - **Clerk trace.** Every signed-in test records Clerk's decisions on each page answer, its Frontend API answers, its cookies' names and times, and Clerk JS's session changes. If the page reaches sign-in, the test prints them once as `[E2E_CLERK_AUTH_TRACE]`, redacted (BUG-333). It finds Clerk's Frontend API from the publishable key, because `clerkSetup()` sets `CLERK_FAPI` only in the setup worker.
+  - **Clerk trace.** Every signed-in test records failed requests, action/RSC and navigation answers, Clerk's Frontend API answers, and Clerk JS's session changes. It prints `[E2E_CLERK_AUTH_TRACE]` on sign-in, a "Failed to fetch" alert or a failed test (BUG-333, BUG-337). Sign-in and alert each report once; a later sign-in is still reported after an alert, and teardown never repeats an earlier report. The 100-entry buffer includes event times and cookie names/lengths. Paths keep only the app's and Clerk's route words: a Clerk ID shows its kind (`sess_…`) and any other segment `…`. Strict allowlists also retain Clerk's own decision names (those `@clerk/backend` defines; any other value shows only its length), numeric `__client_uat`, on requests too, and redirect counts, and the session JWT's numeric `iat`/`exp`; credentials, action IDs, bodies and other query values are omitted. Diagnostic reads share a five-second deadline and note any timeout. It finds Clerk's Frontend API from the publishable key, because `clerkSetup()` sets `CLERK_FAPI` only in the setup worker.
+    - **Redirect visibility.** Playwright 1.64.0 can abort a redirected server action before emitting its 307 whenever any route is registered, including the dev-browser echo filter (microsoft/playwright#43242). The two-server contract intentionally requires that event with interception enabled. Playwright 1.64.1 restores this diagnostic path: the isolated contract passed on 2026-10-21, after the release-age gate opened. The upgrade does not fix BUG-337 or explain why Clerk redirected. Signed-in specs must import `test` from `./helpers/clerk-auth-test`; `tests/clerk-auth-fixture-policy.test.ts` enforces that coverage.
+    - **Cookie evidence.** Chromium can resolve a failed request's headers to the provisional set, which omits Cookie. The `requestfailed` line therefore says cookies are unavailable; it never means no cookies were sent. For a failed redirected fetch, use the redirect response line's `request cookies (response observed)` field as evidence of cookies sent. If that field is unavailable, it proves nothing about cookies. The final context-cookie snapshot describes the jar when reporting, not the failed request.
   - **Failed restore.** If a signed-in test cannot restore the stored session within 20 seconds, it fails with one error naming what Clerk's Frontend API answered (method, path, status, error codes and trace ID; never a token). That error is recorded in `test-results/.auth/`, and every later signed-in test fails with it at once.
   - **Teardown.** Teardown revokes the stored session through Clerk's Backend API by its ID, whatever a browser can see.
 - The runner shows the web server's output (`stdout: 'pipe'`), and everything it writes passes the E2E log redaction, because CI logs are public.
 - Starts a production server for E2E runs (`pnpm build && pnpm start` locally, `pnpm start` in CI)
 - Waits on `/api/health`, not just the root URL, so Playwright startup includes a DB-aware readiness check
 - Runs with **1 worker** because authenticated E2E flows share one Clerk user; mutating specs still reset that user to a deterministic baseline in `beforeEach`
-- Local `pnpm test:e2e` runs through `scripts/run-local-e2e.ts`, which mirrors CI by preparing a local Docker Postgres first and then invoking Playwright with the Docker `DATABASE_URL`
+- Local `pnpm test:e2e` runs through `scripts/test-lanes/run-local-e2e.ts`, which mirrors CI by preparing a local Docker Postgres first and then invoking Playwright with the Docker `DATABASE_URL`
 
 ### Playwright Retry Policy
 
@@ -222,7 +224,7 @@ To check which of them `.env.local` sets without printing any value, list the na
 rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY|NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL)=' .env.local | cut -d= -f1
 ```
 
-Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `--include-placeholders` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, but hash collisions or explicit overrides can still select the same port; check ownership before running. CI still supplies its own `DATABASE_URL` through `.github/workflows/ci.yml`, for the database its `Start Postgres` step runs.
+Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/test-lanes/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/test-lanes/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `--include-placeholders` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, but hash collisions or explicit overrides can still select the same port; check ownership before running. CI still supplies its own `DATABASE_URL` through `.github/workflows/ci.yml`, for the database its `Start test database` step runs.
 
 Every database connection the E2E code opens refuses a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true` is set, so a direct `pnpm exec playwright test` that would otherwise use `.env.local`'s remote URL stops in global setup, before it touches the test user's rows. The app server Playwright starts still connects to that URL, and its health probe writes a rate-limit row there first (BUG-360).
 
@@ -454,7 +456,7 @@ Quick Practice at `/app/practice/quick` is covered by `practice.spec.ts`. Compar
 
 ```bash
 # Inspect this clone's resolved local target
-pnpm exec tsx scripts/resolve-local-test-target.ts env
+pnpm local:test:target env
 
 # Clear Next.js cache
 rm -rf .next
@@ -508,7 +510,7 @@ See DEBT-293 for the full analysis and the resolved reset strategy.
 2. **Local app port conflict:** A previous dev server is still running but in a bad state, or `PORT` was overridden to collide with another process.
 
    ```bash
-   pnpm exec tsx scripts/resolve-local-test-target.ts env
+   pnpm local:test:target env
    ```
 
    Stop only the process you own. Do not use blanket `kill -9` on a shared port.

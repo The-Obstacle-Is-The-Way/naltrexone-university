@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { StripeCallBudget } from './stripe-call-budget';
+import { STRIPE_MIN_REQUEST_MS, StripeCallBudget } from './stripe-call-budget';
 
 describe('StripeCallBudget', () => {
   it('uses one monotonic deadline across calls', () => {
@@ -12,6 +12,39 @@ describe('StripeCallBudget', () => {
     expect(() => budget.requireRemainingMs()).toThrow(
       'Stripe caller deadline exhausted',
     );
+  });
+
+  // BUG-368: a timer can fire a fraction of a millisecond before the
+  // deadline, leaving a remainder no request can use.
+  it('counts a remainder too short for any Stripe request as spent', () => {
+    let now = 0;
+    const budget = new StripeCallBudget(1_000, () => now);
+    now = 1_000 - STRIPE_MIN_REQUEST_MS + 0.5;
+    expect(budget.remainingMs()).toBe(0);
+    expect(() => budget.requireRemainingMs()).toThrow(
+      'Stripe caller deadline exhausted',
+    );
+  });
+
+  it('keeps a remainder of exactly the minimum usable', () => {
+    let now = 0;
+    const budget = new StripeCallBudget(1_000, () => now);
+    now = 1_000 - STRIPE_MIN_REQUEST_MS;
+    expect(budget.remainingMs()).toBe(STRIPE_MIN_REQUEST_MS);
+  });
+
+  it('starts no backoff that would leave less than a usable remainder', async () => {
+    vi.useFakeTimers();
+    try {
+      let now = 0;
+      const budget = new StripeCallBudget(1_000, () => now);
+      now = 1_000 - (500 + STRIPE_MIN_REQUEST_MS) + 0.5;
+      const waited = budget.waitBeforeRetry(500);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(await waited).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('starts no backoff after exhaustion or when it cannot fit', async () => {

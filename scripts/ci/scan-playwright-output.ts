@@ -7,11 +7,11 @@
 // It prints counts and file paths only, never a matched value.
 import { type Dirent, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import {
   type ClerkCredentialCounts,
   countClerkCredentials,
 } from '@/tests/shared/clerk-credential-shapes';
+import { isMain } from '../lib/entry-point.mts';
 
 const TEXT_TYPES = new Set(['.json', '.log', '.md', '.txt']);
 
@@ -101,6 +101,5 @@ export function runFromCommandLine(
   return failed ? 1 : 0;
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-if (import.meta.url === executedPath)
+if (isMain(import.meta.url))
   process.exitCode = runFromCommandLine(process.argv.slice(2));

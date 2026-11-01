@@ -231,7 +231,7 @@
         "lib/sentry-breadcrumbs-sdk.test.ts",
         "lib/operational-alert-events-sdk.test.ts",
         "lib/cron-monitor-sdk.test.ts",
-        "vitest.browser.setup.ts"
+        "components/error-boundary-page-sentry-sdk.browser.spec.tsx"
       ],
       "linter": {
         "rules": {

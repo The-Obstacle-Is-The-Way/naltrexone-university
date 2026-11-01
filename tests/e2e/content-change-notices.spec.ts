@@ -1,9 +1,10 @@
-import { expect, type Page, type TestInfo, test } from '@playwright/test';
+import { expect, type Page, type TestInfo } from '@playwright/test';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+import { test } from './helpers/clerk-auth-test';
 import {
   type ContentChanges,
   openContentChanges,

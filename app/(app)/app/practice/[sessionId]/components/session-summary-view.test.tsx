@@ -110,7 +110,7 @@ describe('SessionSummaryView', () => {
     expect(findStatValue(doc, 'Accuracy')).toBe('0%');
   });
 
-  it('shows — for tutor summary when answered is zero', () => {
+  it('shows 0% for tutor summary when answered is zero', () => {
     const html = renderToStaticMarkup(
       <SessionSummaryView
         summary={{
@@ -132,7 +132,7 @@ describe('SessionSummaryView', () => {
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
-    expect(findStatValue(doc, 'Accuracy')).toBe('—');
+    expect(findStatValue(doc, 'Accuracy')).toBe('0%');
   });
 
   it('returns tutor summary primary actions when mode is tutor and omits legacy links', () => {

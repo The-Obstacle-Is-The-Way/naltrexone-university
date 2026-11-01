@@ -20,6 +20,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: null,
       hasActiveSubscriptionPeriod: false,
       trialEndsAt: null,
+      cancelAtPeriodEnd: false,
     });
   });
 
@@ -42,6 +43,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
+      cancelAtPeriodEnd: false,
     });
   });
 
@@ -86,6 +88,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: 'annual',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: new Date('2026-03-01T00:00:00Z'),
+      cancelAtPeriodEnd: false,
     });
   });
 
@@ -103,6 +106,23 @@ describe('CheckEntitlementUseCase', () => {
 
     const result = await useCase.execute({ userId: 'user-1' });
     expect(result.trialEndsAt).toEqual(trialEnd);
+  });
+
+  // BUG-364 (DEBT-414 F22): the layout reads a scheduled cancellation here.
+  it('surfaces a scheduled cancellation for the layout', async () => {
+    const sub = createSubscription({
+      userId: 'user-1',
+      status: 'inTrial',
+      currentPeriodEnd: new Date('2026-02-07T00:00:00Z'),
+      cancelAtPeriodEnd: true,
+    });
+    const useCase = new CheckEntitlementUseCase(
+      new FakeSubscriptionRepository([sub]),
+      () => new Date('2026-02-01T00:00:00Z'),
+    );
+
+    const result = await useCase.execute({ userId: 'user-1' });
+    expect(result.cancelAtPeriodEnd).toBe(true);
   });
 
   it('keeps surfacing trialEndsAt for an inTrial subscription whose period has lapsed', async () => {
@@ -125,6 +145,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: 'monthly',
       hasActiveSubscriptionPeriod: false,
       trialEndsAt: trialEnd,
+      cancelAtPeriodEnd: false,
     });
   });
 
@@ -147,6 +168,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
+      cancelAtPeriodEnd: false,
     });
   });
 
@@ -169,6 +191,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
+      cancelAtPeriodEnd: false,
     });
   });
 
@@ -191,6 +214,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
+      cancelAtPeriodEnd: false,
     });
   });
 
@@ -213,6 +237,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
+      cancelAtPeriodEnd: false,
     });
   });
 
@@ -235,6 +260,7 @@ describe('CheckEntitlementUseCase', () => {
       plan: 'monthly',
       hasActiveSubscriptionPeriod: false,
       trialEndsAt: null,
+      cancelAtPeriodEnd: false,
     });
   });
 });

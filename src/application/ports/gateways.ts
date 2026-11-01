@@ -85,6 +85,8 @@ export type DetachTrialPaymentMethodInput = {
   sessionId: string;
   externalPaymentMethodId: string;
   externalCustomerId: string;
+  // The Subscription the Session targeted, whose default the card may hold.
+  externalSubscriptionId: string;
 };
 
 export type SetTrialSubscriptionDefaultPaymentMethodInput = {

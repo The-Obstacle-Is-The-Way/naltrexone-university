@@ -19,6 +19,10 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
 import {
+  runRenewalConsentTerminationContract,
+  terminationConsentInput,
+} from '@/tests/shared/renewal-consent-termination-contract';
+import {
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -347,3 +351,21 @@ describe('renewal consent record persistence', () => {
     },
   );
 });
+
+runRenewalConsentTerminationContract(
+  'DrizzleRenewalConsentRecordRepository',
+  async () => ({
+    async seed(input) {
+      const user = await createUser(db, cleanup);
+      const repository = new DrizzleRenewalConsentRecordRepository(primary.db);
+      const competingRepository = new DrizzleRenewalConsentRecordRepository(
+        competing.db,
+      );
+      const record = await repository.save(
+        terminationConsentInput(user.id, input),
+      );
+      consentIds.push(record.id);
+      return { record, repository, competingRepository };
+    },
+  }),
+);

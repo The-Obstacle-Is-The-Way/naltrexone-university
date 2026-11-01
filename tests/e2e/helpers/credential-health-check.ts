@@ -4,7 +4,7 @@ import {
   createPostgresMigrationLedgerQuery,
   MigrationLedgerVerificationError,
   verifyMigrationLedger as verifySharedMigrationLedger,
-} from '@/scripts/migration-ledger';
+} from '@/scripts/database/migration-ledger';
 import { delay } from '@/src/adapters/shared/delay';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';

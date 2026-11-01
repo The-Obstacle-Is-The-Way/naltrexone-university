@@ -7,8 +7,9 @@ import {
 } from '@/tests/shared/ci-image-policy';
 import { workflowFiles, workflowImages } from '@/tests/shared/workflow-files';
 
-const START_POSTGRES = 'bash scripts/ci/start-postgres.sh';
-const PRINT_POSTGRES_LOG = 'docker logs postgres || true';
+const START_POSTGRES =
+  'bash scripts/ci/pull-image.sh --env POSTGRES_IMAGE_REPOSITORY Postgres "$POSTGRES_IMAGE_DIGEST" docker.io/library/postgres public.ecr.aws/docker/library/postgres mirror.gcr.io/library/postgres';
+const PRINT_POSTGRES_LOG = 'docker compose logs --no-color db || true';
 const LOCAL_DATABASE_URL = /@(localhost|127\.0\.0\.1):/;
 
 type Env = Record<string, string>;
@@ -132,7 +133,7 @@ describe('CI container images', () => {
     );
     const steps = ci?.job.steps ?? [];
     const pooler = steps.findIndex((step) =>
-      step.run?.includes('docker compose up -d --no-deps --wait'),
+      step.run?.includes('docker compose up -d --wait'),
     );
     const integration = steps.findIndex(
       (step) => step.run === 'pnpm test:integration:coverage',
@@ -149,11 +150,10 @@ describe('CI container images', () => {
     expect(steps[pooler]?.run).toContain('${DB_TEST_POOLER_PORT:?');
     expect(steps[pooler]?.run).toContain('GITHUB_ENV');
     expect(steps[pooler]?.run).toContain(
-      'docker compose up --no-start --no-deps --pull never pgbouncer',
+      'docker compose up -d --wait --wait-timeout 60 --pull never db pgbouncer',
     );
-    expect(steps[pooler]?.run).toContain(
-      `docker network connect --alias db "\${COMPOSE_PROJECT_NAME}_default" postgres`,
-    );
+    expect(steps[pooler]?.run).not.toContain('docker network connect');
+    expect(ci?.job.env?.DB_TEST_PORT).toBe('5432');
     expect(steps[pooler]?.['timeout-minutes']).toBeGreaterThan(0);
     const compose = parse(readFileSync('docker-compose.yml', 'utf8')) as {
       services: {
@@ -205,7 +205,7 @@ describe('CI container images', () => {
     expect(services).toEqual([]);
   });
 
-  it('starts Postgres with registry failover, bounded, before any pnpm step, in every job that uses a local database', () => {
+  it('pulls Postgres with registry failover before installation, then starts Compose before migration in every database job', () => {
     const jobs = localDatabaseJobs();
 
     expect(jobs.map(({ file }) => file)).toEqual([
@@ -220,6 +220,17 @@ describe('CI container images', () => {
       expect(start).toBeGreaterThanOrEqual(0);
       expect(start).toBeLessThan(firstPnpm);
       expect(steps[start]?.['timeout-minutes']).toBeGreaterThan(0);
+      const compose = steps.findIndex(
+        (step) => step.name === 'Start test database',
+      );
+      const migrate = steps.findIndex((step) => step.name === 'Migrate DB');
+      expect(compose).toBeGreaterThan(firstPnpm);
+      expect(compose).toBeLessThan(migrate);
+      expect(job.env?.DB_TEST_PORT).toBe('5432');
+      expect(steps[compose]?.run).toContain('--pull never db');
+      expect(steps[compose]?.run).toContain('COMPOSE_PROJECT_NAME=%s');
+      expect(steps[compose]?.run).toContain('DB_TEST_POOLER_PORT=%s');
+      expect(steps[compose]?.['timeout-minutes']).toBeGreaterThan(0);
     }
   });
 
@@ -243,6 +254,42 @@ describe('CI container images', () => {
     expect(digests).toHaveLength(2);
     expect(new Set(digests).size).toBe(1);
     expect(digests[0]).toMatch(/^sha256:[0-9a-f]{64}$/);
-    expect(compose.services.db.image).toBe(`postgres@${digests[0]}`);
+    expect(compose.services.db.image).toBe(
+      `\${POSTGRES_IMAGE_REPOSITORY:-postgres}@${digests[0]}`,
+    );
   });
+});
+
+it('publishes the local database only on loopback', () => {
+  const compose = parse(readFileSync('docker-compose.yml', 'utf8'));
+  expect(compose.services.db.ports).toEqual([
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose resolves this literal; JavaScript must not.
+    '127.0.0.1:${DB_TEST_PORT:-5434}:5432',
+  ]);
+});
+
+it('keeps bounded healthchecks and a healthy database prerequisite in the shared Compose services', () => {
+  const compose = parse(readFileSync('docker-compose.yml', 'utf8'));
+  expect(compose.services.db.healthcheck).toEqual({
+    test: ['CMD-SHELL', 'pg_isready -U postgres -d addiction_boards_test'],
+    interval: '5s',
+    timeout: '5s',
+    retries: 10,
+  });
+  expect(compose.services.pgbouncer.healthcheck).toEqual({
+    test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U postgres -d postgres'],
+    interval: '5s',
+    timeout: '5s',
+    retries: 10,
+  });
+  expect(compose.services.pgbouncer.depends_on.db.condition).toBe(
+    'service_healthy',
+  );
+  for (const { job } of localDatabaseJobs()) {
+    const startup = job.steps?.find(
+      (step) => step.name === 'Start test database',
+    );
+    expect(startup?.run).toContain('--wait --wait-timeout 60 --pull never');
+    expect(startup?.['timeout-minutes']).toBeGreaterThan(0);
+  }
 });

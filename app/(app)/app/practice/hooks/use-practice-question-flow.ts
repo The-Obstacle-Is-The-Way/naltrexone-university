@@ -11,11 +11,11 @@ import {
   type PracticeFilters,
   toPracticeQuestionResult,
 } from '@/app/(app)/app/practice/practice-page-logic';
-import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getNextQuestion,
   submitAnswer,
-} from '@/src/adapters/controllers/question-actions';
+} from '@/app/(app)/app/shared/client-actions';
+import { useIsMounted } from '@/lib/use-is-mounted';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 

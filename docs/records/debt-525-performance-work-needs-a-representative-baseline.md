@@ -14,7 +14,7 @@ The owner adopted DEBT-524 option 2 and Resolution steps 1–8 on 2026-10-17. Th
 
 ## Evidence
 
-- `lib/sentry-data-collection.ts:399` samples server traces at 5%. `src/adapters/shared/server-tracing.ts:7-26,68-105` defines action spans and their allowed custom attributes. BUG-331 still owns trace/privacy verification and the decision before expanding collection.
+- `lib/sentry-data-collection.ts:399` samples server traces at 5%. `src/adapters/shared/server-tracing.ts:7-26,68-105` defines action spans and their allowed custom attributes. BUG-331 verified trace privacy; whether to keep the 5% sample is the owner's decision, held in BUG-331's Waiting row, and comes before expanding collection.
 - `lib/db.ts:19-22` limits one postgres.js pool to ten clients. Aggregate connection demand and pool waits need measurement alongside query time. BUG-345 supplies the missing server timeout backstop.
 - DEBT-450 names Sentry/Neon measurements and the bookmark census. Its scoring description predates ADR-022: `src/application/use-cases/get-user-stats.ts:110-124` requests lifetime count and score plus bounded recent metrics; `src/adapters/repositories/drizzle-attempt-repository.ts:383-428` joins corrected revisions and practice state.
 - The root reads the nonce (`app/layout.tsx:72`), while marketing components cache their content (`components/marketing/marketing-layout.tsx:25,55,73`; `marketing-home.tsx:71,93,135,182,253`). Measure actual request/render work rather than treating all content as uncached.

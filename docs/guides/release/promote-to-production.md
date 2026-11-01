@@ -67,8 +67,8 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 1. Promotion PR (dev → main): CI (GitHub Actions)
    └─ pnpm typecheck
    └─ pnpm lint:ci
-   └─ pnpm exec tsx scripts/internal/run-managed-db-migrate.ts # CI database only
-   └─ pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders
+   └─ pnpm exec tsx scripts/database/managed/run-managed-db-migrate.ts # CI database only
+   └─ pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts --include-placeholders
    └─ pnpm test:coverage
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # every trigger; no provider secret required
@@ -241,7 +241,9 @@ seed of a commit before `0042` fails on the retired revision-sync function.
 
 ## 3. Data-Affecting Migration Pattern
 
-When a migration changes enums, renames columns, or otherwise affects data that the seed script populates (e.g., tag taxonomy changes), the migration SQL itself should include the necessary data cleanup. This keeps the procedure to two commands. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass, as in the manual reseed above:
+When a migration changes seed-managed data (for example, tag taxonomy), preserve or transform the required rows in the migration itself. Do not delete derived rows on the assumption that a later seed will restore them: direct seeding refuses a database with an active content release. After bootstrap, migrations must leave the data coherent without a reseed; content changes use the reviewed stage/activation procedure.
+
+Only before an active release exists may a reviewed migration plan include a separate reseed from admitted canonical input. The historical two-command pattern below applies only to that state. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass, as in the manual reseed above:
 
 ```bash
 # 1. Apply schema migration (includes any required data cleanup)
@@ -254,7 +256,7 @@ DATABASE_URL="<target>" DB_TARGET_ACK='<from the refusal>' pnpm db:seed
 #    SELECT kind, COUNT(*) FROM tags GROUP BY kind;
 ```
 
-**Design principle:** Migrations that affect seed-managed tables (like `tags`, `question_tags`) should delete the derived rows as part of the migration SQL, so no manual cleanup is needed. The seed script rebuilds them from the canonical MDX source files. See SPEC-033 §14 for a concrete example.
+**Design principle:** Keep data and schema consistent at each migration boundary. SPEC-033 §14 records a pre-bootstrap cleanup/reseed example, not a general instruction to delete `tags` or `question_tags`. Prove the planned transformation against representative stored data and its constraints before applying it.
 
 **For additive-only migrations** (new columns, new tables, new enum values), `pnpm db:migrate` alone is sufficient — no reseed needed unless the seed populates the new columns.
 
@@ -267,10 +269,10 @@ For authoring rules before a migration PR merges — pre-flight data proof, clea
 | Environment | How to Connect | DATABASE_URL Source |
 |-------------|---------------|---------------------|
 | **Local app runtime** | Direct (already in `.env.local`) | `.env.local`, expected to match Vercel Development and the Neon `dev` branch |
-| **Local authenticated E2E** | Resolver-scoped Docker Postgres via `pnpm test:e2e` | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL`; an external `.env.local` target requires both explicit opt-ins |
+| **Local authenticated E2E** | Resolver-scoped Docker Postgres via `pnpm test:e2e` | `scripts/test-lanes/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL`; an external `.env.local` target requires both explicit opt-ins |
 | **Preview / shared non-production** | Use your provider CLI/dashboard to fetch the non-production connection string | Vercel Preview/Development env vars, currently the Neon `dev` branch |
 | **Production** | Use your provider CLI/dashboard to fetch the production connection string | Vercel Production env vars, currently the Neon `main` branch |
-| **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
+| **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/test-lanes/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
 
 Example for preview/production. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass:
 
@@ -366,7 +368,7 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
 
 **Before opening one, run the gated QA procedures it needs.** A promotion ships everything `dev` holds that `main` lacks, not only the PR that prompted it, so run `git fetch` and read `origin/main..origin/dev` against each procedure whose header says `Promotion gate: yes`. If the range changes that procedure's flows, it must pass against the dev preview first ([QA method](../qa/method.md#when-procedures-run), item 2). The promotion's description names each procedure and either links its run or says why its flows are unchanged. If `dev` gains a merge before the promotion merges, fetch and check the range again, run any procedure whose flows the new merge changes, and update the description.
 
-1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm exec tsx scripts/verify-promotion.ts <PR>`. It verifies:
+1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm pr:verify-promotion <PR>`. It verifies:
    - a same-repository `dev` → `main` PR, with up-to-date ancestry;
    - every first-parent merge's source PR, and the actual second-parent head;
    - each source's formal approval predating its merge: exact-head, or carried as the [merge guard](./review-and-merge.md#the-merge-guard) allows, with each source diff taken against the merge's first parent;
@@ -376,7 +378,7 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
    Direct commits, ambiguous PR associations, missing approvals and incomplete evidence fail closed.
 2. **Source-thread counts are current observations.** GitHub cannot reconstruct their historical count, so keep the source merge receipts; the thread-resolution ruleset covers the merge-time requirement.
 3. **Adjudicate any finding CodeRabbit posts on the promotion anyway.** Resolve threads with receipts. A stale requested-changes review on an older promotion head may be dismissed with a comment citing this procedure and the current source proof; never dismiss an unaddressed finding. Do not request a promotion review.
-4. **Merge with `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge`.** It:
+4. **Merge with `pnpm pr:verify-promotion <PR> --merge`.** It:
    - fetches `origin` and re-runs the proof;
    - writes the output into a marked section of the PR body, and confirms the body shows it;
    - re-reads the PR and refuses if its base or head moved;

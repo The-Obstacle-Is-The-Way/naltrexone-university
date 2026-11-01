@@ -4,15 +4,15 @@ import {
   setBookmarkForQuestion,
 } from '@/app/(app)/app/shared/bookmark-toggle';
 import {
+  getBookmarkStatus,
+  setBookmark,
+} from '@/app/(app)/app/shared/client-actions';
+import {
   reportClientError,
   shouldReportClientError,
 } from '@/lib/report-client-error';
 import type { QuestionMode } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
-import {
-  getBookmarkStatus,
-  setBookmark,
-} from '@/src/adapters/controllers/bookmark-actions';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import { STANDARD_READ_TIMEOUT_MS } from '../../../shared/timeout-tiers';
 

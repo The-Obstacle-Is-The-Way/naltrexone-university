@@ -514,6 +514,21 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
         default_payment_method?: unknown;
       };
       expect(retrieved.default_payment_method === paymentMethod.id).toBe(true);
+
+      // BUG-364: a detach leaves the PaymentMethod as the default, and an
+      // empty value clears the default.
+      await harness.paymentMethods.detach(paymentMethod.id);
+      const detached = (await harness.subscriptions.retrieve(seeded.id)) as {
+        default_payment_method?: unknown;
+      };
+      expect(detached.default_payment_method === paymentMethod.id).toBe(true);
+      const cleared = (await harness.subscriptions.update.call(
+        harness.subscriptions,
+        seeded.id,
+        { default_payment_method: '' },
+        { idempotencyKey: idempotencyKey('subscription_default_clear') },
+      )) as { default_payment_method?: unknown };
+      expect(cleared.default_payment_method).toBeNull();
     },
   },
   {

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { practiceSessions } from '@/db/schema';
+import { shouldCacheStartPracticeSessionError } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
@@ -58,6 +59,7 @@ describe('start-session idempotency on real Postgres', () => {
 
     const start = (connection: typeof first) =>
       withIdempotency({
+        shouldCacheError: shouldCacheStartPracticeSessionError,
         repo: new ObservedRepository(connection.db),
         logger: new FakeLogger(),
         userId: user.id,

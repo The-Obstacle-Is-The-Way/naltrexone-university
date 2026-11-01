@@ -36,4 +36,9 @@ describe('renewal consent value objects', () => {
       ),
     ).toEqual(new Date('2029-08-06T12:00:00Z'));
   });
+  it('computes the termination floor alone without inventing a consent date', () => {
+    expect(
+      computeRenewalConsentRetainUntil(null, new Date('1960-02-29T12:00:00Z')),
+    ).toEqual(new Date('1961-03-01T12:00:00Z'));
+  });
 });

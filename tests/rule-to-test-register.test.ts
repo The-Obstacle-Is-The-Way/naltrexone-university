@@ -6,7 +6,7 @@ import {
   findRuleRegisterProblems,
   parseRuleRegister,
   RULE_REGISTER_PATH,
-} from '../scripts/rule-to-test-register';
+} from './rule-to-test-register-source-scan.mts';
 
 // DEBT-465 Part 3 (ADR-019 amendment): each business rule names the tests
 // that prove it, and a rename or deletion of one of them fails here.

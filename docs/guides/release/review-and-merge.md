@@ -36,8 +36,8 @@ How a feature PR gets reviewed and merged into `dev`. The rules are in [`AGENTS.
 ## The Merge Guard
 
 ```bash
-pnpm exec tsx scripts/merge-reviewed-pr.ts <PR>          # read-only
-pnpm exec tsx scripts/merge-reviewed-pr.ts <PR> --merge  # re-reads GitHub, then merges
+pnpm pr:merge-reviewed <PR>          # read-only
+pnpm pr:merge-reviewed <PR> --merge  # re-reads GitHub, then merges
 ```
 
 It merges only when all of these hold:

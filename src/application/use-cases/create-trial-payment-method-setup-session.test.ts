@@ -39,6 +39,7 @@ function createPaymentGateway() {
 async function createUseCase(input?: {
   status?: 'inTrial' | 'active';
   currentPeriodEnd?: Date;
+  cancelAtPeriodEnd?: boolean;
   operations?: FakeTrialPaymentMethodSetupOperationRepository;
   logger?: FakeLogger;
   /** Without one, the subscription row has no Stripe subscription id. */
@@ -55,6 +56,7 @@ async function createUseCase(input?: {
     plan: 'monthly',
     status: input?.status ?? 'inTrial',
     currentPeriodEnd: input?.currentPeriodEnd ?? trialEndsAt,
+    cancelAtPeriodEnd: input?.cancelAtPeriodEnd ?? false,
   });
   const externalSubscriptionId =
     input?.externalSubscriptionId === undefined
@@ -257,6 +259,30 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     expect(active.payments.trialSetupInputs).toEqual([]);
     expect(expired.payments.trialSetupInputs).toEqual([]);
     expect(expiresNow.payments.trialSetupInputs).toEqual([]);
+  });
+
+  // BUG-364 (DEBT-414 F22): a page loaded before a portal cancellation can
+  // still submit the add-card form; the renewal it would consent to is gone.
+  it('refuses before Stripe when the trial has a scheduled cancellation', async () => {
+    const { payments, useCase } = await createUseCase({
+      cancelAtPeriodEnd: true,
+    });
+
+    await expect(
+      useCase.execute({
+        userId,
+        expectedDisclosureVersion: '2026-08-05',
+        email: 'learner@example.com',
+        successUrl: 'https://app.example.com/success',
+        cancelUrl: 'https://app.example.com/cancel',
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'CONFLICT',
+        'A trial with a scheduled cancellation cannot add a payment method',
+      ),
+    );
+    expect(payments.trialSetupInputs).toEqual([]);
   });
 
   it('logs only a safe error code when operation persistence fails', async () => {

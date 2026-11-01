@@ -14,12 +14,13 @@ import {
   auditDocumentation,
   auditRecordLifecycle,
   brokenDocumentationLinks,
+  DOCUMENTATION_BLOCKING_FINDINGS,
   type DocumentationAudit,
   RECORDS,
   readDocumentation,
   readDocumentationFiles,
   runDocumentationCommand,
-} from '../scripts/documentation-archive';
+} from '../scripts/records/documentation-archive';
 
 function audit(files: Record<string, string>) {
   return auditDocumentation(new Map(Object.entries(files)), (file) =>
@@ -33,7 +34,7 @@ function runArchiveCommand(root: string) {
     [
       '--import',
       import.meta.resolve('tsx'),
-      path.resolve('scripts/documentation-archive.ts'),
+      path.resolve('scripts/records/documentation-archive.ts'),
     ],
     { cwd: root, encoding: 'utf8', timeout: 14_000 },
   );
@@ -233,6 +234,18 @@ describe('documentation archive convention', () => {
   });
 });
 
+describe('blocking documentation findings', () => {
+  it('requires malformed ledger lines, invalid statuses and unreadable queue dates to block', () => {
+    expect(DOCUMENTATION_BLOCKING_FINDINGS).toEqual(
+      expect.arrayContaining([
+        'malformedLedgerLines',
+        'invalidStatus',
+        'invalidQueueReview',
+      ]),
+    );
+  });
+});
+
 describe('documentation archive command', () => {
   const roots: string[] = [];
   afterEach(() => {
@@ -327,6 +340,39 @@ describe('documentation archive command', () => {
     },
   );
 
+  it.each([
+    [
+      'malformedLedgerLines',
+      RECORDS.ledger,
+      '- BUG-001 · Example · Resolved · 2026-10-19 · docs/records/bug-001-example.md',
+    ],
+    ['invalidStatus', 'docs/records/bug-001-example.md', '**Status:** Pending'],
+    [
+      'invalidQueueReview',
+      RECORDS.index,
+      '**Now** — fixture\n\n**Queue review due:** tomorrow',
+    ],
+  ] as const)(
+    'blocks a real %s finding independently',
+    (field, file, contents) => {
+      const root = fixture();
+      const files: Record<string, string> = {
+        [RECORDS.index]: '**Now** — fixture\n\n|ID|Title|\n|---|---|\n',
+        [RECORDS.ledger]: '# Closed records',
+      };
+      if (field === 'invalidStatus')
+        files[RECORDS.index] += '|[BUG-001](./bug-001-example.md)|Example|';
+      files[file] = contents;
+      populate(root, files);
+      const result = readDocumentation(root);
+      expect(result[field]).toHaveLength(1);
+      for (const blocking of DOCUMENTATION_BLOCKING_FINDINGS) {
+        if (blocking !== field) expect(result[blocking]).toEqual([]);
+      }
+      expect(runDocumentationCommand(root, () => {})).toBe(1);
+    },
+  );
+
   it('exits nonzero with a diagnostic for ambiguous fenced status metadata', () => {
     const root = fixture();
     populate(root, {
@@ -400,48 +446,32 @@ describe('repository documentation', () => {
   const exists = (file: string) => existsSync(path.resolve(file));
   let result: DocumentationAudit;
 
-  // Lifecycle reads every record's status, but parses only the index in full.
   beforeAll(() => {
     result = auditRecordLifecycle(files, exists);
   });
 
-  it('lists no record ID twice across open records and the ledger', () => {
-    expect(result.duplicates).toEqual([]);
+  it('blocks every audit finding except the two scheduled-date reports and counts', () => {
+    expect([...DOCUMENTATION_BLOCKING_FINDINGS].sort()).toEqual(
+      Object.keys(result)
+        .filter(
+          (field) =>
+            !['scheduledOverdue', 'scheduledFarFuture', 'counts'].includes(
+              field,
+            ),
+        )
+        .sort(),
+    );
   });
 
-  it('keeps terminal-status records out of live folders', () => {
-    expect(result.closedLive).toEqual([]);
+  it('has no lifecycle blocker from the same categories as the command', () => {
+    for (const field of DOCUMENTATION_BLOCKING_FINDINGS) {
+      expect(result[field], field).toEqual([]);
+    }
   });
 
-  it('has working register rows for every live record', () => {
-    expect(result.missingLiveRows).toEqual([]);
-    expect(result.missingRowTargets).toEqual([]);
-  });
-
-  it('keeps one Now stanza and no Latest changelog in each index', () => {
-    expect(result).toMatchObject({ invalidNow: [] });
-  });
-
-  it('keeps only open records, the index and the ledger in docs/records', () => {
-    expect(result.strayRegisterFiles).toEqual([]);
-  });
-
-  it('names every Verifying record in its index Now stanza', () => {
-    expect(result.unnamedVerifying).toEqual([]);
-  });
-
-  it('gives every Verifying record a due date', () => {
-    expect(result.invalidScheduledChecks).toEqual([]);
-  });
-
-  it('keeps every live record status to one line', () => {
-    expect(result.longStatus).toEqual([]);
-  });
-
-  it('keeps the records index within its size budget', () => {
-    expect(result.oversized).toEqual([]);
-  });
-
+  // Parse links one document per case: one all-document test can exceed the
+  // test timeout under coverage. Record and archive links have separate
+  // per-document cases in documentation-records.test.ts.
   it.each([...files.keys()])('resolves relative file links in %s', (file) => {
     expect(
       brokenDocumentationLinks(file, files.get(file) ?? '', exists),

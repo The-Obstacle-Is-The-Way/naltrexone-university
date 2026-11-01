@@ -2,14 +2,14 @@ import {
   isTruthyEnvFlag,
   type LocalTestTargetEnv,
   resolveLocalTestTarget,
-} from '@/scripts/resolve-local-test-target';
+} from '@/scripts/test-lanes/resolve-local-test-target';
+import { isLoopbackHostname } from '../../scripts/lib/loopback-hostname';
 
 type ResolveIntegrationDatabaseUrlInput = {
   env?: LocalTestTargetEnv;
   cwd?: string;
 };
 
-const CI_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const CI_DATABASE_PORT = '5432';
 const CI_DATABASE_NAME = 'addiction_boards_test';
 
@@ -49,7 +49,7 @@ function isAllowlistedCiDatabaseUrl(databaseUrl: string): boolean {
     const hostname = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
     return (
       (parsed.protocol === 'postgres:' || parsed.protocol === 'postgresql:') &&
-      CI_DATABASE_HOSTS.has(hostname) &&
+      isLoopbackHostname(hostname) &&
       port === CI_DATABASE_PORT &&
       databaseName === CI_DATABASE_NAME
     );

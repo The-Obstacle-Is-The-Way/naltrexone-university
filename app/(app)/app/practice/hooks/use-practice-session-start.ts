@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { startPracticeSession } from '@/app/(app)/app/shared/client-actions';
 import { reportClientError } from '@/lib/report-client-error';
-import { startPracticeSession } from '@/src/adapters/controllers/practice-actions';
 import { navigateTo } from '../client-navigation';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
 import type { IncompleteSessionRefreshOutcome } from '../practice-page-incomplete-session';

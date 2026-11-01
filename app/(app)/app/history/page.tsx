@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
+import { redirectIfUnsubscribed } from '@/app/(app)/app/shared/redirect-if-unsubscribed';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   type GetSessionHistoryOutput,
@@ -100,6 +101,7 @@ export function createHistoryPage(deps?: {
         }),
         getTagsFn({}),
       ]);
+      redirectIfUnsubscribed([result, tagsResult]);
 
       const tagOptions = tagsResult.ok
         ? tagsResult.data.rows
@@ -132,6 +134,7 @@ export function createHistoryPage(deps?: {
         offset,
         mode: modeFilter === 'all' ? undefined : modeFilter,
       });
+    redirectIfUnsubscribed([result]);
 
     return (
       <HistoryPageClient

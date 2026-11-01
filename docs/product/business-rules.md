@@ -3,14 +3,18 @@
 Each rule below states, in plain language, something the system guarantees a learner or a subscriber. The lines under it name the tests that prove it. A clinician or the owner can read what the product promises without reading code, and a developer can see where each promise is pinned.
 
 `tests/rule-to-test-register.test.ts` checks the register on every `pnpm test`.
-- Every named file must exist and still declare a test with the named title that runs unconditionally. The file is parsed, and these do not count:
+- Every named file must exist and still contain a test declaration with the named title that is not excluded by the static checks below. The file is parsed, and these do not count:
   - a test that is commented out, skipped, todo or skipped by its options;
   - a conditional test (`runIf`, `skipIf`);
   - a test declared under a condition: an `if` or ternary branch, after `&&`, `||` or `??`, in a `switch` case or in a `catch` block.
 
-  A test in a loop, a `try` block or a `finally` block counts. Titles built at run time, and tests reached through renamed aliases of `it`, are outside what the check reads; write proofs as plain `it`, `test` or `.each` declarations.
+  This is a declaration check, not proof of execution (BUG-361). A test in a loop, a `try` block or a `finally` block currently counts, even when that code does not execute. Titles built at run time, and tests reached through renamed aliases of `it`, are outside what the check reads; write proofs as plain `it`, `test` or `.each` declarations.
 - Every rule must name at least one test.
 - A malformed heading or proof line, or a repeated rule number, is reported rather than skipped. Renaming or deleting a test that proves a rule fails the check until the register is updated in the same change.
+
+`tests/rule-proof-reporter.mts` also checks actual results at the end of each unfiltered unit, browser and integration run. Each lane independently requires its assigned proofs to have run and passed; the full gate requires all three lanes. Ordinary titles must be unique in their named source file and bind to that declaration's runtime location. Parameterized proofs carry literal `meta.ruleProof` file/title options; at least one generated result and every case must pass. The two shared factories explicitly require both their fake and Postgres consumers. Shared proofs also require that metadata. A repository JS/TS source scan validates annotation ownership, including imported helpers; dependency, build and vendored-skill outputs are excluded.
+
+An explicit focused, watch or sharded run, or a run started through Vitest's API that covers only part of a lane, prints `SKIPPED` for this audit and is not a full-lane receipt; Stryker's partial mutation runs use `vitest.stryker.config.mts`, which leaves the reporter out. Hidden configuration filters on an otherwise unfiltered command fail. End-to-end proof lines run under Playwright, outside these lanes, so only the declaration check covers them. The required configurations prohibit `.only`, register the reporter and collect declaration locations; the package and CI command checks keep their full runs unfiltered. No saved result is reused. This proves execution and passing results for the registered identities, not the quality of assertions inside a test.
 
 This register replaces the Gherkin acceptance-test harness this file once proposed. That harness was considered and not adopted ([ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03), DEBT-465's decision). Its design is in this file's history up to commit `91a24f3e`.
 
@@ -22,8 +26,9 @@ This register replaces the Gherkin acceptance-test harness this file once propos
   - real Postgres (`tests/integration/`) for a rule that lives in storage or SQL;
   - end-to-end only for what nothing lower reaches.
 - **Renaming a test that proves a rule** means updating its line here.
+- **Parameterized or shared tests** also use `{ meta: { ruleProof: { file: 'path', title: 'exact test title' } } }` as literal declaration options. Update both fields with the register when moving or renaming the proof.
 - **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
-- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343, and R31 with BUG-351.
+- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343, R30 with BUG-349, and R31 with BUG-351.
 
 ## Practice sessions
 
@@ -81,7 +86,7 @@ The server owns expiry. The browser counts down from server remaining time, usin
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `refuses a mark %i ms after expiry without finalizing the exam`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `flushes the on-screen answer when the server refuses a mark after its deadline`
 
-### R16. A learner always sees a question's choices in the same order, seeded by both the learner and the question.
+### R16. With unchanged input choices, a learner sees a question's choices in a stable order, seeded by both the learner and the question.
 
 - `src/application/shared/shuffled-choice-views.test.ts`: `returns deterministic output for the same user and question`
 - `src/application/shared/shuffled-choice-views.test.ts`: `uses the userId in the shuffle seed`
@@ -120,9 +125,10 @@ A hold blocks its exact revision from activation. A published replacement remain
 - `src/application/use-cases/get-previous-attempt.test.ts`: `reveals nothing for an omitted attempt on a question %s`
 - `src/application/use-cases/get-previous-attempt.test.ts`: `still reveals the revision a learner answered on a question %s`
 
-### R20. An item counts toward a score when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt (withdrawn, under review, or key-corrected). A retired question keeps counting, and activity counts (total answered, the streak) count every answer.
+### R20. An item counts toward a score when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt (withdrawn, under review, or key-corrected). A retired question keeps counting, and activity counts (total answered, the streak) count every answer. Scored items with no correct answers display 0%; only a zero score denominator displays a dash.
 
 - `src/domain/services/scoring.test.ts`: `with a fair chance %s, counts an item whose question is %s: %s`
+- `app/(app)/app/shared/session-score-presentation.test.tsx`: `agrees across the session screens for $mode with $name`
 - `tests/integration/scores-when-content-changes.integration.test.ts`: `agrees across the summary, History and the Dashboard as content changes during and after an exam`
 - `src/application/use-cases/get-user-stats.test.ts`: `leaves a withdrawn question out of accuracy, not out of activity`
 
@@ -179,12 +185,21 @@ The first sourced stage names that verified baseline and initializes the waterma
 
 ## Subscription and billing
 
-### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed.
+### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed, and a page whose data is refused sends the learner to Pricing.
 
 - `src/adapters/controllers/require-entitled-user-id.test.ts`: `throws UNSUBSCRIBED when the user is not entitled`
-- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED when not entitled`
-- `src/adapters/controllers/bookmark-controller.test.ts`: `returns UNSUBSCRIBED when not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED from startPracticeSession when not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED from endPracticeSession when not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED from discardPracticeSession when not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED from finalizeExamAnswers when not entitled`
+- `src/adapters/controllers/bookmark-controller.test.ts`: `returns UNSUBSCRIBED from setBookmark when not entitled`
+- `src/adapters/controllers/bookmark-controller.test.ts`: `returns UNSUBSCRIBED from getBookmarks when not entitled`
 - `src/adapters/controllers/stats-controller.test.ts`: `returns UNSUBSCRIBED when not entitled`
+- `app/(app)/app/shared/redirect-if-unsubscribed.test.ts`: `sends a learner whose data check found no subscription to Pricing`
+- `app/(app)/app/dashboard/page.test.tsx`: `sends a learner without a subscription to Pricing instead of a bare refusal`
+- `app/(app)/app/bookmarks/page.test.tsx`: `sends a learner without a subscription to Pricing instead of a bare refusal`
+- `app/(app)/app/shared/redirect-on-unsubscribed.test.ts`: `starts a full navigation to Pricing when the action finds no subscription, and still returns the result`
+- `tests/app-client-action-imports.test.ts`: `wraps every controller action in the Pricing redirect`
 
 ### R3. Access ends the instant the paid period ends, whatever the subscription's status says.
 
@@ -198,12 +213,21 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/application/use-cases/create-checkout-session.test.ts`: `does not pass a trial to the gateway for a user with an existing subscription row`
 - `src/application/use-cases/create-checkout-session.test.ts`: `returns ALREADY_SUBSCRIBED when a subscription is still current`
 
-### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices.
+### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices. In the app, a trial with a scheduled cancellation promises no renewal and offers no card, and a card added through a setup records no renewal consent if the app recorded the cancellation first, even when the setup began before it. Billing and email state the cutoff in UTC, Eastern and Pacific time, naming a different local date or year.
 
 - `src/domain/services/entitlement.test.ts`: `keeps access until the period ends when cancellation is scheduled`
+- `app/(app)/app/billing/page.test.tsx`: `states the $name cancellation cutoff with UTC, Eastern and Pacific times`
+- `src/application/shared/renewal-notice-email-format.test.ts`: `distinguishes both occurrences of the repeated fall-back hour`
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `selects only active, renewing annual subscriptions in the supplied window`
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `lists active, renewing monthly subscriptions in id order, after a cursor`
 - `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: `a paid subscriber cancels without obstruction; renewal stops and access continues to the period end`
+- `src/domain/services/trial-ending.test.ts`: `ends a trial whose cancellation is scheduled, whether or not a card is saved`
+- `app/(app)/app/layout-shell.test.tsx`: `states when access ends instead of a renewal or a card once cancellation is scheduled`
+- `app/(app)/app/billing/billing-trial-card.test.tsx`: `states that a trial with cancellation scheduled ends without a charge (saved card=%s)`
+- `src/application/use-cases/create-trial-payment-method-setup-session.test.ts`: `refuses before Stripe when the trial has a scheduled cancellation`
+- `src/adapters/controllers/stripe-webhook-controller-trial-setup.test.ts`: `detaches the card and records no renewal consent once the trial has a scheduled cancellation`
+- `tests/integration/trial-payment-method-setup-operations.integration.test.ts`: `persists the %s terminal reason and time for the holding claim`
+- `tests/integration/stripe-webhook-trial-setup-cancellation.integration.test.ts`: `records no consent and detaches the card when the cancellation lands while Stripe is called`
 
 ### R12. A repeated or out-of-order billing event never applies twice and never moves a subscription back to an older state.
 
@@ -226,6 +250,14 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/adapters/controllers/stripe-webhook-controller-completion-sweep.test.ts`: `fails the delivery when the sweep fails, and sweeps again when Stripe sends the event again`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `keeps a Session created after the completion's event, which belongs to a later checkout`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `logs an error, and goes on, when another Session completed too`
+
+### R30. The first observed subscription termination starts the retention clock; a replay changes no consent record. Consent evidence is kept for at least three UTC calendar years after acceptance or one year after that termination, whichever is later. A longer stored floor is preserved. February 29 plus one year is March 1.
+
+- `tests/shared/renewal-consent-termination-contract.ts`: `keeps the first observation, retention and updatedAt on $name replay`
+- `tests/shared/renewal-consent-termination-contract.ts`: `keeps the consent floor when it outlasts the termination floor`
+- `tests/shared/renewal-consent-termination-contract.ts`: `retains a leap-day termination through March 1 of the next year`
+- `tests/shared/renewal-consent-termination-contract.ts`: `preserves an existing retention floor longer than either calendar floor`
+- `tests/shared/renewal-consent-termination-contract.ts`: `records exactly one of two concurrent first observations`
 
 ## Account
 

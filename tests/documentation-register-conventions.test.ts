@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   auditDocumentation,
   auditRecordLifecycle,
-} from '../scripts/documentation-archive';
+} from '../scripts/records/documentation-archive';
 
 function audit(files: Record<string, string>) {
   return auditDocumentation(new Map(Object.entries(files)), (file) =>

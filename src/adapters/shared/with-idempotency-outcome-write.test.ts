@@ -33,6 +33,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -76,6 +77,7 @@ describe('withIdempotency outcome writes', () => {
     });
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -113,6 +115,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -143,6 +146,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -174,6 +178,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'question-feedback:submitQuestionReport',
@@ -203,6 +208,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -229,6 +235,7 @@ describe('withIdempotency outcome writes', () => {
     const execute = vi.fn(async () => ({ feedbackId: crypto.randomUUID() }));
     const key = '17171717-1717-1717-1717-171717171717';
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'question-feedback:submitQuestionReport',
@@ -265,6 +272,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'question-feedback:submitQuestionReport',
@@ -311,6 +319,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'question-feedback:submitQuestionReport',
@@ -358,6 +367,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'question-feedback:submitQuestionReport',
@@ -402,6 +412,7 @@ describe('withIdempotency outcome writes', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'question-feedback:submitQuestionReport',

@@ -26,7 +26,7 @@ Corrected 2026-10-19: every connection the E2E code opens now refuses a non-loca
 ## Evidence
 
 - **The host check.**
-  - `scripts/e2e-local-orchestrator.ts:137-143` checks the URL's host on the `pnpm test:e2e` path.
+  - `scripts/test-lanes/e2e-local-orchestrator.ts:113-118` checks the URL's host on the `pnpm test:e2e` path.
   - `playwright.config.ts:8` loads `.env.local` without overriding exported variables, so before the partial fix a direct `pnpm exec playwright test` reached setup with whatever `DATABASE_URL` was there, unchecked.
   - On both paths, the E2E code's connections now refuse a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true`, which admits any host. The app server's do not; see "Fixed in part".
 - **The preflight.** It refuses a non-test Stripe key (`tests/e2e/helpers/credential-health-check.ts:569-576`). Test-mode keys work against any database, so passing it does not prove a non-production target.
@@ -88,3 +88,7 @@ The owner decides whether deploy-target E2E remains, and which identity mechanis
 
 - BUG-353: the explicit seed flag and the production fixture census.
 - #1560: the scripts directory audit, whose debt record covers database-target policy duplication.
+
+Corrected 2026-10-20: follow DEBT-532’s moved E2E planner and recheck its host-guard citation; the owner’s production-target decision is unchanged.
+
+Corrected 2026-10-21: retain #1584’s partial E2E connection guard and recheck the moved host guard and updated preflight citations.

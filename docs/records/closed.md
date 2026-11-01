@@ -306,14 +306,27 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-316 · Content Release Test Failures Leak or Block Resources · Resolved · 2026-10-02 · docs/_archive/bugs/bug-316-content-release-test-resource-cleanup.md
 - BUG-317 · Content Release Guidance Overstates Isolation and Clinical Behaviour · Resolved · 2026-10-02 · docs/_archive/bugs/bug-317-content-release-documentation-overclaims.md
 - BUG-318 · Sentry Receives Credentials on Every Server Error Event · Resolved · 2026-10-05 · docs/_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md
+- BUG-319 · Subscribe and Add-Card Fail for a Page Loaded Before a Deploy · Resolved · 2026-10-23 · docs/records/bug-319-subscribe-actions-break-after-a-deploy.md · #1599 · d3647ae4170968e95caac45890e2baa03d137795
+- BUG-320 · A New User's First Visit Can Fail When Two Requests Create Their Row at Once · Resolved · 2026-10-21 · docs/records/bug-320-first-pricing-render-user-upsert-race.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
 - BUG-322 · A Checkout Error Is Hidden Behind the Consent Dialog That Reopens · Resolved · 2026-10-06 · docs/_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md
 - BUG-324 · Exported Server Actions Accept Caller-Supplied Dependencies · Resolved · 2026-10-06 · docs/_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md
+- BUG-325 · Malformed Anonymous Requests Make Our Code Throw and Write Oversized Error Logs · Resolved · 2026-10-21 · docs/records/bug-325-malformed-requests-throw-and-write-oversized-logs.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
 - BUG-326 · Error Pages Send Learners and Payers to the Public GitHub Issue Tracker · Resolved · 2026-10-06 · docs/_archive/bugs/bug-326-error-pages-send-people-to-public-issue-tracker.md
+- BUG-327 · Dependabot Branches Are Built on Vercel With Preview Secrets · Resolved · 2026-10-21 · docs/records/bug-327-dependabot-branches-build-with-preview-secrets.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
 - BUG-328 · Public Playwright Reports Still Carry Clerk Development-Instance Tokens · Resolved · 2026-10-06 · docs/_archive/bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md
 - BUG-330 · Signed-In E2E Fails En Masse When the Stored Clerk Session Cannot Be Restored After Its Token Expires · Resolved · 2026-10-10 · docs/_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md
+- BUG-331 · Server Breadcrumbs and Request Spans Carry Credentials the Scrubbers Miss · Resolved · 2026-10-23 · docs/records/bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
+- BUG-332 · A New User's Concurrent First Requests Can Deadlock Provisioning · Resolved · 2026-10-23 · docs/records/bug-332-concurrent-first-requests-can-deadlock-provisioning.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
+- BUG-333 · A Signed-In E2E Test Loses Its Clerk Session When It Navigates During Clerk JS's Cookie Rewrite · Resolved · 2026-10-23 · docs/records/bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md · #1599 · 6b2e40379e25e476a3a8640338628941d4e81ba8
 - BUG-335 · The Merge Guard Mistakes a Merged-In `main` Commit for the Approved Head · Resolved · 2026-10-10 · docs/_archive/bugs/bug-335-merge-guard-mistakes-a-merged-in-main-commit-for-the-approved-head.md
+- BUG-339 · The Register Budget Test Can Time Out in CI's Coverage Run · Resolved · 2026-10-21 · docs/records/bug-339-register-budget-test-can-time-out-in-ci.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
+- BUG-340 · Stripe Renamed Checkout's Save-Information Checkbox, So the Hosted Smoke Cannot Submit · Resolved · 2026-10-21 · docs/records/bug-340-stripe-renamed-checkout-save-information-checkbox.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
+- BUG-341 · A Documentation Test Run From a Worktree's Pre-Push Hook Marks the Clone Bare · Resolved · 2026-10-21 · docs/records/bug-341-documentation-test-can-mark-the-clone-bare.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
+- BUG-342 · A User-Repository Conflict Test Fails When Its Two Writes Share a Millisecond · Resolved · 2026-10-21 · docs/records/bug-342-user-repository-conflict-test-depends-on-the-clock.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
 - BUG-344 · The Advisory Watcher Fails Every Run While a New Advisory's Issue Is Open · Resolved · 2026-10-16 · docs/records/bug-344-advisory-watcher-fails-while-a-new-advisory-is-open.md · #1540 · d4681072b174b50db088f7dd102d6e2e12920a81
 - BUG-345 · The Database Timeouts Do Not Apply Through Neon's Pooler · Resolved · 2026-10-18 · docs/records/bug-345-database-timeouts-do-not-apply-through-the-pooler.md · #1555 · 93bdef517d55662802ea4c2b2a46d5ac257df29a
+- BUG-347 · An Exam's Timing Is Judged on Several Clocks, and Each Reader Decides Whether It Is Over · Resolved · 2026-10-23 · docs/records/bug-347-exam-timing-is-judged-on-several-clocks.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
+- BUG-348 · Each Call Site Decides What an Error Logs, So a Billing Failure Goes Unlogged and Raw Error Text Reaches the Logs · Resolved · 2026-10-23 · docs/records/bug-348-each-call-site-decides-what-an-error-logs.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 - BUG-352 · CI's Pooler Image Depends on Docker Hub Alone · Resolved · 2026-10-18 · docs/records/bug-352-ci-pooler-image-depends-on-docker-hub-alone.md · #1555 · 93bdef517d55662802ea4c2b2a46d5ac257df29a
 
 ## Debt
@@ -818,12 +831,18 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-499 · Nothing Pins What We Send to Sentry, and a Green Major Would Change It · Resolved · 2026-10-05 · docs/_archive/debt/debt-499-sentry-major-widens-data-collection.md
 - DEBT-500 · Vitest 5 Needs a Coordinated Migration · Resolved · 2026-10-14 · docs/records/debt-500-vitest-5-coordinated-migration.md · #1515 · 83dee3ee4cbcde06ee57e2947cbad7a4ac6c6da7
 - DEBT-506 · Dependabot Alerts of 2026-10-06 — Six Fixed, Two Without Published Fixes · Resolved · 2026-10-09 · docs/_archive/debt/debt-506-dependabot-alert-triage-2026-10.md
+- DEBT-508 · Concurrent E2E Runs Share One Clerk Rate Budget and One Stripe Customer · Resolved · 2026-10-23 · docs/records/debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md · #1599 · 250349ced5293e3c486769e72cabc0c9a8c1e9e3
+- DEBT-509 · Pending Next.js Security Fixes Have No Watcher · Resolved · 2026-10-23 · docs/records/debt-509-pending-nextjs-security-fixes-have-no-watcher.md · #1599 · 250349ced5293e3c486769e72cabc0c9a8c1e9e3
+- DEBT-510 · Codecov Sometimes Drops the Patch Notification After a Successful Upload · Resolved · 2026-10-23 · docs/records/debt-510-codecov-drops-patch-notifications.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 - DEBT-513 · Error Text Reaches Sentry as Written · Resolved · 2026-10-10 · docs/_archive/debt/debt-513-error-text-reaches-sentry-as-written.md
 - DEBT-515 · CodeRabbit Learns Lasting Rules From Agents Speaking as the Owner · Resolved · 2026-10-15 · docs/records/debt-515-coderabbit-learns-rules-from-agents.md · #1529 · 18902d03bc354bb16e1ac32db54adc5ed3207175
 - DEBT-516 · CI's Database Image Depends on One Registry · Resolved · 2026-10-17 · docs/records/debt-516-ci-database-image-depends-on-one-registry.md · #1552 · 82dd0948911668ba4ffd969ca93d489a69cc4e3e
 - DEBT-517 · Alerts #77 and #81 Wait on Fixes That Are Not Coming · Resolved · 2026-10-12 · docs/records/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md · #1470 · a6c330ef26cd619520a1f156675d390492ea097a
 - DEBT-522 · Partial Prefetching Is Unset, So Every Build Warns · Resolved · 2026-10-16 · docs/records/debt-522-partial-prefetching-is-unset.md · #1540 · 72bbd5655715d11967b7a82d1dc71a2008398bf7
+- DEBT-523 · A Push to Main That GitHub Drops Has No Way to Run Its Checks · Resolved · 2026-10-23 · docs/records/debt-523-a-dropped-push-to-main-has-no-way-to-run-its-checks.md · #1599 · 95d9f91cb70c029003cc484a49480bb69651db87
 - DEBT-524 · Fixing the Open Records One by One Leaves Their Shared Causes in Place · Decomposed · 2026-10-17 · docs/records/debt-524-the-open-records-share-structural-causes.md · #1549 · 1d2ffa0351a225f85021817e049512f5d972c5da
+- DEBT-527 · Vendor Calls on Request Paths Have No Time Budget, So a Hung Call Outlives Its Request · Resolved · 2026-10-23 · docs/records/debt-527-vendor-calls-outlive-their-request.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
+- DEBT-531 · Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently · Resolved · 2026-10-23 · docs/records/debt-531-content-changes-have-no-single-planner.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 
 ## Frontend (FE prefix, retired)
 

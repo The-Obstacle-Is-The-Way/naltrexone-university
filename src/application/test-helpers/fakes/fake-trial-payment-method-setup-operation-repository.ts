@@ -115,7 +115,8 @@ export class FakeTrialPaymentMethodSetupOperationRepository
       (operation) =>
         operation.userId === userId &&
         operation.stripeSubscriptionId === stripeSubscriptionId &&
-        operation.subscriptionDefaultSetAt !== null,
+        operation.subscriptionDefaultSetAt !== null &&
+        operation.status !== 'terminal',
     );
   }
 

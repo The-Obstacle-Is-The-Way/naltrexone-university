@@ -12,6 +12,9 @@ export const CLERK_SESSION_DEADLINES = {
   restoreMs: 20_000,
 } as const;
 
+// Diagnostics must finish before they can obscure the failure being diagnosed.
+export const DIAGNOSIS_TIMEOUT_MS = 5_000;
+
 // The setup test's timeout until the session budget is reserved: the
 // credential health check, Stripe customer sweep, seed, reset and clerkSetup,
 // which take about 3 seconds in CI. clerkSetup alone retries for over half a

@@ -19,6 +19,7 @@ describe('withIdempotency', () => {
     const execute = vi.fn(async () => ({ ok: true }));
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -41,6 +42,7 @@ describe('withIdempotency', () => {
     const execute = vi.fn(async () => ({ ok: true }));
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -73,6 +75,7 @@ describe('withIdempotency', () => {
     const execute = vi.fn(async () => ({ ok: true }));
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -112,6 +115,7 @@ describe('withIdempotency', () => {
     });
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -143,6 +147,7 @@ describe('withIdempotency', () => {
     const execute = vi.fn(async () => ({ ok: true }));
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -184,6 +189,7 @@ describe('withIdempotency', () => {
     );
 
     const base = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'question:submitAnswer',
@@ -232,6 +238,7 @@ describe('withIdempotency', () => {
     const execute = vi.fn(async () => ({ ok: true }));
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'question:submitAnswer',
@@ -271,6 +278,7 @@ describe('withIdempotency', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'question:submitAnswer',
@@ -314,6 +322,7 @@ describe('withIdempotency', () => {
     const execute = vi.fn(async () => ({ ok: true }));
 
     const promise = withIdempotency({
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'question:submitAnswer',
@@ -347,6 +356,7 @@ describe('withIdempotency', () => {
     });
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'practice:startPracticeSession',
@@ -390,6 +400,7 @@ describe('withIdempotency', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -438,6 +449,7 @@ describe('withIdempotency', () => {
     nowMs += 30_000;
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -460,6 +472,7 @@ describe('withIdempotency', () => {
     nowMs += 31_000;
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -503,6 +516,7 @@ describe('withIdempotency', () => {
     const execute = vi.fn(async () => ({ ok: true }));
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -540,6 +554,7 @@ describe('withIdempotency', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -567,6 +582,7 @@ describe('withIdempotency', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -593,6 +609,7 @@ describe('withIdempotency', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -623,6 +640,7 @@ describe('withIdempotency', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -635,6 +653,7 @@ describe('withIdempotency', () => {
 
     const parseError = new Error('invalid cached result');
     const promise = withIdempotency({
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -675,6 +694,7 @@ describe('withIdempotency', () => {
     });
 
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -712,6 +732,7 @@ describe('withIdempotency', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -759,6 +780,7 @@ describe('withIdempotency', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',

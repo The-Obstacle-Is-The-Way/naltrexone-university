@@ -167,6 +167,7 @@ console.log('not json');
       plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: trialEnd,
+      cancelAtPeriodEnd: false,
     });
   });
 
