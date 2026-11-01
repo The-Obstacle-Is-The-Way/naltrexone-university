@@ -258,6 +258,48 @@ describe('rate-limit keys the key column cannot hold, against real Postgres', ()
     expect(row?.key).toMatch(/#sha256:[A-Za-z0-9_-]{43}$/);
   });
 
+  it('counts a key written in the stored digest form apart from the long key stored in that form', async () => {
+    const prefix = family();
+    const long = {
+      key: `${prefix}${'x'.repeat(300)}`,
+      limit: 1,
+      windowMs: 60_000,
+    };
+    await limiter.limit(long);
+    const [longRow] = await stored(prefix);
+
+    await expect(
+      limiter.limit({ key: longRow?.key ?? '', limit: 1, windowMs: 60_000 }),
+    ).resolves.toMatchObject({ success: true });
+  });
+
+  it.each([
+    ['short', ''],
+    ['long', 'x'.repeat(300)],
+  ])(
+    'counts %s keys that differ only in a lone surrogate or U+FFFD apart',
+    async (_length, filler) => {
+      const prefix = family();
+      const lone = {
+        key: `${prefix}${filler}\uD800`,
+        limit: 1,
+        windowMs: 60_000,
+      };
+      const replaced = {
+        key: `${prefix}${filler}\uFFFD`,
+        limit: 1,
+        windowMs: 60_000,
+      };
+
+      await expect(limiter.limit(lone)).resolves.toMatchObject({
+        success: true,
+      });
+      await expect(limiter.limit(replaced)).resolves.toMatchObject({
+        success: true,
+      });
+    },
+  );
+
   it('counts two long keys that share their first 255 characters apart', async () => {
     const head = `${family()}${'x'.repeat(300)}`;
     const first = { key: `${head}:first`, limit: 1, windowMs: 60_000 };

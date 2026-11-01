@@ -31,12 +31,6 @@ const SHA256_BASE64URL_LENGTH = 43;
 const STORED_KEY_HEAD_LENGTH =
   RATE_LIMIT_KEY_MAX_LENGTH - DIGEST_MARKER.length - SHA256_BASE64URL_LENGTH;
 
-// rate_limits.key holds RATE_LIMIT_KEY_MAX_LENGTH characters and, as Postgres
-// text, no NUL, so a key past either would fail its write. Such a key is
-// stored as its head, which keeps the family its prefix names, and the
-// SHA-256 digest of the whole key, which keeps keys sharing a head apart. A
-// key that fits is stored as the driver encodes it, which writes a lone UTF-16
-// surrogate as U+FFFD.
 // Whether the column holds a key's characters. Postgres counts each
 // character once, where a string's length counts one outside the BMP twice,
 // so a key is counted by code point, stopping once past the column.
@@ -50,12 +44,29 @@ function fitsKeyColumn(key: string): boolean {
   return true;
 }
 
+// rate_limits.key holds RATE_LIMIT_KEY_MAX_LENGTH characters and, as Postgres
+// text, no NUL. A key is stored as it is only when the column holds it
+// exactly: it fits, holds no NUL and no lone UTF-16 surrogate, which the
+// driver would write as U+FFFD, and does not contain the digest form below.
+// Any other key is stored as its head, which keeps the family its prefix
+// names, and the SHA-256 digest of its UTF-16 code units, so keys that differ
+// in any way are stored apart.
 function storedKey(key: string): string {
-  if (fitsKeyColumn(key) && !key.includes('\u0000')) return key;
+  if (
+    fitsKeyColumn(key) &&
+    key.isWellFormed() &&
+    !key.includes('\u0000') &&
+    !key.includes(DIGEST_MARKER)
+  )
+    return key;
   const head = key
     .slice(0, STORED_KEY_HEAD_LENGTH)
+    .toWellFormed()
     .replaceAll('\u0000', '\uFFFD');
-  return `${head}${DIGEST_MARKER}${createHash('sha256').update(key).digest('base64url')}`;
+  const digest = createHash('sha256')
+    .update(key, 'utf16le')
+    .digest('base64url');
+  return `${head}${DIGEST_MARKER}${digest}`;
 }
 
 export class DrizzleRateLimiter implements RateLimiter {
