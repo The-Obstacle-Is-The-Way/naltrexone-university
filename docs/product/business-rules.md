@@ -59,6 +59,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `applies the flush within the deadline grace window`
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `drops a flush arriving after the grace window and still finalizes`
+- `tests/integration/bug-regression-exam-draft-bounds.integration.test.ts`: `BUG-371 finishes an exam whose final draft arrives a day late, dropping the draft`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `sends a final draft after a backgrounded exam resumes beyond grace so the server decides its cutoff`
 
 The server owns expiry. The browser counts down from server remaining time, using monotonic elapsed time, and refreshes on return. A timer request before server expiry preserves the draft and retries; manual early submission remains allowed. An expired, unfinalized exam still appears as unfinished, and draft review hides correctness. Summary and completed feedback require committed finalization.

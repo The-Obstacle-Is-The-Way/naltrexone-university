@@ -6,7 +6,6 @@ import { SUBMIT_ANSWER_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import {
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
   MAX_PRACTICE_SESSION_TAG_FILTERS,
-  MAX_TIME_SPENT_SECONDS,
 } from '@/src/adapters/shared/validation-limits';
 import {
   zDifficulty,
@@ -87,12 +86,9 @@ const SubmitAnswerInputSchema = z
     retryOrigin: z.enum(AllAttemptRetryOrigins).optional(),
     retrySessionId: zUuid.optional(),
     idempotencyKey: zUuid.optional(),
-    timeSpentSeconds: z
-      .number()
-      .int()
-      .min(0)
-      .max(MAX_TIME_SPENT_SECONDS)
-      .optional(),
+    // The browser's measurement, unbounded above: SubmitAnswerUseCase caps it
+    // at a day, so a question left open longer is still answered (BUG-371).
+    timeSpentSeconds: z.number().int().min(0).optional(),
   })
   .strict()
   .superRefine((input, ctx) => {

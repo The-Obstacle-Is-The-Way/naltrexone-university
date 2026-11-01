@@ -321,7 +321,7 @@ export function usePracticeSessionQuestionFlow(
       setQuestion,
     ]);
 
-  // BUG-254: the bounded candidate draft for the question currently on-screen.
+  // BUG-254: the single candidate draft for the question currently on-screen.
   // The exam-expiry finalize path forwards this so the server can grade the
   // selection visible at timer expiry, even when the deadline rejects the save.
   const getCurrentExamDraft = useCallback<
