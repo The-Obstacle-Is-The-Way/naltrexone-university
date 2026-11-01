@@ -232,7 +232,6 @@ describe('rate-limit keys the key column cannot hold, against real Postgres', ()
 
   it.each([
     ['longer than the column', 'x'.repeat(1_000)],
-    ['one character longer than the column', 'x'.repeat(256)],
     ['holding a NUL', 'a\u0000b'],
   ])('counts a key %s, and refuses it past its limit', async (_shape, tail) => {
     const input = { key: `${family()}${tail}`, limit: 2, windowMs: 60_000 };
@@ -246,6 +245,17 @@ describe('rate-limit keys the key column cannot hold, against real Postgres', ()
     await expect(limiter.limit(input)).resolves.toMatchObject({
       success: false,
     });
+  });
+
+  it('counts a key one character longer than the column, and stores it by its digest', async () => {
+    const prefix = family();
+    const key = `${prefix}${'x'.repeat(RATE_LIMIT_KEY_MAX_LENGTH + 1 - prefix.length)}`;
+
+    await limiter.limit({ key, limit: 5, windowMs: 60_000 });
+
+    const [row] = await stored(prefix);
+    expect(key).toHaveLength(RATE_LIMIT_KEY_MAX_LENGTH + 1);
+    expect(row?.key).toMatch(/#sha256:[A-Za-z0-9_-]{43}$/);
   });
 
   it('counts two long keys that share their first 255 characters apart', async () => {
