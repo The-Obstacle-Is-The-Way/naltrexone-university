@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { EXAM_DRAFT_SAVE_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
-import { MAX_DRAFT_CUMULATIVE_MS } from '@/src/adapters/shared/validation-limits';
 import { ApplicationError } from '@/src/application/errors';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
+import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from '@/src/application/use-cases/save-exam-draft-answer';
 import { saveExamDraftAnswer } from './practice-controller';
 import { createDeps } from './test-helpers/practice-controller-test-helpers';
 
@@ -52,7 +52,7 @@ describe('practice-controller', () => {
       expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([]);
     });
 
-    it('returns VALIDATION_ERROR when cumulativeMs exceeds the draft maximum', async () => {
+    it('passes cumulativeMs over a day to the use case, which caps it (BUG-371)', async () => {
       const deps = createDeps();
 
       const result = await saveExamDraftAnswer(
@@ -60,21 +60,17 @@ describe('practice-controller', () => {
           sessionId: '11111111-1111-1111-1111-111111111111',
           questionId: '22222222-2222-2222-2222-222222222222',
           selectedChoiceId: '33333333-3333-3333-3333-333333333333',
-          cumulativeMs: MAX_DRAFT_CUMULATIVE_MS + 1,
+          cumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS + 1,
         },
         deps,
       );
 
-      expect(result).toMatchObject({
-        ok: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          fieldErrors: {
-            cumulativeMs: expect.any(Array),
-          },
-        },
-      });
-      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([]);
+      expect(result).toMatchObject({ ok: true });
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
+        expect.objectContaining({
+          cumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS + 1,
+        }),
+      ]);
     });
 
     it('accepts cumulativeMs at the draft maximum boundary', async () => {
@@ -87,7 +83,7 @@ describe('practice-controller', () => {
         latestAnsweredAt: new Date('2026-02-01T00:00:10.000Z'),
         draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
-        draftCumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
+        draftCumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
         fairChanceAtEnd: null,
       } as const;
       const deps = createDeps({ saveDraftOutput });
@@ -102,7 +98,7 @@ describe('practice-controller', () => {
           sessionId: '11111111-1111-1111-1111-111111111111',
           questionId: '22222222-2222-2222-2222-222222222222',
           selectedChoiceId: '33333333-3333-3333-3333-333333333333',
-          cumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
+          cumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
         },
         deps,
       );
@@ -114,7 +110,7 @@ describe('practice-controller', () => {
           sessionId: '11111111-1111-1111-1111-111111111111',
           questionId: '22222222-2222-2222-2222-222222222222',
           selectedChoiceId: '33333333-3333-3333-3333-333333333333',
-          cumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
+          cumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
         },
       ]);
     });

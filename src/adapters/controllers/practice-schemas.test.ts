@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DRAFT_CUMULATIVE_MS } from '@/src/adapters/shared/validation-limits';
+import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from '@/src/application/use-cases/save-exam-draft-answer';
 import {
   EndPracticeSessionOutputSchema,
   FinalizeExamAnswersInputSchema,
@@ -61,18 +61,30 @@ describe('SaveExamDraftAnswerInputSchema', () => {
     expect(SaveExamDraftAnswerInputSchema.parse(input)).toEqual(input);
   });
 
-  it('keeps cumulativeMs bounded for time-only exam drafts', () => {
-    const result = SaveExamDraftAnswerInputSchema.safeParse({
+  it('accepts cumulativeMs over a day, which the use case caps (BUG-371)', () => {
+    const input = {
       sessionId: crypto.randomUUID(),
       questionId: crypto.randomUUID(),
       selectedChoiceId: null,
-      cumulativeMs: MAX_DRAFT_CUMULATIVE_MS + 1,
-    });
+      cumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS + 1,
+    };
 
-    expect(result.success).toBe(false);
-    expect(result.error?.flatten().fieldErrors.cumulativeMs).toEqual(
-      expect.any(Array),
-    );
+    expect(SaveExamDraftAnswerInputSchema.parse(input)).toEqual(input);
+  });
+
+  it('rejects a fractional or negative draft cumulativeMs', () => {
+    for (const cumulativeMs of [1.5, -1]) {
+      const result = SaveExamDraftAnswerInputSchema.safeParse({
+        sessionId: crypto.randomUUID(),
+        questionId: crypto.randomUUID(),
+        selectedChoiceId: null,
+        cumulativeMs,
+      });
+
+      expect(result.error?.flatten().fieldErrors.cumulativeMs).toEqual(
+        expect.any(Array),
+      );
+    }
   });
 
   it('keeps the draft input strict', () => {
@@ -149,13 +161,26 @@ describe('FinalizeExamAnswersInputSchema', () => {
     expect(FinalizeExamAnswersInputSchema.parse(input)).toEqual(input);
   });
 
-  it('keeps the final flush cumulativeMs bounded', () => {
+  it('accepts a final flush cumulativeMs over a day, which the use case caps (BUG-371)', () => {
+    const input = {
+      sessionId: crypto.randomUUID(),
+      finalDraftAnswer: {
+        questionId: crypto.randomUUID(),
+        selectedChoiceId: null,
+        cumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS + 1,
+      },
+    };
+
+    expect(FinalizeExamAnswersInputSchema.parse(input)).toEqual(input);
+  });
+
+  it('rejects a fractional final flush cumulativeMs', () => {
     const result = FinalizeExamAnswersInputSchema.safeParse({
       sessionId: crypto.randomUUID(),
       finalDraftAnswer: {
         questionId: crypto.randomUUID(),
         selectedChoiceId: null,
-        cumulativeMs: MAX_DRAFT_CUMULATIVE_MS + 1,
+        cumulativeMs: 1.5,
       },
     });
 
