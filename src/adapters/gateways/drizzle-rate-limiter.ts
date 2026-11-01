@@ -1,5 +1,6 @@
+import { createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import { rateLimits } from '@/db/schema';
+import { RATE_LIMIT_KEY_MAX_LENGTH, rateLimits } from '@/db/schema';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -23,6 +24,26 @@ const NOOP_LOGGER: Logger = {
 
 function isPositiveInteger(value: number): boolean {
   return Number.isInteger(value) && value > 0;
+}
+
+const DIGEST_MARKER = '#sha256:';
+const SHA256_BASE64URL_LENGTH = 43;
+const STORED_KEY_HEAD_LENGTH =
+  RATE_LIMIT_KEY_MAX_LENGTH - DIGEST_MARKER.length - SHA256_BASE64URL_LENGTH;
+
+// rate_limits.key holds RATE_LIMIT_KEY_MAX_LENGTH characters and, as Postgres
+// text, no NUL, so a key past either would fail its write. Such a key is
+// stored as its head, which keeps the family its prefix names, and the
+// SHA-256 digest of the whole key, which keeps keys sharing a head apart. A
+// key that fits is stored as the driver encodes it, which writes a lone UTF-16
+// surrogate as U+FFFD.
+function storedKey(key: string): string {
+  if (key.length <= RATE_LIMIT_KEY_MAX_LENGTH && !key.includes('\u0000'))
+    return key;
+  const head = key
+    .slice(0, STORED_KEY_HEAD_LENGTH)
+    .replaceAll('\u0000', '\uFFFD');
+  return `${head}${DIGEST_MARKER}${createHash('sha256').update(key).digest('base64url')}`;
 }
 
 export class DrizzleRateLimiter implements RateLimiter {
@@ -64,7 +85,7 @@ export class DrizzleRateLimiter implements RateLimiter {
     const [row] = await this.db
       .insert(rateLimits)
       .values({
-        key: input.key,
+        key: storedKey(input.key),
         windowStart,
         count: 1,
       })
@@ -93,7 +114,7 @@ export class DrizzleRateLimiter implements RateLimiter {
       } catch (error) {
         this.logger.warn(
           {
-            key: input.key,
+            key: storedKey(input.key),
             limit: input.limit,
             windowMs: input.windowMs,
             error: projectSafeErrorDiagnostics(error),

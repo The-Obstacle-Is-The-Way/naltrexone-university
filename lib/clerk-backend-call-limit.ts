@@ -1,4 +1,9 @@
-import { createPublicKey, type KeyObject, verify } from 'node:crypto';
+import {
+  createHash,
+  createPublicKey,
+  type KeyObject,
+  verify,
+} from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { getClientIp } from '@/lib/request-ip';
 import {
@@ -103,6 +108,20 @@ const MAX_SESSIONS_CHECKED = 4;
 
 type ExpiredSession = { id: string; token: string };
 
+// Clerk's session IDs are a short prefix and an alphanumeric ID.
+const CLERK_SESSION_ID = /^[A-Za-z0-9_]{1,64}$/;
+
+// A session ID as it keys the per-session limits. Until Clerk checks the
+// token's signature, its claims are the sender's to choose. One shaped like
+// Clerk's own is kept as it is; any other is replaced by its SHA-256 digest,
+// whose `sha256:` form no Clerk ID takes. Either way the key has a bounded
+// length and only characters a database key can hold.
+function sessionKeyId(sid: unknown): string {
+  if (typeof sid !== 'string') return 'unknown';
+  if (CLERK_SESSION_ID.test(sid)) return sid;
+  return `sha256:${createHash('sha256').update(sid).digest('base64url')}`;
+}
+
 // The sessions a GET could refresh: expired session tokens alongside a
 // refresh cookie. Clerk refreshes the suffixed cookie's or the plain one's, as
 // it decides. A session's ID keys the per-session limit.
@@ -123,7 +142,7 @@ function expiredSessions(
       payload.exp + CLERK_CLOCK_SKEW_SECONDS <= nowSeconds
     )
       sessions.push({
-        id: typeof payload.sid === 'string' ? payload.sid : 'unknown',
+        id: sessionKeyId(payload.sid),
         token: value,
       });
   }

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { rateLimits } from '@/db/schema';
 import { DrizzleRateLimiter } from '@/src/adapters/gateways/drizzle-rate-limiter';
@@ -204,5 +204,88 @@ describe('rate-limit guards and triggered cleanup against real Postgres', () => 
     await expect(
       db.select().from(rateLimits).where(eq(rateLimits.key, firstKey)),
     ).resolves.toEqual([{ key: firstKey, windowStart: expired, count: 1 }]);
+  });
+});
+
+// rate_limits.key is varchar(255), and Postgres text holds no NUL. Every key
+// counts, one past either included.
+describe('rate-limit keys the key column cannot hold, against real Postgres', () => {
+  const family = () => {
+    const prefix = `it-rate-keys:${randomUUID()}:`;
+    families.push(prefix);
+    return prefix;
+  };
+  const families: string[] = [];
+  const stored = (prefix: string) =>
+    db
+      .select()
+      .from(rateLimits)
+      .where(drizzleSql`starts_with(${rateLimits.key}, ${prefix})`);
+
+  afterEach(async () => {
+    for (const prefix of families.splice(0)) {
+      await db
+        .delete(rateLimits)
+        .where(drizzleSql`starts_with(${rateLimits.key}, ${prefix})`);
+    }
+  });
+
+  it.each([
+    ['longer than the column', 'x'.repeat(1_000)],
+    ['one character longer than the column', 'x'.repeat(256)],
+    ['holding a NUL', 'a\u0000b'],
+    [
+      'with a character outside the BMP split at its stored head',
+      `${'x'.repeat(203)}\u{1F600}${'y'.repeat(100)}`,
+    ],
+  ])('counts a key %s, and refuses it past its limit', async (_shape, tail) => {
+    const input = { key: `${family()}${tail}`, limit: 2, windowMs: 60_000 };
+
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: true,
+    });
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: true,
+    });
+    await expect(limiter.limit(input)).resolves.toMatchObject({
+      success: false,
+    });
+  });
+
+  it('counts two long keys that share their first 255 characters apart', async () => {
+    const head = `${family()}${'x'.repeat(300)}`;
+    const first = { key: `${head}:first`, limit: 1, windowMs: 60_000 };
+    const second = { key: `${head}:second`, limit: 1, windowMs: 60_000 };
+
+    await expect(limiter.limit(first)).resolves.toMatchObject({
+      success: true,
+    });
+    await expect(limiter.limit(second)).resolves.toMatchObject({
+      success: true,
+    });
+  });
+
+  it("stores a long key under its own first characters, so a key's prefix still names its family", async () => {
+    const prefix = family();
+    await limiter.limit({
+      key: `${prefix}${'x'.repeat(1_000)}`,
+      limit: 5,
+      windowMs: 60_000,
+    });
+
+    const [row] = await stored(prefix);
+    expect(row?.key.length).toBeLessThanOrEqual(255);
+    expect(row?.key.startsWith(`${prefix}xxxx`)).toBe(true);
+  });
+
+  it('stores a key the column holds as it is', async () => {
+    const prefix = family();
+    const fits = `${prefix}${'x'.repeat(255 - prefix.length)}`;
+
+    await limiter.limit({ key: fits, limit: 5, windowMs: 60_000 });
+
+    await expect(stored(prefix)).resolves.toEqual([
+      { key: fits, windowStart: now, count: 1 },
+    ]);
   });
 });

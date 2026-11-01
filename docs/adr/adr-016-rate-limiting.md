@@ -1,6 +1,6 @@
 # ADR-016: Rate Limiting and Abuse Prevention
 
-**Status:** Accepted, as amended 2026-10-13 (keyed actions and retention; see [Amendment](#amendment--2026-10-13))
+**Status:** Accepted, as amended 2026-10-13 (keyed actions and retention; see [Amendment](#amendment--2026-10-13)) and 2026-11-01 (keys the column cannot hold; see [Amendment](#amendment--2026-11-01))
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-009 (Security Hardening), ADR-011 (API Design Principles)
@@ -142,3 +142,10 @@ Corrections of fact. The decision is unchanged.
 
 - **Keyed actions are limited only on a fresh claim.** Section 5 described the order before idempotency keys. A controller action that runs through `executeIdempotent` passes its limiter as `beforeExecute`. With a key, `withIdempotency` runs it only for the request that wins a fresh claim, so a replay returns the stored outcome without spending quota, and a denial is never cached under the key (DEBT-424, BUG-259). Never call a limiter inside the idempotent `execute()` closure; route handlers (webhooks, health, cron) still limit before any business work, cron after checking its bearer token.
 - **Retention.** Rows are not "pruned periodically", as Mitigations says. `rate_limits` has one prune owner, `DrizzleRateLimiter.limit`: when a request opens a new window, it deletes, in a bounded batch and fail-open, rows whose window started more than a day ago (BUG-104, DEBT-448). A day is a target, not a hard maximum, and a window longer than a day is refused, since its counter would be pruned while still open.
+
+## Amendment — 2026-11-01
+
+An addition to section 4, Key Strategy. The decision is unchanged.
+
+- **Every key counts.** `rate_limits.key` holds `RATE_LIMIT_KEY_MAX_LENGTH` (255) characters and, as Postgres text, no NUL, so a key past either would fail its write. `DrizzleRateLimiter` stores such a key as its head, which keeps the family its prefix names, and the SHA-256 digest of the whole key, which keeps keys sharing a head apart. A key that fits is stored as the database driver encodes it, which writes a lone UTF-16 surrogate as U+FFFD.
+- **A value the sender chooses is bounded where it is read.** A token's claims, before its signature is checked, go into a key only through an allowlist or as their digest: the Clerk limiter (`lib/clerk-backend-call-limit.ts`) keeps a session ID shaped like Clerk's own and keys any other by its digest. A client address enters keys as `lib/request-ip.ts` reads it, which in production is the header Vercel sets; the limiter's storage bounds it like any other key.
