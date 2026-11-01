@@ -605,10 +605,12 @@ export const pendingStripeCancellations = pgTable(
 );
 
 // rate_limits (composite PK: key + window_start)
+// A key's longest length; the limiter stores a longer one by its digest.
+export const RATE_LIMIT_KEY_MAX_LENGTH = 255;
 export const rateLimits = pgTable(
   'rate_limits',
   {
-    key: varchar('key', { length: 255 }).notNull(),
+    key: varchar('key', { length: RATE_LIMIT_KEY_MAX_LENGTH }).notNull(),
     windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
     count: integer('count').notNull(),
   },
