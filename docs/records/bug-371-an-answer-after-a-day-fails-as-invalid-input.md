@@ -27,7 +27,7 @@ Each use case behind those schemas already caps the time at a day, and that cap 
   - `buildTimeSpentSeconds` (`app/(app)/app/practice/shared/question-flow-actions.ts:101-108`) returns `Math.max(0, Math.floor((now - loadedAt) / 1000))`. Practice sessions and Quick Practice use it.
   - The single-question page computes the same value inline (`app/(app)/app/questions/[slug]/question-page-logic.ts:255-263`).
   - In an exam, `use-practice-session-question-flow.ts` adds `Date.now() - enteredAt` to the question's saved total, at lines 257-261 for a draft save and 333-336 for the final draft.
-- **The schemas reject more than a day.**
+- **The schemas rejected more than a day** (at `ade3fdfa`, before this fix).
   - `SubmitAnswerInputSchema` (`src/adapters/controllers/question-controller.ts:90-95`) declares `timeSpentSeconds` up to `.max(MAX_TIME_SPENT_SECONDS)`.
   - `practice-schemas.ts:64` (the finalize's final draft) and `:82` (the draft save) declare `cumulativeMs` up to `.max(MAX_DRAFT_CUMULATIVE_MS)`.
   - `createAction` (`create-action.ts:46-51`) parses the schema before `execute` runs. For a submission, that is before `requireEntitledUserId`.
@@ -74,9 +74,9 @@ Option 2, for all three schemas. How long a question was open is the browser's m
 
 - [x] Red first, through the real use cases against Postgres:
   - `controllers.integration.test.ts`: a submission over a day stores 86,400 seconds.
-  - `bug-regression-exam-draft-bounds.integration.test.ts`: a draft save over a day stores a day, and an expired exam whose final draft is over a day finishes, with its attempt timed at 86,400 seconds.
-  - All three returned an error with field errors before the change (2026-11-01).
-- [x] The controller and schema tests accept a time over a day and pass it to the use case: `question-controller.test.ts`, `practice-schemas.test.ts` and `practice-controller-exam-draft.test.ts`. They still refuse a fractional or negative time. These replace the tests that pinned the rejections (2026-11-01).
+  - `bug-regression-exam-draft-bounds.integration.test.ts`: a draft save over a day stores a day. An expired exam whose final draft is over a day finishes, with its attempt timed at 86,400 seconds. An exam whose finish arrives a day after its deadline finishes too: the late draft is dropped and the question recorded as omitted, as business rule R7 states.
+  - Each returned an error with field errors under the old schemas (2026-11-01). The exam cases were re-checked by restoring the old limit.
+- [x] The controller and schema tests accept a time over a day and pass it to the use case: `question-controller.test.ts`, `practice-schemas.test.ts` and `practice-controller-exam-draft.test.ts`. The submit and draft-save schemas still refuse a negative or fractional time, and the draft save an infinite or unsafe one; the finalize schema refuses a fractional one. These replace the tests that pinned the rejections (2026-11-01).
 - [x] The use cases' existing cap tests and BUG-238's state-table check still pass (2026-11-01).
 - [ ] Promoted to `main`. No production check follows: the failure is not logged (see Impact), and reproducing it takes a question open for a day.
 

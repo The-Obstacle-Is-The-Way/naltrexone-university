@@ -719,7 +719,7 @@ describe('question-controller', () => {
       });
     });
 
-    it('passes a time over a day to the use case, which caps it (BUG-371)', async () => {
+    it('passes a time over a day to the use case (BUG-371)', async () => {
       const deps = createDeps();
 
       const result = await submitAnswer(

@@ -37,6 +37,11 @@ import {
 } from '@/src/application/use-cases/save-exam-draft-answer';
 import { SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS } from '@/src/application/use-cases/submit-answer';
 import {
+  DAY_MS,
+  EXAM_SECONDS_PER_QUESTION,
+  MS_PER_SECOND,
+} from '@/src/domain/services';
+import {
   createUser as createDomainUser,
   createSubscription,
 } from '@/src/domain/test-helpers';
@@ -171,6 +176,26 @@ function createPracticeControllerDepsForBug238(input: {
   };
 }
 
+// One exam question allots 72 seconds (EXAM_SECONDS_PER_QUESTION).
+const ONE_QUESTION_DEADLINE_MS = EXAM_SECONDS_PER_QUESTION * MS_PER_SECOND;
+
+function createExamFinalizerAt(now: Date): FinalizeExamAnswersUseCase {
+  return new FinalizeExamAnswersUseCase(
+    new DrizzleQuestionRepository(db),
+    new DrizzleAttemptRepository(db),
+    new DrizzlePracticeSessionRepository(db),
+    async (fn) =>
+      db.transaction(async (tx) =>
+        fn({
+          questions: new DrizzleQuestionRepository(tx),
+          attempts: new DrizzleAttemptRepository(tx),
+          sessions: new DrizzlePracticeSessionRepository(tx),
+        }),
+      ),
+    () => now,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // BUG-238: Exam draft cumulativeMs is bounded
 // ---------------------------------------------------------------------------
@@ -243,7 +268,6 @@ describe('BUG-238 and BUG-371: exam draft time is capped at a day', () => {
       status: 'published',
       difficulty: 'easy',
     });
-    const questions = new DrizzleQuestionRepository(db);
     const attempts = new DrizzleAttemptRepository(db);
     const sessions = new DrizzlePracticeSessionRepository(db);
     const session = await sessions.create({
@@ -258,20 +282,8 @@ describe('BUG-238 and BUG-371: exam draft time is capped at a day', () => {
     });
     // One question allots 72 seconds; a second past the deadline is inside
     // the final draft's grace window, so the draft is graded.
-    const afterDeadline = new Date(session.startedAt.getTime() + 73_000);
-    const finalizeExamAnswersUseCase = new FinalizeExamAnswersUseCase(
-      questions,
-      attempts,
-      sessions,
-      async (fn) =>
-        db.transaction(async (tx) =>
-          fn({
-            questions: new DrizzleQuestionRepository(tx),
-            attempts: new DrizzleAttemptRepository(tx),
-            sessions: new DrizzlePracticeSessionRepository(tx),
-          }),
-        ),
-      () => afterDeadline,
+    const finalizeExamAnswersUseCase = createExamFinalizerAt(
+      new Date(session.startedAt.getTime() + ONE_QUESTION_DEADLINE_MS + 1_000),
     );
 
     const result = await finalizeExamAnswers(
@@ -301,6 +313,65 @@ describe('BUG-238 and BUG-371: exam draft time is capped at a day', () => {
         questionId: question.id,
         isCorrect: true,
         timeSpentSeconds: SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
+      }),
+    ]);
+  });
+
+  it('BUG-371 finishes an exam whose final draft arrives a day late, dropping the draft', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-bug371-finalize-late-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const attempts = new DrizzleAttemptRepository(db);
+    const sessions = new DrizzlePracticeSessionRepository(db);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+    // A device asleep on the question for a day sends its finish a day after
+    // the deadline, long past the grace window.
+    const finalizeExamAnswersUseCase = createExamFinalizerAt(
+      new Date(
+        session.startedAt.getTime() + DAY_MS + ONE_QUESTION_DEADLINE_MS + 1_000,
+      ),
+    );
+
+    const result = await finalizeExamAnswers(
+      {
+        sessionId: session.id,
+        onlyIfExpired: true,
+        finalDraftAnswer: {
+          questionId: question.id,
+          selectedChoiceId: question.correctChoiceId,
+          cumulativeMs: DAY_MS + ONE_QUESTION_DEADLINE_MS + 1_000,
+        },
+      },
+      createPracticeControllerDepsForBug238({
+        userId: user.id,
+        email: user.email,
+        finalizeExamAnswersUseCase,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: { sessionId: session.id, totals: { answered: 0, correct: 0 } },
+    });
+    const sessionAttempts = await attempts.findBySessionId(session.id, user.id);
+    expect(sessionAttempts).toEqual([
+      expect.objectContaining({
+        questionId: question.id,
+        outcome: { kind: 'omitted' },
+        isCorrect: false,
+        timeSpentSeconds: 0,
       }),
     ]);
   });

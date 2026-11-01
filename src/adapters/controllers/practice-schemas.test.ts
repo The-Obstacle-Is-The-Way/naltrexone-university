@@ -72,8 +72,13 @@ describe('SaveExamDraftAnswerInputSchema', () => {
     expect(SaveExamDraftAnswerInputSchema.parse(input)).toEqual(input);
   });
 
-  it('rejects a fractional or negative draft cumulativeMs', () => {
-    for (const cumulativeMs of [1.5, -1]) {
+  it('rejects a fractional, negative, infinite or unsafe draft cumulativeMs', () => {
+    for (const cumulativeMs of [
+      1.5,
+      -1,
+      Number.POSITIVE_INFINITY,
+      Number.MAX_SAFE_INTEGER + 1,
+    ]) {
       const result = SaveExamDraftAnswerInputSchema.safeParse({
         sessionId: crypto.randomUUID(),
         questionId: crypto.randomUUID(),
