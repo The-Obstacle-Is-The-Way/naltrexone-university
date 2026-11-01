@@ -32,6 +32,14 @@ async function openPortal(page: Page): Promise<void> {
   await expect(page).toHaveURL(/^https:\/\/billing\.stripe\.com\//, {
     timeout: 30_000,
   });
+  // The URL commits before the portal renders: behind a spinner, Stripe first
+  // loads the session's data and then one more script. Locally that took about
+  // 9.5 seconds on 2026-10-30, past the 5-second default, so wait for the
+  // cancel link both cases show, as the hosted Checkout helpers wait for
+  // Stripe's first control.
+  await expect(
+    page.getByRole('link', { name: 'Cancel subscription' }),
+  ).toBeVisible({ timeout: 30_000 });
 }
 
 // The cancellation flow as a learner meets it: the cancel link, an optional
@@ -169,10 +177,8 @@ test.describe
 
       await openPortal(page);
       // DEBT-414 F05: a trial's first card comes only through the add-card
-      // flow that records consent, never the portal.
-      await expect(
-        page.getByRole('link', { name: 'Cancel subscription' }),
-      ).toBeVisible();
+      // flow that records consent, never the portal. openPortal waited for the
+      // rendered portal, so a missing link is not a page still loading.
       await expect(
         page.getByRole('link', { name: 'Add payment method' }),
       ).toHaveCount(0);
