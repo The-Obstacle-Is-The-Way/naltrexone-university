@@ -19,6 +19,7 @@ import type {
   NewRenewalConsentRecord,
   RenewalConsentRecord,
 } from '@/src/domain/entities';
+import { computeRenewalConsentRetainUntil } from '@/src/domain/value-objects';
 
 type ConsentRow = typeof renewalConsentRecords.$inferSelect;
 
@@ -152,12 +153,15 @@ export class DrizzleRenewalConsentRecordRepository
     externalSubscriptionId: string;
     terminatedAt: Date;
   }): Promise<number> {
-    const terminatedAtIso = input.terminatedAt.toISOString();
+    const terminationFloor = computeRenewalConsentRetainUntil(
+      null,
+      input.terminatedAt,
+    ).toISOString();
     const updated = await this.db
       .update(renewalConsentRecords)
       .set({
-        subscriptionTerminatedAt: sql`GREATEST(COALESCE(${renewalConsentRecords.subscriptionTerminatedAt}, ${terminatedAtIso}::timestamptz), ${terminatedAtIso}::timestamptz)`,
-        retainUntil: sql`GREATEST(${renewalConsentRecords.retainUntil}, ${renewalConsentRecords.acceptedAt} + INTERVAL '3 years', ${terminatedAtIso}::timestamptz + INTERVAL '1 year')`,
+        subscriptionTerminatedAt: input.terminatedAt,
+        retainUntil: sql`GREATEST(${renewalConsentRecords.retainUntil}, ${terminationFloor}::timestamptz)`,
         updatedAt: this.now(),
       })
       .where(

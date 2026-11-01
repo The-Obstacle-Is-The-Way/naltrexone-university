@@ -10,6 +10,7 @@ import {
 import {
   CLERK_BACKEND_CALL_RATE_LIMIT,
   CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
+  CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
   CLERK_BACKEND_CALL_SITE_RATE_LIMIT,
   ONE_MINUTE_MS,
 } from '@/src/adapters/shared/rate-limits';
@@ -76,6 +77,30 @@ describe('requests that make Clerk call its Backend API', () => {
     });
   });
 
+  // DEBT-503 item 4: a refresh of a session Clerk signed has its own
+  // per-address bucket, wide enough for one hospital or venue network.
+  it('limits refreshes of genuine sessions per address in a wider bucket', () => {
+    expect(CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT).toEqual({
+      limit: 200,
+      windowMs: ONE_MINUTE_MS,
+    });
+  });
+
+  // Clerk treats a token as current until five seconds past its expiry.
+  it("ignores a session within Clerk's five seconds of clock skew", () => {
+    const refreshing = (exp: number) =>
+      request('https://example.com/pricing', {
+        cookie: `__session=${sessionToken(exp)}; __refresh_abc=x`,
+      });
+
+    expect(
+      triggersClerkBackendCall(refreshing(NOW_SECONDS - 4), NOW_SECONDS),
+    ).toBe(false);
+    expect(
+      triggersClerkBackendCall(refreshing(NOW_SECONDS - 5), NOW_SECONDS),
+    ).toBe(true);
+  });
+
   const expired = sessionToken(NOW_SECONDS - 60);
   const current = sessionToken(NOW_SECONDS + 60);
 
@@ -109,6 +134,23 @@ describe('requests that make Clerk call its Backend API', () => {
       'an expired suffixed session with a refresh cookie',
       'https://example.com/pricing',
       { cookie: `__session_abc=${expired}; __refresh_abc=x` },
+    ],
+    // Clerk reads cookies with the `cookie` package, which Next's parser
+    // does not match: it trims names, and keeps a value that will not decode.
+    [
+      'a handshake nonce cookie that does not percent-decode',
+      'https://example.com/pricing',
+      { cookie: '__clerk_handshake_nonce=%' },
+    ],
+    [
+      'a handshake nonce cookie with a space before its equals sign',
+      'https://example.com/pricing',
+      { cookie: '__clerk_handshake_nonce =x' },
+    ],
+    [
+      'an expired session after a tab',
+      'https://example.com/pricing',
+      { cookie: `__client_uat=1;\t__session=${expired}; __refresh_abc=x` },
     ],
   ])('recognizes %s', (_kind, url, init) => {
     expect(triggersClerkBackendCall(request(url, init), NOW_SECONDS)).toBe(

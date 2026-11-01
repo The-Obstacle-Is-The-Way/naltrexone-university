@@ -5,6 +5,7 @@ import {
   NextResponse,
 } from 'next/server';
 import {
+  type ClerkBackendCallLimit,
   limitClerkBackendCalls,
   loadContainerOperationalAlerts,
   loadContainerRateLimiter,
@@ -18,14 +19,19 @@ import {
 } from '@/lib/clerk-call-failures';
 import { parseClerkJwtKey } from '@/lib/clerk-jwt-key';
 import {
+  CRON_ROUTE_PATHS,
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
 } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
 import { sentryEnvironmentFor } from '@/lib/sentry-data-collection';
+import { HTTP_UNAUTHORIZED } from '@/src/adapters/shared/http-status';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { RateLimiter } from '@/src/application/ports/gateways';
-import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
+import type {
+  OperationalAlertKind,
+  OperationalAlerts,
+} from '@/src/application/ports/operational-alerts';
 
 export function parseSentryIngestOrigin(
   dsn: string | undefined,
@@ -222,8 +228,17 @@ function configuredClerkJwtKey(): string | undefined {
   }
 }
 
+// Read once per server instance, so Clerk and BUG-323's limiter (DEBT-503
+// item 4) check session tokens with the same key.
+let clerkJwtKey: { value: string | undefined } | undefined;
+
+function readClerkJwtKey(): string | undefined {
+  clerkJwtKey ??= { value: configuredClerkJwtKey() };
+  return clerkJwtKey.value;
+}
+
 function clerkJwtKeyOption(): { jwtKey?: string } {
-  const jwtKey = configuredClerkJwtKey();
+  const jwtKey = readClerkJwtKey();
   return jwtKey ? { jwtKey } : {};
 }
 
@@ -274,6 +289,13 @@ function usesProductionClerkInstance(): boolean {
   );
 }
 
+const REFUSAL_ALERTS: Partial<
+  Record<ClerkBackendCallLimit, OperationalAlertKind>
+> = {
+  site: 'clerk_site_limit_reached',
+  'signed-in-address': 'clerk_signed_in_limit_reached',
+};
+
 export type ProxyDependencies = {
   loadBackendCallLimiter: () => Promise<RateLimiter>;
   loadOperationalAlerts: () => Promise<OperationalAlerts>;
@@ -284,6 +306,25 @@ export function createProxy({
   loadOperationalAlerts,
 }: ProxyDependencies) {
   return async function proxy(request: NextRequest, event: NextFetchEvent) {
+    // The cron routes check CRON_SECRET themselves and need no Clerk session,
+    // so Clerk never reads their Authorization header.
+    if (CRON_ROUTE_PATHS.includes(request.nextUrl?.pathname)) {
+      return NextResponse.next();
+    }
+
+    // BUG-369: Clerk's middleware reads a token from any Authorization header
+    // and can spend its Backend API on it, refreshing a genuine expired
+    // session token or verifying an API-key or machine token, uncounted by
+    // BUG-323's limits. No page or browser request to the app sends the
+    // header, so any other request carrying it is refused, before Clerk and
+    // before the public resources too: only the cron routes take it.
+    if (request.headers.has('authorization')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_UNAUTHORIZED },
+      );
+    }
+
     // These exact public machine resources must not require even Clerk's
     // anonymous dev-browser handshake, which redirects HTML requests.
     if (
@@ -311,19 +352,19 @@ export function createProxy({
           event.waitUntil(raiseLimiterFailureAlert(loadOperationalAlerts));
         },
         (limit) => {
-          // DEBT-503 item 3: each refusal is logged for diagnosis. Only the
-          // site-wide limit alerts the owner, after the response: one client
-          // over its own limit is the limit working, and needs no one.
+          // DEBT-503 item 3: each refusal is logged for diagnosis. The owner
+          // hears of two, after the response: the site-wide limit, and (item
+          // 4) one address's refreshes of sessions Clerk signed, which turned
+          // away people on a shared network. One client over its own limit,
+          // a signed-in session's included, is the limit working, and needs
+          // no one.
           console.warn({ event: 'clerk_backend_call_refused', limit });
-          if (limit === 'site') {
-            event.waitUntil(
-              raiseOperationalAlert(
-                loadOperationalAlerts,
-                'clerk_site_limit_reached',
-              ),
-            );
+          const kind = REFUSAL_ALERTS[limit];
+          if (kind) {
+            event.waitUntil(raiseOperationalAlert(loadOperationalAlerts, kind));
           }
         },
+        readClerkJwtKey(),
       );
       if (limited) return limited;
     }
