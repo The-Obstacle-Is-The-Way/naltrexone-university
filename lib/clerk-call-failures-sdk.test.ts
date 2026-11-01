@@ -67,12 +67,23 @@ function signingKey() {
   };
 }
 
-// Runs the real Clerk middleware for a document request, answering its
-// Backend API calls by path.
+// A page load, or a script's fetch of a protected route: there, as for a
+// server action, proxy.ts's `auth.protect()` answers a signed-out visitor
+// with Clerk's 404 rewrite, whose auth reason Clerk joins to its own.
+type ClerkRequest = 'document' | 'protected-fetch';
+
+const REQUEST_HEADERS: Record<ClerkRequest, Record<string, string>> = {
+  document: { accept: 'text/html', 'sec-fetch-dest': 'document' },
+  'protected-fetch': { accept: 'application/json', 'sec-fetch-dest': 'empty' },
+};
+
+// Runs the real Clerk middleware for a request, answering its Backend API
+// calls by path.
 async function clerkAnswerTo(
   url: string,
   cookie: string,
   answer: ClerkApiAnswer,
+  kind: ClerkRequest = 'document',
 ) {
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = PUBLISHABLE_KEY;
   process.env.CLERK_SECRET_KEY = 'sk_live_sdk';
@@ -85,9 +96,15 @@ async function clerkAnswerTo(
   });
   const { clerkMiddleware } = await import('@clerk/nextjs/server');
   const request = new NextRequest(url, {
-    headers: { cookie, accept: 'text/html', 'sec-fetch-dest': 'document' },
+    headers: { cookie, ...REQUEST_HEADERS[kind] },
   });
-  const response = await clerkMiddleware()(
+  const middleware =
+    kind === 'protected-fetch'
+      ? clerkMiddleware(async (auth) => {
+          await auth.protect();
+        })
+      : clerkMiddleware();
+  const response = await middleware(
     request,
     new NextFetchEvent({ request, page: '/', context: undefined }),
   );
@@ -144,6 +161,45 @@ describe('Clerk calls the real middleware fails silently', () => {
 
     expect(paths).toContain('/v1/sessions/sess_sdk/refresh');
     expect(response.headers.get('x-clerk-auth-status')).toBe('handshake');
+    expect(clerkCallFailure(request, response)).toBe('refresh');
+  });
+
+  // A script's fetch cannot follow a handshake, so Clerk signs it out and
+  // auth.protect() answers with the rewrite.
+  it('names a failed signing-key fetch behind a protected fetch, whose auth reason Clerk joins to its rewrite', async () => {
+    const key = signingKey();
+
+    const { request, response } = await clerkAnswerTo(
+      'https://example.com/api/protected',
+      signedInCookies(key.token(60)),
+      (path) => (path === '/v1/jwks' ? json(503, { errors: [] }) : undefined),
+      'protected-fetch',
+    );
+
+    expect(response.headers.get('x-clerk-auth-reason')).toBe(
+      'protect-rewrite, jwk-remote-failed-to-load',
+    );
+    expect(clerkCallFailure(request, response)).toBe('keys');
+  });
+
+  it('names a refused refresh behind a protected fetch, whose auth reason Clerk joins to its rewrite', async () => {
+    const key = signingKey();
+
+    const { request, response, paths } = await clerkAnswerTo(
+      'https://example.com/api/protected',
+      signedInCookies(key.token(-60)),
+      (path) => {
+        if (path === '/v1/jwks') return json(200, key.keys);
+        if (path === '/v1/sessions/sess_sdk/refresh') return refused();
+        return undefined;
+      },
+      'protected-fetch',
+    );
+
+    expect(paths).toContain('/v1/sessions/sess_sdk/refresh');
+    expect(response.headers.get('x-clerk-auth-reason')).toMatch(
+      /^protect-rewrite, session-token-expired-refresh-/,
+    );
     expect(clerkCallFailure(request, response)).toBe('refresh');
   });
 
