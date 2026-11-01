@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isMain } from '../lib/entry-point.mts';
-import { createGhRunner } from '../lib/github-cli.mts';
+import { createGhRunner, withGhFailureReason } from '../lib/github-cli.mts';
 import {
   type AlertIssueSync,
   type AlertIssues,
@@ -254,9 +254,12 @@ export async function runFromCommandLine(
     const result = await reportLearnings(replies, issues);
     output.log(`${summary} (${result})`);
     return 0;
-  } catch {
+  } catch (error) {
     output.error(
-      'CodeRabbit learnings review failed; inspect GitHub comment and issue access.',
+      withGhFailureReason(
+        'CodeRabbit learnings review failed; inspect GitHub comment and issue access.',
+        error,
+      ),
     );
     return 1;
   }

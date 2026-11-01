@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { isMain } from '../lib/entry-point.mts';
-import { createGhRunner } from '../lib/github-cli.mts';
+import {
+  createGhRunner,
+  ghFailureReason,
+  withGhFailureReason,
+} from '../lib/github-cli.mts';
 import { listRepositoryIssueEntries } from '../lib/github-issues.mts';
 
 // Dependabot alerts come from GitHub's advisory database, and an upstream
@@ -248,6 +252,24 @@ function describeAdvisory(
   );
 }
 
+// The run's report names each failed item beside gh's own reason, so a log
+// shows why without a separate probe (BUG-370).
+function withReason(item: string, error: unknown): string {
+  const reason = ghFailureReason(error);
+  return reason ? `${item} (${reason})` : item;
+}
+
+// An advisory whose review fails both while raising and while closing is
+// named once, with its first reason.
+function oncePerItem(labels: readonly string[]): string[] {
+  const byItem = new Map<string, string>();
+  for (const label of labels) {
+    const item = label.split(' ')[0] ?? label;
+    if (!byItem.has(item)) byItem.set(item, label);
+  }
+  return [...byItem.values()];
+}
+
 export type RaiseOutcome = {
   raised: string[];
   failed: string[];
@@ -288,8 +310,8 @@ export async function raiseUpstreamAdvisories(
       continue;
     handled.add(advisory.ghsaId);
     // A database that cannot be read rules nothing out, so the issue opens.
-    const review = await database.find(advisory.ghsaId).catch(() => {
-      outcome.unreviewed.push(advisory.ghsaId);
+    const review = await database.find(advisory.ghsaId).catch((error) => {
+      outcome.unreviewed.push(withReason(advisory.ghsaId, error));
       return null;
     });
     if (ruledOutByReview(review, dependencies.locked)) {
@@ -305,8 +327,8 @@ export async function raiseUpstreamAdvisories(
         URGENT_SEVERITIES.has(advisory.severity),
       );
       outcome.raised.push(advisory.ghsaId);
-    } catch {
-      outcome.failed.push(advisory.ghsaId);
+    } catch (error) {
+      outcome.failed.push(withReason(advisory.ghsaId, error));
     }
   }
   return outcome;
@@ -758,7 +780,8 @@ const REVIEW_CLOSE_MARKER =
   '<!-- upstream-advisory-watch: closed after GitHub review -->';
 
 // `unreviewed`: advisories whose review could not be read. `failed`: issues
-// that could not be closed.
+// that could not be closed. Each names the advisory, with gh's reason when gh
+// gave one (`withReason`).
 export type CloseOutcome = {
   closed: string[];
   failed: string[];
@@ -783,8 +806,8 @@ export async function closeReviewedIssues(
     let review: ReviewedAdvisory | null;
     try {
       review = await database.find(ghsaId);
-    } catch {
-      outcome.unreviewed.push(ghsaId);
+    } catch (error) {
+      outcome.unreviewed.push(withReason(ghsaId, error));
       continue;
     }
     const evidence = ruledOutByReview(review, locked);
@@ -802,8 +825,8 @@ export async function closeReviewedIssues(
           `again.\n\n${REVIEW_CLOSE_MARKER}\n`,
       );
       outcome.closed.push(ghsaId);
-    } catch {
-      outcome.failed.push(ghsaId);
+    } catch (error) {
+      outcome.failed.push(withReason(ghsaId, error));
     }
   }
   return outcome;
@@ -884,7 +907,9 @@ export async function watchUpstreamAdvisories(
       // direct dependency's must be noticed and fixed, so it fails the run.
       if (!direct && error instanceof RepositoryNotFound)
         unwatched.push(repository);
-      else unreadable.push(repository);
+      else if (error instanceof RepositoryNotFound)
+        unreadable.push(`${repository} (not found)`);
+      else unreadable.push(withReason(repository, error));
     }
   }
   const raised = await raiseUpstreamAdvisories(
@@ -902,7 +927,7 @@ export async function watchUpstreamAdvisories(
     ...raised,
     failed: [...raised.failed, ...reviewed.failed],
     closed: reviewed.closed,
-    unreviewed: [...new Set([...raised.unreviewed, ...reviewed.unreviewed])],
+    unreviewed: oncePerItem([...raised.unreviewed, ...reviewed.unreviewed]),
     read,
     unreadable,
     unwatched,
@@ -982,7 +1007,10 @@ export async function runUpstreamAdvisoryWatch(
     output.error(
       error instanceof RateLimited
         ? 'GitHub’s API rate limit ran out, so nothing was raised; the next run reads every repository again.'
-        : 'Upstream advisory watch failed; inspect the advisory source and GitHub issue access.',
+        : withGhFailureReason(
+            'Upstream advisory watch failed; inspect the advisory source and GitHub issue access.',
+            error,
+          ),
     );
     return 1;
   }
