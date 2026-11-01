@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { isMain } from '../lib/entry-point.mts';
+import { withGhFailureReason } from '../lib/github-cli.mts';
 import {
   type AlertIssueSync,
   type AlertIssues,
@@ -96,11 +97,14 @@ export async function runDocumentationDueChecks(
     return 0;
   } catch (error) {
     // Other failures can carry a GitHub credential, so only the repository's
-    // own message is printed.
+    // own message, or gh's own error line, is printed.
     output.error(
       error instanceof QueueReviewError
         ? `Overdue production check failed: ${error.message}.`
-        : 'Overdue production check failed; inspect the records and GitHub issue access.',
+        : withGhFailureReason(
+            'Overdue production check failed; inspect the records and GitHub issue access.',
+            error,
+          ),
     );
     return 1;
   }
