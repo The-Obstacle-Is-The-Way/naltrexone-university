@@ -5,6 +5,7 @@ import {
   NextResponse,
 } from 'next/server';
 import {
+  type ClerkBackendCallLimit,
   limitClerkBackendCalls,
   loadContainerOperationalAlerts,
   loadContainerRateLimiter,
@@ -27,7 +28,10 @@ import { sentryEnvironmentFor } from '@/lib/sentry-data-collection';
 import { HTTP_UNAUTHORIZED } from '@/src/adapters/shared/http-status';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { RateLimiter } from '@/src/application/ports/gateways';
-import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
+import type {
+  OperationalAlertKind,
+  OperationalAlerts,
+} from '@/src/application/ports/operational-alerts';
 
 export function parseSentryIngestOrigin(
   dsn: string | undefined,
@@ -224,8 +228,17 @@ function configuredClerkJwtKey(): string | undefined {
   }
 }
 
+// Read once per server instance, so Clerk and BUG-323's limiter (DEBT-503
+// item 4) check session tokens with the same key.
+let clerkJwtKey: { value: string | undefined } | undefined;
+
+function readClerkJwtKey(): string | undefined {
+  clerkJwtKey ??= { value: configuredClerkJwtKey() };
+  return clerkJwtKey.value;
+}
+
 function clerkJwtKeyOption(): { jwtKey?: string } {
-  const jwtKey = configuredClerkJwtKey();
+  const jwtKey = readClerkJwtKey();
   return jwtKey ? { jwtKey } : {};
 }
 
@@ -275,6 +288,13 @@ function usesProductionClerkInstance(): boolean {
     true
   );
 }
+
+const REFUSAL_ALERTS: Partial<
+  Record<ClerkBackendCallLimit, OperationalAlertKind>
+> = {
+  site: 'clerk_site_limit_reached',
+  'signed-in-address': 'clerk_signed_in_limit_reached',
+};
 
 export type ProxyDependencies = {
   loadBackendCallLimiter: () => Promise<RateLimiter>;
@@ -332,19 +352,19 @@ export function createProxy({
           event.waitUntil(raiseLimiterFailureAlert(loadOperationalAlerts));
         },
         (limit) => {
-          // DEBT-503 item 3: each refusal is logged for diagnosis. Only the
-          // site-wide limit alerts the owner, after the response: one client
-          // over its own limit is the limit working, and needs no one.
+          // DEBT-503 item 3: each refusal is logged for diagnosis. The owner
+          // hears of two, after the response: the site-wide limit, and (item
+          // 4) one address's refreshes of sessions Clerk signed, which turned
+          // away people on a shared network. One client over its own limit,
+          // a signed-in session's included, is the limit working, and needs
+          // no one.
           console.warn({ event: 'clerk_backend_call_refused', limit });
-          if (limit === 'site') {
-            event.waitUntil(
-              raiseOperationalAlert(
-                loadOperationalAlerts,
-                'clerk_site_limit_reached',
-              ),
-            );
+          const kind = REFUSAL_ALERTS[limit];
+          if (kind) {
+            event.waitUntil(raiseOperationalAlert(loadOperationalAlerts, kind));
           }
         },
+        readClerkJwtKey(),
       );
       if (limited) return limited;
     }

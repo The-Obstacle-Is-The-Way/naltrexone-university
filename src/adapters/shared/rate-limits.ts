@@ -37,6 +37,16 @@ export const CLERK_BACKEND_CALL_SITE_RATE_LIMIT = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
+// DEBT-503 item 4: with CLERK_JWT_KEY, a refresh of a session Clerk signed is
+// counted per address in this bucket instead. Only real accounts fill it, so
+// it is sized for one hospital or venue network whose people return together,
+// while one address still takes at most a fifth of the site-wide cap. Item 4's
+// measurements retune it.
+export const CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT = {
+  limit: 200,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
 // DEBT-503 item 3: Clerk's middleware refreshes and resolves handshakes
 // itself, and some of those calls fail for ordinary reasons, such as a session
 // that ended elsewhere or a reused handshake nonce. Past this many in a
