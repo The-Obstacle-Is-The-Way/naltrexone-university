@@ -33,7 +33,8 @@ production seed or a data fix, the owner takes a restore point:
    **Backup & restore** and create a manual snapshot of `main` named
    `pre-YYYYMMDD-<change>`, expiring in 7 days. Free allows one manual
    snapshot, so delete an older one first. A snapshot keeps its state until it
-   expires, whatever the history window. Record its time beside the change.
+   expires, whatever the history window. Before step 2, confirm the snapshot
+   is listed there, and record its time beside the change.
 2. Make the change, then check its result straight away.
 3. If the change went wrong, restore from the snapshot:
    - A **multi-step restore** creates a new branch from the snapshot, to

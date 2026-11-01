@@ -75,4 +75,4 @@ Check both the row and Resend:
 - An email created after requeue is the new send. A recorded failure returns the row to `terminal_failure` and alerts; restart at step 1 after fixing the cause.
 - An email created before requeue is a replay. If its earlier report was dropped before the row had that provider ID, the row can remain `accepted` indefinitely. A later report can still update it. Do not treat acceptance as delivery: the deadline checks count acceptance as sent, so they cannot detect this case. Escalate missing provider evidence under F21 and any missed deadline under F07.
 
-Do not rely on production delivery reports until DEBT-414 F07 records a real report that Resend's webhook log shows answered with 200. This procedure does not close F21's early-report gap.
+Do not rely on production delivery reports until DEBT-414 F07 records a real renewal notice's report that Resend's webhook log shows answered with 200 and that moved the notice's row from `accepted` to `delivered` or `terminal_failure`. A 200 alone is not enough: the endpoint also answers 200 to a report that matches no notice. This procedure does not close F21's early-report gap.
