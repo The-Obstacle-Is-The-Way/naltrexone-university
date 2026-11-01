@@ -27,6 +27,11 @@ import type { RenewalNoticeDeliveryStatus } from '@/src/domain/entities';
 import { DAY_MS, nextAnniversaryRenewalAt } from '@/src/domain/services';
 import type { CronMonitor } from '../shared/cron-monitor';
 import {
+  type ClerkBackendCallUsageOutcome,
+  type ClerkBackendCallUsageRollUps,
+  rollUpClerkBackendCallUsage,
+} from './clerk-backend-call-usage';
+import {
   type OperationalAlertDrillCycles,
   type OperationalAlertDrillOutcome,
   raiseOperationalAlertDrillIfDue,
@@ -337,6 +342,8 @@ export type SendDueRenewalNoticesJobDeps = {
   alertDrillCycles: OperationalAlertDrillCycles;
   /** The repository's GitHub workflows, the alert watcher among them. */
   scheduledWorkflows: ScheduledWorkflows;
+  /** The daily roll-up of the Clerk limiter's counters (DEBT-503). */
+  clerkBackendCallUsage: ClerkBackendCallUsageRollUps;
   annualPlan: PlanNoticeTerms;
   monthlyPlan: PlanNoticeTerms;
 };
@@ -358,6 +365,7 @@ export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   durationMs: number;
   alertDrill: OperationalAlertDrillOutcome;
   scheduledChecks: ScheduledChecksOutcome;
+  clerkBackendCallUsage: ClerkBackendCallUsageOutcome;
 };
 
 function safeLimit(value: number, fallback: number, maximum: number): number {
@@ -382,6 +390,12 @@ export async function sendDueRenewalNotices(
     now: deps.now,
     workflows: deps.scheduledWorkflows,
     alerts: deps.alerts,
+    logger: deps.logger,
+  });
+  // DEBT-503: the limiter's counters are pruned a day after their minute, so
+  // the roll-up also runs whatever the notices do.
+  const clerkBackendCallUsage = await rollUpClerkBackendCallUsage({
+    rollUps: deps.clerkBackendCallUsage,
     logger: deps.logger,
   });
   const observedAt = deps.now();
@@ -470,6 +484,7 @@ export async function sendDueRenewalNotices(
     durationMs: Math.max(0, deps.monotonicNow() - startedAt),
     alertDrill,
     scheduledChecks,
+    clerkBackendCallUsage,
   };
 }
 

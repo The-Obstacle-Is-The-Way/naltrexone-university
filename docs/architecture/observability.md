@@ -64,6 +64,35 @@ receipt; do not claim a Sentry search proves its absence.
 DEBT-505 added that
 path for the conditions a person must act on: see Operational alerts below.
 
+Clerk's Backend API usage outlasts the logs in `clerk_backend_call_usage`
+(DEBT-503 item 4, step 1). Each daily run of the renewal job rolls the Clerk
+limiter's per-minute counters up before `rate_limits` prunes them, a day after
+their minute: one row per bucket, with no address or session in it. A bucket's
+row starts where its previous row ended, at most a day back, so rows never
+overlap and can be added up.
+
+- `busiest_minute` against `per_minute_limit` is the bucket's headroom.
+- `windows_over_limit` counts the minutes that went over, per address or
+  session in those buckets.
+- `counted_over_limit` is the requests refused; for `call-failed` and
+  `token-rejected`, item 3's alert counters, it is the failures past the alert
+  threshold.
+- `counted` in `session` or `signed-in-session` shows whether production
+  refreshes sessions on the server at all.
+
+The job's response reports `clerkBackendCallUsage`: `rolled_up`, `up_to_date`
+when every bucket was rolled up within the minute, or `unavailable`, logged as
+`clerk_backend_call_usage_roll_up_unavailable`. The owner reads the rows in
+production with:
+
+```sql
+SELECT bucket, period_end, per_minute_limit, busiest_minute,
+  windows_over_limit, counted_over_limit, counted
+FROM clerk_backend_call_usage
+WHERE period_end > now() - interval '30 days'
+ORDER BY bucket, period_end;
+```
+
 ## Operational alerts
 
 Use cases, jobs and the proxy raise a condition a person must act on through

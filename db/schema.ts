@@ -3,6 +3,7 @@
 import { desc, relations, sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
+  bigint,
   boolean,
   check,
   foreignKey,
@@ -600,6 +601,42 @@ export const pendingStripeCancellations = pgTable(
   (t) => ({
     createdAtIdx: index('pending_stripe_cancellations_created_at_idx').on(
       t.createdAt,
+    ),
+  }),
+);
+
+// clerk_backend_call_usage (composite PK: bucket + period_start)
+// DEBT-503 item 4, step 1: the renewal job's daily roll-up of the Clerk
+// limiter's per-minute counters in rate_limits, one row per bucket, with no
+// address or session in it. Each bucket's period starts where its previous
+// roll-up ended, at most a day back, since rate_limits keeps counters for a
+// day only; so a bucket's rows never overlap. counted_over_limit is how far
+// past the limit the counts went: requests refused for the request buckets,
+// failures past the alert threshold for call-failed and token-rejected.
+export const clerkBackendCallUsage = pgTable(
+  'clerk_backend_call_usage',
+  {
+    bucket: varchar('bucket', { length: 128 }).notNull(),
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+    perMinuteLimit: integer('per_minute_limit').notNull(),
+    counted: bigint('counted', { mode: 'number' }).notNull(),
+    busiestMinute: integer('busiest_minute').notNull(),
+    windowsOverLimit: bigint('windows_over_limit', {
+      mode: 'number',
+    }).notNull(),
+    countedOverLimit: bigint('counted_over_limit', {
+      mode: 'number',
+    }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.bucket, t.periodStart] }),
+    periodChk: check(
+      'clerk_backend_call_usage_period_chk',
+      sql`${t.periodStart} < ${t.periodEnd}`,
     ),
   }),
 );
