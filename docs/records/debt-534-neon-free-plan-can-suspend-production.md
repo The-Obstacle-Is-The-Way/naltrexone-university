@@ -26,7 +26,7 @@ Preview and Development use the same project (its `dev` branch), so their traffi
 - **Writes.** At 1 GB, writes that grow storage fail.
 - **Shared allowance.** A burst of Preview deployments or a load test spends production's compute.
 - **Recovery.** A bad migration or seed noticed more than 6 hours later cannot be undone by point-in-time restore. Until the move, the database recovery guide's restore point, a manual snapshot taken just before a bulk write, covers a planned change; it cannot cover an unplanned one.
-- **DEBT-445.** Free stops creating branches at 10 per project, so per-Preview database branches cannot be turned on while the project stays on Free.
+- **DEBT-445.** Free allows Preview branching but caps the project at 10 branches, `main` and `dev` included. At least 34 PR branches deployed Previews in each October week, so per-Preview branches on Free would have almost no headroom: a busy week or a missed cleanup would stop new Preview branches, and the merge guard needs every check green. DEBT-445 therefore waits for this move.
 
 ## Options
 
