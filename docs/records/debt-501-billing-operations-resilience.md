@@ -1,6 +1,6 @@
 # DEBT-501: Billing Operations Can Leave Payers Without Access as the Service Grows or Changes
 
-**Status:** Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items
+**Status:** Open — item 9's reconcile watch, due 2026-11-13; then the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -14,7 +14,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 ## Items
 
-**Decided 2026-10-08 (AUDIT-015): order.** Quick wins first: item 1's Stripe timeout, item 2's runbook line, items 5 and 6. Then an operational alert (DEBT-505) for a reconcile run that stops early, so item 1 announces its own trigger; once that alert exists, item 1's oldest-first reconcile waits for it. Before the first live sale: item 2's recorded-price design with its unknown-price alert, item 4's add-card recheck (with DEBT-414 F22), and the owner's item 7.
+**Decided 2026-10-08 (AUDIT-015): order.** Quick wins first: item 1's Stripe timeout, item 2's runbook line, items 5 and 6. Then an operational alert (DEBT-505) for a reconcile run that stops early, so item 1 announces its own trigger; once that alert exists, item 1's oldest-first reconcile waits for it. Before the first live sale: item 2's recorded-price design with its unknown-price alert, item 4's add-card recheck (with DEBT-414 F22), the owner's item 7, and, decided 2026-10-30, item 9's reconcile watch.
 
 *Corrected 2026-10-10: the unknown-price alert moved from the alerts step to item 2, whose legacy price-ID list became the recorded-price design.*
 
@@ -136,6 +136,15 @@ This is part of the existing pre-sale work, not a separate refactor gate. Item 3
 - **Decided.** Page the guard's listing with `starting_after` while `has_more`, under a stated bound, and give BUG-321's listing the same paging. If the bound is exhausted before absence is proved, refuse Checkout with a recoverable error; never treat a truncated list as no blocking subscription. The adapter-owned `FakeStripeCheckoutClient` pages Checkout sessions but not subscriptions, so its subscription list and its shared contract scenario gain paging first.
 
   *Corrected 2026-10-06: an exhausted bound now refuses Checkout with a recoverable error, instead of treating a truncated list as absence (#1410).*
+
+### 9. Nothing notices when the daily reconcile stops running (P3)
+
+- **Evidence.** The renewal job checks in with the Sentry cron monitor `send-renewal-notices` on each run, and the daily watcher opens an issue when it has not checked in for 25 hours (`docs/architecture/observability.md`, Watcher). The reconcile route has no monitor, and its one alert, `stripe_reconcile_stopped_early`, comes only from a run. A firewall rule or a failed deployment can stop a run before the handler; a `CRON_SECRET` mismatch reaches it, and it logs and answers 401. Each leaves an hour of Vercel logs and no record of the missed run. Found 2026-10-25 while checking whether BUG-369's firewall rule could stop the crons: Vercel's firewall traffic shows `vercel-cron/1.0` allowed through to the reconcile route in the 08:00 UTC hour, but nothing records how that run ended.
+- **Impact.** Webhooks still sync each subscription, so this is the repair path going quiet: drift between Stripe and the database, and the reconcile's duplicate-subscription check (BUG-343), stop with no signal.
+- **Options.**
+  1. A second Sentry cron monitor, `reconcile-stripe-subscriptions`, through the same `withCronMonitor`, with the watcher reading both. It reuses a tested path, but needs a paid Sentry plan.
+  2. The monitored renewal job raises a new kind, `stripe_reconcile_stopped`, as it already watches GitHub's schedules, when no reconcile run has passed `CRON_SECRET` and started in the past 24 hours, or none has finished in the past 26. Counting starts catches the first missed run at the next 09:00 UTC check: Hobby can start the 08:00 UTC reconcile up to an hour late, so it may still be running then, and a limit on finished runs alone would have to exceed 25 hours and miss that check. No new vendor cost, but a row per run.
+- **Decided 2026-10-30: option 2.** The Sentry organization is on the Developer plan: its one cron monitor is `send-renewal-notices`, with no on-demand budget. Build it by 2026-11-13, before the first live sale. Held by clone 2 (`naltrexone-university-2`), whose session found it; the repository owner reassigns it if that clone stops.
 
 ## Verification
 
