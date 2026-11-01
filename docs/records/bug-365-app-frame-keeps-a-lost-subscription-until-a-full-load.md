@@ -1,6 +1,6 @@
 # BUG-365: The App Frame Keeps a Lost Subscription Until a Full Load
 
-**Status:** Verifying — the dev-preview check, then promotion to main and the production check; due 2026-10-29
+**Status:** Verifying — the owner's no-card production trial check, before the first live sale; due 2026-11-08
 **Priority:** P3
 **Date:** 2026-10-22
 
@@ -62,8 +62,8 @@ Option 1, chosen by the owner on 2026-10-22: a page whose data check finds no su
 
 - [x] Red first, for the server pages: the helper and the dashboard, bookmarks and history pages redirect a learner whose data check returns `UNSUBSCRIBED` to Pricing. Removing the call fails each test.
 - [x] Red first, for the browser pages: `redirectOnUnsubscribed` navigates to Pricing on `UNSUBSCRIBED` and returns the result. The import scan failed while 14 hooks imported actions directly. With one client action unwrapped, the scan fails; the page tests alone did not, as the adversarial review showed.
-- [ ] Dev preview: lose entitlement with the app open, for example by canceling immediately in the Stripe sandbox. Navigating in the app, and acting inside a practice session, each land on Pricing. Record whether the Billing observation was a client navigation (Network panel, Preserve log).
-- [ ] Production after promotion.
+- [x] Dev preview: lose entitlement with the app open, for example by canceling immediately in the Stripe sandbox. Navigating in the app, and acting inside a practice session, each land on Pricing. Record whether the Billing observation was a client navigation (Network panel, Preserve log). *On `5c8c9f2b`, 2026-10-28 and 10-29:* the subscription was canceled immediately in the Stripe sandbox at 19:48:08Z with the app open in two tabs, and its deletion webhook was delivered with a 2xx. Billing then showed "Canceled" under the stale trial banner through a client navigation: an RSC fetch with no document request. Navigating to the dashboard landed on `/pricing?reason=subscription_required` without the app frame. In a practice question opened before the cancel, **Try again** replaced the page with Pricing. A first **Submit** there had returned "Invalid input" instead: the question had been open more than 24 hours, an older, separate defect.
+- [ ] Production, before the first live sale: the owner, on their own account, starts a no-card trial; cancels it in the live portal, and the frame and Billing say the cancellation is scheduled with no renewal or add-card copy, and Renew restores the add-card copy (BUG-364); then, with the app open, cancels it immediately in the live Dashboard, and navigating in the app lands on Pricing (BUG-365). The tree is the one verified on the dev preview; this checks the live portal's cancellation mode and the live webhook. Starting a live trial is the owner's decision; if they decline, the record closes with this check as a Waiting row whose trigger is the first live sale. *Re-dated 2026-11-01:* promotion #1613 released the fix on 2026-11-01 (`e701fa8d`, the tree tested on the preview).
 
 ## Related
 
