@@ -1,6 +1,6 @@
 # DEBT-529: The Per-Screen Request Protocols Rely on a Contract Nothing Checks, and Their Safe Defaults Are Opt-In
 
-**Status:** Verifying — promotion to main; due 2026-10-31
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-31
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -87,7 +87,7 @@ Another defect alone neither satisfies option 2 nor authorizes it. Option 1 leav
 
 - [x] A test fails when a contract entry names a declaration or running test that no longer exists in its file. The guard failed on the original contract; its missing, moved, renamed, commented-out and skipped proof cases pass.
 - [x] Keyed actions require a cache policy; shared flow helpers require the complete sequencing pair. Behavioral protocol cases remain in place.
-- [ ] Promote the fix to main.
+- [x] Promoted to `main` by #1613 (`e701fa8d`) on 2026-11-01; production has served it since 13:52 UTC.
 
 ## Related
 

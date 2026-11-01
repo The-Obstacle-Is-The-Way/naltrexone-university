@@ -1,6 +1,6 @@
 # BUG-361: The Rule Register Counts Unreachable Test Declarations
 
-**Status:** Verifying — promotion to main; due 2026-10-26
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -48,6 +48,7 @@ Corrected 2026-10-19: bind reproduction claims to the audited baseline and recor
 - [x] An uncalled function, a zero-iteration loop, code after a `return` and an empty `.each` table cannot satisfy a proving-test entry.
 - [x] Supported module and suite declarations still pass; existing skip and conditional controls remain effective.
 - [x] Check the live register and run its proving suites after the fix: the unit, browser and integration reporters each issued a passing full-lane receipt.
+- [x] Promoted to `main` by #1613 (`e701fa8d`) on 2026-11-01; production has served it since 13:52 UTC.
 
 ## Related
 

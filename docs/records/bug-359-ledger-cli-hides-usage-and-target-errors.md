@@ -1,6 +1,6 @@
 # BUG-359: The Ledger CLI Hides Usage and Target Errors
 
-**Status:** Verifying — promotion to main; due 2026-10-26
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -42,6 +42,7 @@ Corrected 2026-10-19: bind reproduction claims to the audited baseline and recor
 
 - [x] Safe input failures exit nonzero with actionable messages, red first.
 - [x] Unknown/driver errors remain sanitized; typed ledger failures retain their code and remedy.
+- [x] Promoted to `main` by #1613 (`e701fa8d`) on 2026-11-01; production has served it since 13:52 UTC.
 
 ## Related
 

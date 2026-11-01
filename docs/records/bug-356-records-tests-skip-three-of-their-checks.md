@@ -1,6 +1,6 @@
 # BUG-356: The Records Tests Skip Their Ledger-Line, Status and Queue-Review Checks
 
-**Status:** Verifying — promotion to main; due 2026-10-26
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -42,6 +42,7 @@ Corrected 2026-10-19: bind reproduction claims to the audited baseline and recor
 
 - [x] Live-tree tests fail on a malformed ledger line, an unrecognized status and an unreadable queue-review date (shown red with a temporary edit), and pass on the real tree.
 - [x] The command and the tests share one list of blocking findings.
+- [x] Promoted to `main` by #1613 (`e701fa8d`) on 2026-11-01; production has served it since 13:52 UTC.
 
 ## Related
 

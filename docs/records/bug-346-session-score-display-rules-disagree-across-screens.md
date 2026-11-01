@@ -1,6 +1,6 @@
 # BUG-346: One Session Shows 0% in History and a Dash on Its Summary and the Dashboard
 
-**Status:** Verifying — promotion to main; due 2026-10-31
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-31
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -72,7 +72,7 @@ The shared render test failed first on the dashboard and summary for one unanswe
 - [x] One test renders the same tutor session through History, the dashboard and the summary, and they agree.
 - [x] All four session screens call the shared score presenter; none keeps its own percentage formatter.
   - Corrected 2026-10-19: this item first read "No screen computes the score label or percent format itself". The shared presenter owns the percentage-or-dash decision; the dashboard and History still write their own "X/Y correct" text around it.
-- [ ] Promote to `main`; due 2026-10-31.
+- [x] Promoted to `main` by #1613 (`e701fa8d`) on 2026-11-01; production has served it since 13:52 UTC. Before it, practice-core-flows on the dev preview at `4e287f1b` found the same scores on the summary, dashboard and History (2026-10-24).
 
 ## Related
 

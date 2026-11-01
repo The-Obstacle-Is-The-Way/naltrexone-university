@@ -1,6 +1,6 @@
 # BUG-349: The Fake Consent Repository Keeps a Later Termination That Postgres Ignores
 
-**Status:** Verifying — promotion to main of the shared first-observation and retention rule; due 2026-10-31
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-31
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -82,7 +82,7 @@ Eight shared scenarios run against the fake and Postgres: three replay orders, t
 - [x] Retention is computed in one place.
 - [x] The register row for the consent fake names its contract evidence.
 
-- [ ] Promote the fix to main.
+- [x] Promoted to `main` by #1613 (`e701fa8d`) on 2026-11-01; production has served it since 13:52 UTC. On the dev preview at `5c8c9f2b`, an immediate cancel's `customer.subscription.deleted` webhook, which records the termination, was delivered with a 2xx and logged no runtime error (2026-10-28).
 
 ## Related
 

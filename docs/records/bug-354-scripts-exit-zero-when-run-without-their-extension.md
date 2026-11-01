@@ -1,6 +1,6 @@
 # BUG-354: Scripts Exit 0 Without Running When Called Without Their Extension or Through a Symlink
 
-**Status:** Verifying — promotion to main; due 2026-10-26
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -58,6 +58,7 @@ Corrected 2026-10-20: the commands no longer strip a leading `--`. #1567, merged
 - [x] A test runs a script by an extensionless path and by a symlink, and fails while either exits 0 without running.
 - [x] Imports do not execute commands; direct, extensionless and symlink execution work for the supported runtimes. A source scan shows every guarded entry point uses the helper; intentional unconditional thin CLIs remain explicit exceptions.
 - [x] Package scripts exist for the merge guard, the promotion verifier and the record ID, and `AGENTS.md` and the guides use them. They take arguments directly (`pnpm pr:merge-reviewed 1560`); like every strict parser since #1567, each refuses a forwarded `--`.
+- [x] Promoted to `main` by #1613 (`e701fa8d`) on 2026-11-01; production has served it since 13:52 UTC.
 
 ## Related
 

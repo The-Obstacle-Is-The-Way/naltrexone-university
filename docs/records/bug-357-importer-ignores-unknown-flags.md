@@ -1,6 +1,6 @@
 # BUG-357: The Draft Importer Ignores Unknown Flags
 
-**Status:** Verifying — promotion to main; due 2026-10-26
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -41,6 +41,7 @@ Corrected 2026-10-20: option 1 preserved the leading separator; the importer now
 
 - [x] A typo and each unsupported argument exit nonzero and create no output, red first.
 - [x] The supported flags, default write behavior and explicit dry-run remain covered, including the environment seeds' `pnpm content:import:drafts --status published --out <staging>` call; a forwarded `--` is refused before writing.
+- [x] Promoted to `main` by #1613 (`e701fa8d`) on 2026-11-01; production has served it since 13:52 UTC.
 
 ## Related
 
