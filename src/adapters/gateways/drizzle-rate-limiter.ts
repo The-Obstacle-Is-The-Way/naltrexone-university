@@ -11,9 +11,8 @@ import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
 import type { DrizzleDb } from '../shared/database-types';
 import { PRUNE_BATCH_LIMIT } from '../shared/prune-constants';
-import { ONE_MINUTE_MS } from '../shared/rate-limits';
+import { RATE_LIMIT_WINDOW_RETENTION_TARGET_MS } from '../shared/rate-limits';
 
-const RATE_LIMIT_WINDOW_RETENTION_TARGET_MS = 1_440 * ONE_MINUTE_MS;
 const NOOP_LOGGER: Logger = {
   debug: () => undefined,
   info: () => undefined,

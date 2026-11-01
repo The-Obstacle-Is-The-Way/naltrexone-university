@@ -27,19 +27,33 @@ function bucketOf(
 // DEBT-503 item 4, step 1: the renewal job rolls the limiter's counters up
 // by bucket, so every key the limiter writes must land in its own bucket.
 describe('the Clerk backend-call usage buckets', () => {
-  it.each([
-    ['site', clerkBackendCallKeys.site],
-    ['signed-in-session', clerkBackendCallKeys.signedInSession('sess_a')],
-    ['signed-in-address', clerkBackendCallKeys.signedInAddress('203.0.113.7')],
-    ['signed-in-address', clerkBackendCallKeys.signedInAddress('2001:db8::7')],
-    ['session', clerkBackendCallKeys.session('sess_a')],
-    ['address', clerkBackendCallKeys.address('203.0.113.7')],
-    ['address', clerkBackendCallKeys.address('2001:db8::7')],
-    ['call-failed', clerkBackendCallKeys.callFailed],
-    ['token-rejected', clerkBackendCallKeys.tokenRejected],
-  ])('rolls the limiter key for %s up into that bucket', (bucket, key) => {
-    expect(bucketOf(key, CLERK_BACKEND_CALL_USAGE_BUCKETS)).toBe(bucket);
-  });
+  // Typed by the builders, so a new limiter key cannot go without a bucket
+  // and fall into the address bucket, whose prefix it would share.
+  const bucketOfBuilder: Record<keyof typeof clerkBackendCallKeys, string> = {
+    address: 'address',
+    session: 'session',
+    signedInAddress: 'signed-in-address',
+    signedInSession: 'signed-in-session',
+    site: 'site',
+    callFailed: 'call-failed',
+    tokenRejected: 'token-rejected',
+  };
+
+  it.each(
+    Object.entries(clerkBackendCallKeys).flatMap(([builder, build]) =>
+      (typeof build === 'string'
+        ? [build]
+        : ['203.0.113.7', '2001:db8::7', 'sess_a'].map((id) => build(id))
+      ).map((key) => ({ builder, key })),
+    ),
+  )(
+    "rolls $key, from the $builder builder, up into that builder's bucket",
+    ({ builder, key }) => {
+      expect(bucketOf(key, CLERK_BACKEND_CALL_USAGE_BUCKETS)).toBe(
+        bucketOfBuilder[builder as keyof typeof clerkBackendCallKeys],
+      );
+    },
+  );
 
   it('rolls up no other key', () => {
     expect(

@@ -606,12 +606,13 @@ export const pendingStripeCancellations = pgTable(
 );
 
 // clerk_backend_call_usage (composite PK: bucket + period_start)
-// DEBT-503 item 4, step 1: the renewal job's daily roll-up of the Clerk
-// limiter's per-minute counters in rate_limits, one row per bucket, with no
-// address or session in it. Each bucket's period starts where its previous
-// roll-up ended, at most a day back, since rate_limits keeps counters for a
-// day only; so a bucket's rows never overlap. counted_over_limit is how far
-// past the limit the counts went: requests refused for the request buckets,
+// DEBT-503 item 4, step 1: the renewal and reconcile jobs' roll-up of the
+// Clerk limiter's per-minute counters in rate_limits, one row per bucket, with
+// no address or session in it. Each bucket's period starts where its previous
+// row ended, at most a day back, since rate_limits keeps counters for a day
+// only; runs hold an advisory lock, so a bucket's rows never overlap.
+// counted_over_limit is how far past per_minute_limit the counts went: the
+// requests refused for the request buckets while that limit applied, and the
 // failures past the alert threshold for call-failed and token-rejected.
 export const clerkBackendCallUsage = pgTable(
   'clerk_backend_call_usage',

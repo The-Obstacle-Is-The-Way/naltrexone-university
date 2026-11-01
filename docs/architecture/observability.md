@@ -65,32 +65,37 @@ DEBT-505 added that
 path for the conditions a person must act on: see Operational alerts below.
 
 Clerk's Backend API usage outlasts the logs in `clerk_backend_call_usage`
-(DEBT-503 item 4, step 1). Each daily run of the renewal job rolls the Clerk
-limiter's per-minute counters up before `rate_limits` prunes them, a day after
-their minute: one row per bucket, with no address or session in it. A bucket's
-row starts where its previous row ended, at most a day back, so rows never
-overlap and can be added up.
+(DEBT-503 item 4, step 1). The reconcile and renewal jobs both roll the Clerk
+limiter's per-minute counters up, one row per bucket with no address or session
+in it, before `rate_limits` prunes them a day after their minute. A bucket's row
+starts where its previous row ended, and runs hold an advisory lock, so rows
+never overlap and can be added up. On Vercel's daily schedule, the two jobs'
+runs are always less than a day apart, so the rows also leave no gap. After a
+missed day, a row starts at the oldest minute still kept, and the gap shows
+between one row's `period_end` and the next one's `period_start`.
 
 - `busiest_minute` against `per_minute_limit` is the bucket's headroom.
 - `windows_over_limit` counts the minutes that went over, per address or
   session in those buckets.
 - `counted_over_limit` is the requests refused; for `call-failed` and
   `token-rejected`, item 3's alert counters, it is the failures past the alert
-  threshold.
-- `counted` in `session` or `signed-in-session` shows whether production
-  refreshes sessions on the server at all.
+  threshold. It is measured against the limit at the time of the roll-up, so
+  roll up before a retuned limit deploys.
+- `counted` in `signed-in-session` shows whether production refreshes sessions
+  Clerk signed. `session` counts every refresh-shaped request whose token the
+  proxy could not verify, forged ones included.
 
-The job's response reports `clerkBackendCallUsage`: `rolled_up`, `up_to_date`
-when every bucket was rolled up within the minute, or `unavailable`, logged as
-`clerk_backend_call_usage_roll_up_unavailable`. The owner reads the rows in
-production with:
+Each job's response reports `clerkBackendCallUsage`: `rolled_up`, `up_to_date`
+when every bucket was already rolled up to the minute before last, or
+`unavailable`, logged as `clerk_backend_call_usage_roll_up_unavailable`. The
+owner reads the rows in production with:
 
 ```sql
-SELECT bucket, period_end, per_minute_limit, busiest_minute,
+SELECT bucket, period_start, period_end, per_minute_limit, busiest_minute,
   windows_over_limit, counted_over_limit, counted
 FROM clerk_backend_call_usage
 WHERE period_end > now() - interval '30 days'
-ORDER BY bucket, period_end;
+ORDER BY bucket, period_start;
 ```
 
 ## Operational alerts

@@ -20,6 +20,7 @@ import {
   type ScheduledWorkflows,
   UPSTREAM_ADVISORY_WATCH_WORKFLOW,
 } from '@/src/adapters/jobs/scheduled-checks';
+import { CLERK_BACKEND_CALL_USAGE_BUCKETS } from '@/src/adapters/shared/clerk-backend-call-keys';
 import { FakeTransactionalEmailGateway } from '@/src/application/test-helpers/fakes';
 import { DAY_MS } from '@/src/domain/services';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
@@ -281,8 +282,18 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
+  // The routes' real wiring rolls up the production buckets (DEBT-503).
+  await db.delete(schema.clerkBackendCallUsage).where(
+    inArray(
+      schema.clerkBackendCallUsage.bucket,
+      CLERK_BACKEND_CALL_USAGE_BUCKETS.map(({ bucket }) => bucket),
+    ),
+  );
   await closeConnection(sql);
 });
+
+// Either answer means the roll-up ran; a broken wiring answers 'unavailable'.
+const ROLLED_UP_OR_CURRENT = expect.stringMatching(/^(rolled_up|up_to_date)$/);
 
 describe('reconcile Stripe subscriptions cron route', () => {
   it('runs the production URL through container wiring and persists Stripe state', async () => {
@@ -352,8 +363,10 @@ describe('reconcile Stripe subscriptions cron route', () => {
       updated: number;
       failed: number;
       failures: Array<{ stripeSubscriptionId: string; error: string }>;
+      clerkBackendCallUsage: string;
     };
     expect(result.failures).toEqual([]);
+    expect(result.clerkBackendCallUsage).toEqual(ROLLED_UP_OR_CURRENT);
     expect(result.failed).toBe(0);
     expect(result.scanned).toBeGreaterThanOrEqual(1);
     expect(result.updated).toBe(result.scanned);
@@ -595,6 +608,7 @@ describe('send renewal notices cron route', () => {
       // gives its cycle back for the next run.
       alertDrill: 'not_sent',
       scheduledChecks: 'running',
+      clerkBackendCallUsage: ROLLED_UP_OR_CURRENT,
     });
     await expect(
       db.query.operationalAlertDrills.findFirst({

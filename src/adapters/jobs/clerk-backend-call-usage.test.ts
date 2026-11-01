@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { rollUpClerkBackendCallUsage } from './clerk-backend-call-usage';
 
-// DEBT-503 item 4, step 1: the renewal job's roll-up step. The roll-up's own
-// behaviour runs on real Postgres.
+// DEBT-503 item 4, step 1: the reconcile and renewal jobs' roll-up step. The roll-up's own
+// behavior runs on real Postgres.
 describe('rollUpClerkBackendCallUsage', () => {
   it('reports rows written as rolled up', async () => {
     const logger = new FakeLogger();
