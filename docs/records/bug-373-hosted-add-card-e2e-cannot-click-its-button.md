@@ -23,7 +23,7 @@ The hosted lane is observational. `.github/workflows/stripe-hosted-checkout-smok
 
 ## Impact
 
-No user-facing failure is known. The same button opens its dialog in `trial-payment-consent-dialog.browser.spec.tsx`, and the lane's other cases passed in both runs. The cost is a flaky observational lane, which hides a real add-card regression behind a known flake.
+No user-facing failure is known. The same button opens its dialog in `trial-payment-consent-dialog.browser.spec.tsx`, and the lane's other cases passed in both runs. The cost is a flaky observational lane: a real add-card regression could pass unnoticed as the known flake.
 
 ## Options
 
