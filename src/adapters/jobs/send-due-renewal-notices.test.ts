@@ -149,6 +149,8 @@ function createDeps(): {
         claim: async () => false,
         release: async () => {},
       },
+      // DEBT-503: every bucket was already rolled up, by default.
+      clerkBackendCallUsage: { rollUp: async () => 0 },
       annualPlan: {
         planName: 'Pro Annual',
         amountCents: 19900,
@@ -306,6 +308,7 @@ describe('sendDueRenewalNotices job', () => {
       durationMs: 250,
       alertDrill: 'not_due',
       scheduledChecks: 'running',
+      clerkBackendCallUsage: 'up_to_date',
     });
   });
 
@@ -704,5 +707,55 @@ describe('the scheduled checks', () => {
       kind: 'scheduled_checks_stopped',
       count: 1,
     });
+  });
+});
+
+// DEBT-503 item 4, step 1: the job rolls the Clerk limiter's counters up
+// daily, before they are pruned a day after their minute.
+describe('the Clerk backend-call usage roll-up', () => {
+  it('rolls the usage up and reports it', async () => {
+    const { deps } = createDeps();
+    deps.clerkBackendCallUsage = { rollUp: async () => 7 };
+
+    const result = await sendDueRenewalNotices(
+      { subscriptionLimit: 10, dispatchLimit: 10 },
+      deps,
+    );
+
+    expect(result.clerkBackendCallUsage).toBe('rolled_up');
+  });
+
+  it('rolls up before the notices, so a failing notice query does not skip it', async () => {
+    const { deps, listDue } = createDeps();
+    let rolledUp = false;
+    deps.clerkBackendCallUsage = {
+      rollUp: async () => {
+        rolledUp = true;
+        return 7;
+      },
+    };
+    listDue.mockRejectedValueOnce(new Error('query failed'));
+
+    await expect(
+      sendDueRenewalNotices({ subscriptionLimit: 10, dispatchLimit: 10 }, deps),
+    ).rejects.toThrow('query failed');
+    expect(rolledUp).toBe(true);
+  });
+
+  it('still runs the notices when the roll-up fails', async () => {
+    const { deps, execute } = createDeps();
+    deps.clerkBackendCallUsage = {
+      rollUp: async () => {
+        throw new Error('database unavailable');
+      },
+    };
+
+    const result = await sendDueRenewalNotices(
+      { subscriptionLimit: 10, dispatchLimit: 10 },
+      deps,
+    );
+
+    expect(result.clerkBackendCallUsage).toBe('unavailable');
+    expect(execute).toHaveBeenCalled();
   });
 });

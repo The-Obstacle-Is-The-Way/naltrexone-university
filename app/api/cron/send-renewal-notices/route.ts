@@ -5,6 +5,7 @@ import {
   MONTHLY_ANNIVERSARY_NOTICE_VERSION,
   PRICING_DATA,
 } from '@/lib/pricing-data';
+import { clerkBackendCallUsageRollUps } from '@/src/adapters/jobs/clerk-backend-call-usage';
 import { operationalAlertDrillCycles } from '@/src/adapters/jobs/operational-alert-drill';
 import {
   listActiveMonthlySubscriptions,
@@ -16,6 +17,7 @@ import {
   SEND_RENEWAL_NOTICES_MONITOR,
   sendDueRenewalNotices,
 } from '@/src/adapters/jobs/send-due-renewal-notices';
+import { CLERK_BACKEND_CALL_USAGE_BUCKETS } from '@/src/adapters/shared/clerk-backend-call-keys';
 import { withCronMonitor } from '@/src/adapters/shared/cron-monitor';
 import { createRenewalNoticeCronHandler } from './route-handler';
 
@@ -47,6 +49,10 @@ export function createSendRenewalNoticesCronHandler(
             alerts: container.createOperationalAlerts(),
             alertDrillCycles: operationalAlertDrillCycles({ db: container.db }),
             scheduledWorkflows: container.createScheduledWorkflows(),
+            clerkBackendCallUsage: clerkBackendCallUsageRollUps({
+              db: container.db,
+              buckets: CLERK_BACKEND_CALL_USAGE_BUCKETS,
+            }),
             annualPlan: {
               planName: PRICING_DATA.annual.name,
               amountCents: PRICING_DATA.annual.amountCents,

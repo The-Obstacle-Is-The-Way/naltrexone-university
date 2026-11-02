@@ -26,6 +26,7 @@ const successResult = {
   durationMs: 250,
   alertDrill: 'not_due',
   scheduledChecks: 'running',
+  clerkBackendCallUsage: 'rolled_up',
 } as const;
 
 function createHarness(input?: {
