@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ClerkBackendCallUsageOutcome } from '@/src/adapters/jobs/clerk-backend-call-usage';
 import type { DrainPendingStripeCustomerCleanupsOutput } from '@/src/adapters/jobs/drain-pending-stripe-customer-cleanups';
 import type {
   ReconcileAllStripeSubscriptionPagesInput,
@@ -59,12 +60,14 @@ function createHarness(input?: {
   allPagesError?: Error;
   drainResult?: DrainPendingStripeCustomerCleanupsOutput;
   drainError?: Error;
+  clerkBackendCallUsage?: ClerkBackendCallUsageOutcome;
 }) {
   const logger = new FakeLogger();
   const rateLimiter = input?.rateLimiter ?? new FakeRateLimiter();
   const pageCalls: ReconcileStripeSubscriptionsInput[] = [];
   const allPagesCalls: ReconcileAllStripeSubscriptionPagesInput[] = [];
   const drainCalls: DrainPendingStripeCustomerCleanupsRequest[] = [];
+  let rollUps = 0;
   const alerts = new FakeOperationalAlerts();
   const dependencies: ReconcileStripeSubscriptionsCronHandlerDependencies = {
     cronSecret: input?.omitCronSecret
@@ -88,6 +91,10 @@ function createHarness(input?: {
       return input?.drainResult ?? drainResult;
     },
     operationalAlerts: alerts,
+    rollUpClerkBackendCallUsage: async () => {
+      rollUps += 1;
+      return input?.clerkBackendCallUsage ?? 'up_to_date';
+    },
   };
   return {
     handle: createReconcileStripeSubscriptionsCronRouteHandler(
@@ -99,6 +106,7 @@ function createHarness(input?: {
     allPagesCalls,
     drainCalls,
     alerts,
+    rollUps: () => rollUps,
   };
 }
 
@@ -172,6 +180,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
         hasMore: false,
         dryRun: false,
       },
+      clerkBackendCallUsage: 'up_to_date',
     });
     expect(harness.allPagesCalls).toEqual([{ limit: 100, dryRun: false }]);
     expect(harness.pageCalls).toEqual([]);
@@ -600,6 +609,43 @@ describe('a reconcile run that stops early', () => {
     await handle(request({ query: '?scope=page' }));
 
     expect(alerts.raised).toEqual([]);
+  });
+});
+
+// DEBT-503 item 4, step 1: this job also rolls the Clerk limiter's counters
+// up, as the renewal job does an hour later, so runs on Vercel's daily
+// schedule are always less than a day apart.
+describe("the Clerk limiter's usage roll-up", () => {
+  it('rolls the counters up and reports it', async () => {
+    const harness = createHarness({ clerkBackendCallUsage: 'rolled_up' });
+
+    const response = await harness.handle(request());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      clerkBackendCallUsage: 'rolled_up',
+    });
+    expect(harness.rollUps()).toBe(1);
+  });
+
+  it('still rolls up when the reconciliation and the drain fail', async () => {
+    const harness = createHarness({
+      allPagesError: new Error('boom'),
+      drainError: new Error('boom'),
+    });
+
+    const response = await harness.handle(request());
+
+    expect(response.status).toBe(500);
+    expect(harness.rollUps()).toBe(1);
+  });
+
+  it('rolls up nothing for an unauthorized request', async () => {
+    const harness = createHarness();
+
+    await harness.handle(request({ authorization: null }));
+
+    expect(harness.rollUps()).toBe(0);
   });
 });
 

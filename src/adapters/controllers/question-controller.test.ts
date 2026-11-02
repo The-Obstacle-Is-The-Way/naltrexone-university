@@ -20,6 +20,7 @@ import {
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { GetNextQuestionOutput } from '@/src/application/use-cases/get-next-question';
 import {
+  SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
   type SubmitAnswerOutput,
   SubmitAnswerUseCase,
   type SubmitAnswerWriteTransaction,
@@ -718,14 +719,32 @@ describe('question-controller', () => {
       });
     });
 
-    it('returns VALIDATION_ERROR when timeSpentSeconds exceeds 24 hours', async () => {
+    it('passes a time over a day to the use case (BUG-371)', async () => {
       const deps = createDeps();
 
       const result = await submitAnswer(
         {
           questionId: '11111111-1111-1111-1111-111111111111',
           choiceId: '22222222-2222-2222-2222-222222222222',
-          timeSpentSeconds: 86401,
+          timeSpentSeconds: SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS + 1,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({ ok: true });
+      expect(deps.submitAnswerUseCase.inputs[0]).toMatchObject({
+        timeSpentSeconds: SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS + 1,
+      });
+    });
+
+    it('returns VALIDATION_ERROR when timeSpentSeconds is fractional', async () => {
+      const deps = createDeps();
+
+      const result = await submitAnswer(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          choiceId: '22222222-2222-2222-2222-222222222222',
+          timeSpentSeconds: 1.5,
         },
         deps,
       );
@@ -737,6 +756,7 @@ describe('question-controller', () => {
           fieldErrors: { timeSpentSeconds: expect.any(Array) },
         },
       });
+      expect(deps.submitAnswerUseCase.inputs).toEqual([]);
     });
 
     it('returns NOT_FOUND when use case throws ApplicationError', async () => {

@@ -356,7 +356,7 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm content:hold \
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
 
-Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published (DEBT-483).
+Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published (DEBT-483). The bootstrap has no supported undo, so take a restore point just before applying it ([Database Rollbacks](../guides/operations/database-recovery.md#restore-point-before-a-risky-production-data-change)).
 
 **Read-only live-key comparison (BUG-351).** Before the bootstrap, the owner compares production's published current answer keys with one commit of the content repository's `main`: with an explicit authorized `DATABASE_URL`, `pnpm content:keys:compare --repo "$CONTENT_REPOSITORY" --commit "<full-commit-id>"`. It reads the commit through the same archive reader and parser as staging, compares each correct choice's label and normalized text as the release planner does, and prints only counts and the commit. Record that full commit ID in BUG-351: the first release after the bootstrap names it as `--baseline`.
 

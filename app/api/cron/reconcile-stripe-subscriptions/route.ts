@@ -1,10 +1,15 @@
 import { createContainer } from '@/lib/container';
 import { limitStripeSubscriptionRequests } from '@/src/adapters/gateways/stripe/stripe-request-limits';
 import { deleteStripeCustomer } from '@/src/adapters/gateways/stripe-customer-deleter';
+import {
+  clerkBackendCallUsageRollUps,
+  rollUpClerkBackendCallUsage,
+} from '@/src/adapters/jobs/clerk-backend-call-usage';
 import { drainPendingStripeCustomerCleanups } from '@/src/adapters/jobs/drain-pending-stripe-customer-cleanups';
 import { reconcileAllStripeSubscriptionPages } from '@/src/adapters/jobs/reconcile-all-stripe-subscription-pages';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
+import { CLERK_BACKEND_CALL_USAGE_BUCKETS } from '@/src/adapters/shared/clerk-backend-call-keys';
 import { createReconcileStripeSubscriptionsCronRouteHandler } from './route-handler';
 
 // Next.js requires route-segment configuration to be a statically analyzable literal.
@@ -111,6 +116,14 @@ export function createReconcileStripeSubscriptionsCronHandler(
               container.logger,
               stripeCustomerId,
             ),
+          logger: container.logger,
+        }),
+      rollUpClerkBackendCallUsage: () =>
+        rollUpClerkBackendCallUsage({
+          rollUps: clerkBackendCallUsageRollUps({
+            db: container.db,
+            buckets: CLERK_BACKEND_CALL_USAGE_BUCKETS,
+          }),
           logger: container.logger,
         }),
     };

@@ -20,6 +20,32 @@ Preferred order of operations:
 
 Treat schema rollback as incident response work, not a routine deploy step.
 
+## Restore Point Before a Risky Production Data Change
+
+Point-in-time restore reaches back only as far as the project's history window:
+6 hours on Neon's Free plan, and 1 day by default on paid plans, which Launch
+can raise to 7 days (DEBT-534 records production's plan). A damaging change
+found after the window has passed cannot be undone that way. So before any
+production change that writes data in bulk, such as the content bootstrap, a
+production seed or a data fix, the owner takes a restore point:
+
+1. In the Neon Console, opened from Vercel Storage → `naltrexone-db`, open
+   **Backup & restore** and create a manual snapshot of `main` named
+   `pre-YYYYMMDD-<change>`, expiring in 7 days. Free allows one manual
+   snapshot, so delete an older one first. A snapshot keeps its state until it
+   expires, whatever the history window. Before step 2, confirm the snapshot
+   is listed there, and record its time beside the change.
+2. Make the change, then check its result straight away.
+3. If the change went wrong, restore from the snapshot:
+   - A **multi-step restore** creates a new branch from the snapshot, to
+     inspect and copy rows back from while `main` keeps serving.
+   - A **one-step restore** replaces `main` with the snapshot and keeps its
+     connection string. Every write since the snapshot moves to the
+     `main (old)` backup branch it creates. Reconcile them with the next
+     section's steps, reading `main (old)` wherever they name Instant
+     Restore's timestamped backup branch, then confirm `/api/health` reports
+     the database.
+
 ## Neon Instant Restore: Recovery-Point Loss and Reconciliation
 
 **RPO warning:** [Neon Instant Restore](https://neon.com/docs/introduction/branch-restore)

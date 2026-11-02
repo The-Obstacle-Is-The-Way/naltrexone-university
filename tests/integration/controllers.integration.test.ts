@@ -18,7 +18,10 @@ import {
 import { FinalizeExamAnswersUseCase } from '@/src/application/use-cases/finalize-exam-answers';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
 import { SaveExamDraftAnswerUseCase } from '@/src/application/use-cases/save-exam-draft-answer';
-import { SubmitAnswerUseCase } from '@/src/application/use-cases/submit-answer';
+import {
+  SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
+  SubmitAnswerUseCase,
+} from '@/src/application/use-cases/submit-answer';
 
 import {
   cleanupAfterEach,
@@ -131,6 +134,63 @@ describe('question controllers (integration)', () => {
       },
       isCorrect: true,
     });
+  });
+
+  it('BUG-371 stores a day when an answer carries more than a day', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-bug371-submit-cap-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const questions = new DrizzleQuestionRepository(db);
+    const attempts = new DrizzleAttemptRepository(db);
+    const sessions = new DrizzlePracticeSessionRepository(db, () => new Date());
+    const logger = new FakeLogger();
+    const deps: QuestionControllerDeps = {
+      authGateway: createAuthGateway(user),
+      logger,
+      rateLimiter: new FakeRateLimiter(),
+      idempotencyKeyRepository: new DrizzleIdempotencyKeyRepository(
+        db,
+        () => new Date(),
+      ),
+      now: () => new Date(),
+      checkEntitlementUseCase: { execute: async () => ({ isEntitled: true }) },
+      getNextQuestionUseCase: new GetNextQuestionUseCase(
+        questions,
+        attempts,
+        sessions,
+        () => new Date(),
+      ),
+      submitAnswerUseCase: new SubmitAnswerUseCase(
+        questions,
+        attempts,
+        sessions,
+        logger,
+      ),
+    };
+
+    const result = await submitAnswer(
+      {
+        questionId: question.id,
+        choiceId: question.correctChoiceId,
+        timeSpentSeconds: SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS + 1,
+      },
+      deps,
+    );
+
+    expect(result).toMatchObject({ ok: true, data: { isCorrect: true } });
+    const inserted = await attempts.findByUserId(user.id, {
+      limit: 10,
+      offset: 0,
+    });
+    expect(inserted).toEqual([
+      expect.objectContaining({
+        questionId: question.id,
+        timeSpentSeconds: SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
+      }),
+    ]);
   });
 
   it('BUG-237 rejects active-exam submitAnswer without attempt or latest-state writes', async () => {
