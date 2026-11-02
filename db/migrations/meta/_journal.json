@@ -379,6 +379,13 @@
       "when": 1792438314591,
       "tag": "0053_bug351_source_watermark",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793550089300,
+      "tag": "0054_debt503_clerk_backend_call_usage",
+      "breakpoints": true
     }
   ]
 }

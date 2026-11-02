@@ -9,6 +9,10 @@
 
 export const ONE_MINUTE_MS = 60_000;
 
+// The limiter prunes a counter once its window started this long ago, so no
+// window may be longer, and a roll-up of the counters must run within it.
+export const RATE_LIMIT_WINDOW_RETENTION_TARGET_MS = 1_440 * ONE_MINUTE_MS;
+
 export const STRIPE_WEBHOOK_RATE_LIMIT = {
   limit: 1000,
   windowMs: ONE_MINUTE_MS,
