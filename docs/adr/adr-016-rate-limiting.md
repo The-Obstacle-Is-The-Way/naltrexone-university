@@ -145,7 +145,7 @@ Corrections of fact. The decision is unchanged.
 
 ## Amendment — 2026-11-01
 
-An addition to section 4, Key Strategy, after BUG-372. The decision is unchanged.
+An addition to section 4, Key Strategy. The decision is unchanged.
 
 - **Every key counts, and keys that differ count apart.** `rate_limits.key` holds `RATE_LIMIT_KEY_MAX_LENGTH` (255) characters and, as Postgres text, no NUL. `DrizzleRateLimiter` stores a key as it is only when the column holds it exactly: it fits, holds no NUL and no lone UTF-16 surrogate, which the driver would write as U+FFFD, and does not contain the digest form. Any other key is stored as its head, which keeps the family its prefix names, then `#sha256:` and the SHA-256 digest of its UTF-16 code units.
 - **A value the sender chooses is bounded where it is read.** A token's claims, before its signature is checked, go into a key only through an allowlist or as their digest: the Clerk limiter (`lib/clerk-backend-call-limit.ts`) keeps a session ID shaped like Clerk's own and keys any other by its digest. A client address enters keys as `lib/request-ip.ts` reads it, which in production is the header Vercel sets; the limiter's storage bounds it like any other key.
