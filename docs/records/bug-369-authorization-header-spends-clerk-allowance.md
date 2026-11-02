@@ -1,6 +1,6 @@
 # BUG-369: An Authorization Header Lets Requests Spend Clerk's Backend API Allowance Uncounted
 
-**Status:** Verifying — the proxy's 401 and both crons' next runs in production; due 2026-11-07
+**Status:** Verifying — every check is recorded below; #1621 closes it; due 2026-11-07
 **Priority:** P2
 **Date:** 2026-10-24
 
@@ -63,7 +63,7 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - It answers 401 to every other request that carries an `Authorization` header, public resources included, before BUG-323's limiter and before Clerk.
   - The cron routes' public-route patterns come from the same list.
 - **Docs.** `docs/architecture/integrations/clerk.md` states the rule, and `docs/architecture/security.md` links to it.
-- **Follow-up.** Tell Clerk about both shapes with DEBT-503 item 2's report (option 3). That is the owner's action.
+- **Follow-up.** Tell Clerk about both shapes with DEBT-503 item 2's report (option 3). That is the owner's action, and it now lives in DEBT-503 item 2.
 
 ## Verification
 
@@ -85,12 +85,10 @@ Options 3 then 1, under the owner's decision of 2026-10-24.
   - with the header, on `www`, the `vercel.app` alias and a deployment URL.
 
   Requests without the header got 200. A wrong, 64-hex secret on either cron route reached the route's own 401.
-- [ ] In production, after release, two checks; due 2026-11-07.
-  - A plain `Authorization` value on an unknown `/api/cron/` path, which the firewall rule lets through, gets the proxy's 401. On 2026-10-24, before the fix, Clerk ran and the route answered 404.
-  - The next runs of both crons succeed.
-
-  *Re-dated 2026-10-30 from 2026-10-31:* the fix reaches production with the next promotion, which waits on the owner's last billing QA steps, and the crons run the morning after it.
-- [ ] After those checks, remove the firewall rule and its row under Edge Rules; due 2026-11-07.
+- [x] In production, after release, two checks.
+  - A plain `Authorization` value on an unknown `/api/cron/` path, which the firewall rule lets through, gets the proxy's 401. On 2026-10-24, before the fix, Clerk ran and the route answered 404. **Done 2026-11-01** on the release of Promote #1613: 401.
+  - The next runs of both crons succeed. **Done 2026-11-02:** the reconcile cron answered 200 at 08:50:11Z and the renewal cron 200 at 09:54:04Z, in Vercel's request logs, and the `send-renewal-notices` cron monitor checked in ok at 09:54:09Z.
+- [x] After those checks, remove the firewall rule and its row under Edge Rules. **Done 2026-11-02** at about 14:57:30Z, with DEBT-503's cookie rule, on the release of Promote #1622. After it, the header got the proxy's 401 on `/`, on both cron routes with an `ak_` or a JWT-shaped value, on an unknown `/api/cron/` path and on the deployment's own URL; `www` still redirected to the apex. A request without the header still got 200.
 
 ## Related
 
