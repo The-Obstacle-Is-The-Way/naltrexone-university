@@ -2,8 +2,8 @@
 
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
-**Now** — 2026-11-01.
-- **Verifying, by due date.** BUG-323 10-24; BUG-336 and BUG-338 10-26; BUG-366 11-02; DEBT-505 11-05; BUG-368, BUG-369 and BUG-370 11-07; BUG-353, BUG-364 and BUG-365 11-08; BUG-371 11-15.
+**Now** — 2026-11-02.
+- **Verifying, by due date.** BUG-323 10-24; BUG-336 and BUG-338 10-26; BUG-366 11-02; DEBT-505 11-05; BUG-368 and BUG-370 11-07; BUG-353, BUG-364 and BUG-365 11-08; BUG-371 11-15.
 - **In progress.** DEBT-518, the documentation revamp: records, agent instructions, layout and archive removal are done; the four splits and the pilot follow.
 - **Next.** DEBT-503 item 3's alert-delivery check. Alert kinds for the silent conditions (DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520. BUG-363's investigation, due 11-04. DEBT-525 sets a performance baseline before choosing optimizations.
 - **Before the first live sale.** DEBT-503 item 4's handshake limits, due 11-06; DEBT-501 item 9's reconcile watch, 11-13. Vercel Pro (DEBT-512), Neon Launch (DEBT-534), the live purchase and refund, its receipt checked as Massachusetts' monthly notice (DEBT-501 item 7, DEBT-414 F19c), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription's correction (BUG-343: the re-check, sweep and alerts ship; its option 4 needs the owner's refund decision, follow-up due 10-30). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 39 days before the first live renewal: the identity resolver (DEBT-502), DEBT-511 on it, and Massachusetts' annual notice if it applies (DEBT-414 F19a).
@@ -33,7 +33,6 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[BUG-365](./bug-365-app-frame-keeps-a-lost-subscription-until-a-full-load.md)|The app frame keeps a lost subscription until a full load|P3|Verifying — the owner's no-card production trial check, before the first live sale; due 2026-11-08|
 |[BUG-366](./bug-366-playwright-install-failover-misses-the-runner-mirror-list.md)|The Playwright install's mirror failover misses the runner's mirror list|P2|Verifying — the first scheduled Checkout smoke on `main` after promotion #1613; due 2026-11-02|
 |[BUG-368](./bug-368-a-stripe-call-can-start-with-a-sliver-of-its-budget.md)|A Stripe call can start with only a sliver of its caller's budget left|P3|Verifying — two weeks of CI after the merge without the call-budget refusal test failing; due 2026-11-07|
-|[BUG-369](./bug-369-authorization-header-spends-clerk-allowance.md)|Authorization header spends Clerk's allowance|P2|Verifying — every check is recorded below; #1621 closes it; due 2026-11-07|
 |[BUG-373](./bug-373-hosted-add-card-e2e-cannot-click-its-button.md)|The hosted trial add-card E2E cannot click its add-card button|P3|Open — read the 295a1179 trace's DOM snapshot for the button's box and its ancestors; due 2026-11-05|
 |[BUG-370](./bug-370-scheduled-jobs-hide-why-gh-failed.md)|Scheduled jobs hide why a gh call failed|P3|Verifying — promotion to main, then a passing run of each changed job; due 2026-11-07|
 |[BUG-371](./bug-371-an-answer-after-a-day-fails-as-invalid-input.md)|An answer submitted a day after its question loaded fails as invalid input|P4|Verifying — promotion to main; due 2026-11-15|
