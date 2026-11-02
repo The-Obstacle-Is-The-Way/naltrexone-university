@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { and, sql as drizzleSql, eq, gte, inArray } from 'drizzle-orm';
 import Stripe from 'stripe';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   createReconcileStripeSubscriptionsCronHandler,
   GET as reconcileGet,
@@ -235,6 +235,14 @@ function authorizedRequest(url: string): Request {
   });
 }
 
+// The database's clock when the suite starts, which stamps the usage rows
+// its cron runs write.
+let suiteStartedAt: Date;
+beforeAll(async () => {
+  const [row] = await db.execute<{ now: string }>(drizzleSql`SELECT now()`);
+  suiteStartedAt = new Date(row?.now ?? Number.NaN);
+});
+
 afterEach(async () => {
   for (const subscription of subscriptionsToRestore) {
     await db
@@ -283,10 +291,14 @@ afterEach(async () => {
 
 afterAll(async () => {
   // The routes' real wiring rolls up the production buckets (DEBT-503).
+  // Only the rows this suite wrote go; integration files run one at a time.
   await db.delete(schema.clerkBackendCallUsage).where(
-    inArray(
-      schema.clerkBackendCallUsage.bucket,
-      CLERK_BACKEND_CALL_USAGE_BUCKETS.map(({ bucket }) => bucket),
+    and(
+      inArray(
+        schema.clerkBackendCallUsage.bucket,
+        CLERK_BACKEND_CALL_USAGE_BUCKETS.map(({ bucket }) => bucket),
+      ),
+      gte(schema.clerkBackendCallUsage.createdAt, suiteStartedAt),
     ),
   );
   await closeConnection(sql);
