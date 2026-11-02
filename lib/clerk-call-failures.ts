@@ -1,3 +1,4 @@
+import { clerkBackendCallKeys } from '@/src/adapters/shared/clerk-backend-call-keys';
 import {
   CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD,
   CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD,
@@ -111,11 +112,11 @@ export async function reportClerkCallFailure(
       const counted = await limiter.limit(
         signature
           ? {
-              key: 'clerk-session-token-rejected:site',
+              key: clerkBackendCallKeys.tokenRejected,
               ...CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD,
             }
           : {
-              key: 'clerk-backend-call-failed:site',
+              key: clerkBackendCallKeys.callFailed,
               ...CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD,
             },
       );

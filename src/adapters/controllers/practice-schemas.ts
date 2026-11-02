@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import {
-  MAX_DRAFT_CUMULATIVE_MS,
   MAX_PAGINATION_LIMIT,
   MAX_PAGINATION_OFFSET,
   MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS,
@@ -53,15 +52,16 @@ export const EndPracticeSessionInputSchema = z
 
 export const DiscardPracticeSessionInputSchema = EndPracticeSessionInputSchema;
 
-// BUG-254: the exam-expiry finalize path may carry exactly one bounded candidate
-// draft for the question on-screen when the timer expired. The server validates
+// BUG-254: the exam-expiry finalize path may carry exactly one candidate draft
+// for the question on-screen when the timer expired. The server validates
 // ownership, membership, choice validity, timing (deadline grace window), and
-// grades it authoritatively. cumulativeMs mirrors the SaveExamDraftAnswer bound.
+// grades it authoritatively. cumulativeMs is the browser's measurement,
+// unbounded above: the exam use cases cap it at a day (BUG-371).
 const FinalDraftAnswerSchema = z
   .object({
     questionId: zUuid,
     selectedChoiceId: zUuid.nullable(),
-    cumulativeMs: z.number().int().min(0).max(MAX_DRAFT_CUMULATIVE_MS),
+    cumulativeMs: z.number().int().min(0),
   })
   .strict();
 
@@ -79,7 +79,7 @@ export const SaveExamDraftAnswerInputSchema = z
     sessionId: zUuid,
     questionId: zUuid,
     selectedChoiceId: zUuid.nullable(),
-    cumulativeMs: z.number().int().min(0).max(MAX_DRAFT_CUMULATIVE_MS),
+    cumulativeMs: z.number().int().min(0),
   })
   .strict();
 

@@ -6,6 +6,7 @@ import {
 } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { getClientIp } from '@/lib/request-ip';
+import { clerkBackendCallKeys } from '@/src/adapters/shared/clerk-backend-call-keys';
 import {
   CLERK_BACKEND_CALL_RATE_LIMIT,
   CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
@@ -251,7 +252,7 @@ type Bucket = {
 
 const SITE_BUCKET: Bucket = {
   limit: 'site',
-  key: 'clerk-backend-call:site',
+  key: clerkBackendCallKeys.site,
   rate: CLERK_BACKEND_CALL_SITE_RATE_LIMIT,
 };
 
@@ -292,7 +293,7 @@ function bucketsFor(
     return [
       {
         limit: 'signed-in-session',
-        key: `clerk-backend-call:signed-in-session:${signed.id}`,
+        key: clerkBackendCallKeys.signedInSession(signed.id),
         rate: CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
       },
       ...(address === 'unknown'
@@ -300,7 +301,7 @@ function bucketsFor(
         : [
             {
               limit: 'signed-in-address' as const,
-              key: `clerk-backend-call:signed-in:${address}`,
+              key: clerkBackendCallKeys.signedInAddress(address),
               rate: CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT,
             },
           ]),
@@ -314,7 +315,7 @@ function bucketsFor(
       : [
           {
             limit: 'address' as const,
-            key: `clerk-backend-call:${address}`,
+            key: clerkBackendCallKeys.address(address),
             rate: CLERK_BACKEND_CALL_RATE_LIMIT,
           },
         ]),
@@ -322,7 +323,7 @@ function bucketsFor(
       ? [
           {
             limit: 'session' as const,
-            key: `clerk-backend-call:session:${session.id}`,
+            key: clerkBackendCallKeys.session(session.id),
             rate: CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
           },
         ]

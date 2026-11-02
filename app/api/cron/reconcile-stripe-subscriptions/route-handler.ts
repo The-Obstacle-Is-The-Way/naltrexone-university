@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import type { ClerkBackendCallUsageOutcome } from '@/src/adapters/jobs/clerk-backend-call-usage';
 import {
   type DrainPendingStripeCustomerCleanupsOutput,
   PENDING_STRIPE_CUSTOMER_CLEANUP_STALE_AFTER_MINUTES,
@@ -67,6 +68,8 @@ export type ReconcileStripeSubscriptionsCronHandlerDependencies = {
     input: DrainPendingStripeCustomerCleanupsRequest,
   ) => Promise<DrainPendingStripeCustomerCleanupsOutput>;
   operationalAlerts: Pick<OperationalAlerts, 'raise'>;
+  /** DEBT-503: the daily roll-up of the Clerk limiter's counters; never throws. */
+  rollUpClerkBackendCallUsage: () => Promise<ClerkBackendCallUsageOutcome>;
 };
 
 function getAuthorizationToken(req: Request): AuthorizationTokenResult {
@@ -212,6 +215,9 @@ async function handleCronRequest(
         )
       : null;
   const reconciliationScope = getReconciliationScope(url);
+  // DEBT-503 item 4, step 1: first, so it runs whatever the reconciliation
+  // and the drain do; the renewal job runs it too, an hour later.
+  const clerkBackendCallUsage = await deps.rollUpClerkBackendCallUsage();
 
   let result:
     | ReconcileStripeSubscriptionsOutput
@@ -288,7 +294,7 @@ async function handleCronRequest(
   }
 
   return NextResponse.json(
-    { ...result, pendingStripeCustomerCleanups },
+    { ...result, pendingStripeCustomerCleanups, clerkBackendCallUsage },
     { status: HTTP_OK },
   );
 }
