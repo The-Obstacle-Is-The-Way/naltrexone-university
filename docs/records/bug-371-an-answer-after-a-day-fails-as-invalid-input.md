@@ -1,6 +1,6 @@
 # BUG-371: An Answer Submitted a Day After Its Question Loaded Fails as Invalid Input
 
-**Status:** Verifying — promotion to main; due 2026-11-15
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-11-15
 **Priority:** P4
 **Date:** 2026-11-01
 
@@ -78,7 +78,7 @@ Option 2, for all three schemas. How long a question was open is the browser's m
   - Each returned an error with field errors under the old schemas (2026-11-01). The exam cases were re-checked by restoring the old limit.
 - [x] The controller and schema tests accept a time over a day and pass it to the use case: `question-controller.test.ts`, `practice-schemas.test.ts` and `practice-controller-exam-draft.test.ts`. The submit and draft-save schemas still refuse a negative or fractional time, and the draft save an infinite or unsafe one; the finalize schema refuses a fractional one. These replace the tests that pinned the rejections (2026-11-01).
 - [x] The use cases' existing cap tests and BUG-238's state-table check still pass (2026-11-01).
-- [ ] Promoted to `main`. No production check follows: the failure is not logged (see Impact), and reproducing it takes a question open for a day.
+- [x] Promoted to `main` by #1622 (`518f94c7`) on 2026-11-02; production has served it since 14:50 UTC. Before the promotion, the dev preview at `4e697ad9` graded a quick-practice answer sent with `timeSpentSeconds` 90,014, and two exam draft saves sent with `cumulativeMs` above 90,000,000, with the page's clock moved 25 hours ahead for those clicks only. No production check follows: the failure is not logged (see Impact), and reproducing it takes a question open for a day.
 
 ## Related
 
