@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, gte, inArray } from 'drizzle-orm';
+import { and, sql as drizzleSql, gte, inArray } from 'drizzle-orm';
 import { NextRequest } from 'next/server';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { rateLimits } from '@/db/schema';
@@ -47,21 +47,25 @@ function handshakeWithSession(sid: string, address: string): NextRequest {
   return request;
 }
 
-// The limiter's own rows for an address, in the minute just counted.
-async function countedSince(address: string, sessionKey: string, since: Date) {
-  return db
-    .select({ key: rateLimits.key })
+// Each key's count over the past hour, which no prune reaches: a counter is
+// pruned only a day after its window started.
+async function countsSince(keys: readonly string[], since: Date) {
+  const rows = await db
+    .select({
+      key: rateLimits.key,
+      total: drizzleSql<number>`sum(${rateLimits.count})::int`,
+    })
     .from(rateLimits)
     .where(
       and(
         gte(rateLimits.windowStart, since),
-        inArray(rateLimits.key, [
-          `clerk-backend-call:${address}`,
-          sessionKey,
-          'clerk-backend-call:site',
-        ]),
+        inArray(rateLimits.key, [...keys]),
       ),
-    );
+    )
+    .groupBy(rateLimits.key);
+  return Object.fromEntries(
+    keys.map((key) => [key, rows.find((row) => row.key === key)?.total ?? 0]),
+  );
 }
 
 // BUG-372, on BUG-323's limiter: whatever a sender puts in an unverified token, the
@@ -74,13 +78,14 @@ describe('limiting requests that make Clerk call its Backend API, on Postgres', 
     'counts a request with a session ID %s, and reports no failure',
     async (_shape, sid) => {
       const address = `2001:db8::${randomUUID().slice(0, 4)}`;
-      const sessionKey = `clerk-backend-call:session:sha256:${createHash('sha256').update(sid).digest('base64url')}`;
-      cleanup.rateLimitKeys.push(
+      const keys = [
         `clerk-backend-call:${address}`,
-        sessionKey,
+        `clerk-backend-call:session:sha256:${createHash('sha256').update(sid).digest('base64url')}`,
         'clerk-backend-call:site',
-      );
-      const since = new Date(Date.now() - 60_000);
+      ];
+      cleanup.rateLimitKeys.push(...keys);
+      const since = new Date(Date.now() - 60 * 60_000);
+      const before = await countsSince(keys, since);
       const failures: unknown[] = [];
 
       const response = await limitClerkBackendCalls(
@@ -91,16 +96,8 @@ describe('limiting requests that make Clerk call its Backend API, on Postgres', 
 
       expect(response).toBeNull();
       expect(failures).toEqual([]);
-      expect(
-        (await countedSince(address, sessionKey, since))
-          .map(({ key }) => key)
-          .sort(),
-      ).toEqual(
-        [
-          `clerk-backend-call:${address}`,
-          sessionKey,
-          'clerk-backend-call:site',
-        ].sort(),
+      await expect(countsSince(keys, since)).resolves.toEqual(
+        Object.fromEntries(keys.map((key) => [key, (before[key] ?? 0) + 1])),
       );
     },
   );

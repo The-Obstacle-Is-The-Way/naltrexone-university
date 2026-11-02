@@ -1,6 +1,6 @@
 # BUG-372: An Unverified Session ID the Key Column Could Not Hold Skipped the Clerk Limiter's Site-Wide Cap
 
-**Status:** Verifying — every check is recorded below; the next pull request touching this folder closes it; due 2026-11-02
+**Status:** Verifying — every check is recorded below; its disclosure pull request, #1621, closes it; due 2026-11-02
 **Priority:** P2
 **Date:** 2026-11-01
 
@@ -22,7 +22,9 @@ A request carrying a Clerk handshake nonce costs Clerk a Backend API lookup; a f
 
 Each one counted per address, at 30 a minute in the proxy and 30 a minute in BUG-323's edge rule. It skipped the 1,000-a-minute site-wide cap, which is what protects Clerk's allowance from a sender rotating addresses.
 
-Found on 2026-11-01 by a second agent's pre-review sweep of DEBT-503 item 4's step 1. It was confirmed by reading the code and by a reproduction test, and kept private until the fix was in production and the owner approved disclosure the same day.
+Found on 2026-11-01 by a second agent's pre-review sweep of DEBT-503 item 4's step 1. It was confirmed by reading the code and by a reproduction test.
+
+This record shipped after its fix, not with it, under the index's exception for an exploitable security finding. The write-up, the reproduction test and the challenge stayed private until the fix was deployed and the owner approved disclosure. The owner chose a fix in a neutral pull request (#1617). Promote #1619 released it on 2026-11-01, and the owner approved disclosure the same evening.
 
 ## Evidence
 
@@ -39,9 +41,9 @@ Found on 2026-11-01 by a second agent's pre-review sweep of DEBT-503 item 4's st
   - The raw-`sid` key reached production with promotion #1386, about 2026-10-06. Before the first live sale, no subscriber was exposed.
   - Sentry's server project holds no `clerk_backend_call_limiter_failed` alert, read on 2026-11-01 by its `alert.kind` tag. The same search finds the drill of 2026-10-09.
   - That alert has existed since 2026-10-08. Before then, a limiter failure was only logged, and production keeps runtime logs for an hour, so those days cannot be checked.
-- **What a sender could have done.** Clerk's production allowance is 1,000 calls per 10 seconds, about 6,000 a minute. At 30 handshakes a minute per address:
-  - about 34 addresses could empty one 10-second window;
-  - about 200 could hold it empty.
+- **What a sender could have done.** Clerk's production allowance is 1,000 calls per 10 seconds, about 6,000 a minute. The proxy and the edge both count an address in fixed one-minute windows, so an address can send its 30 handshakes all within the same 10 seconds:
+  - about 34 addresses could empty one 10-second window that way;
+  - about 200, each sending its 30 a minute, could keep every window empty.
   - While it lasted, returning visitors would have been signed out and new users not provisioned. Open tabs with a valid token are unaffected.
   - With the site-wide cap working, the same sender would only have made returning visitors wait a minute (DEBT-503).
 - **Signals.** Our limiter's only signal was `clerk_backend_call_limiter_failed`, which reads as a database failure. A sender could choose cookies that trip no other alert.

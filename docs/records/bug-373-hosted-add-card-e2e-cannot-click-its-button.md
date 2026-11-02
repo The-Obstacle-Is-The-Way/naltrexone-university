@@ -13,7 +13,7 @@
 1. **The button stays outside the viewport.** In the 295a1179 run, Playwright's click logged 324 retries. Each time, the button was visible, enabled and stable, then "element is outside of the viewport" after scrolling, so the click never ran.
 2. **The click lands but nothing responds.** In the 7437b02d run, the click ran about 20 seconds in, and no request or dialog followed. The test clicks as soon as the URL changes, so a click before the dashboard hydrated is the likely cause; not confirmed.
 
-The hosted lane is observational: CI runs it on a schedule on `main`, and `pnpm test:e2e` (required) does not include it. It still costs every gated push about three minutes and a misleading failure.
+The hosted lane is observational. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs it on `main` daily (`23 9 * * *`) and by manual dispatch, not on pull requests or pushes. `pnpm test:e2e`, which is required, does not include it.
 
 ## Evidence
 
@@ -34,7 +34,7 @@ No user-facing failure is known. The same button opens its dialog in `trial-paym
 ## Verification
 
 - [ ] The cause of each failure is named from its trace, or recorded as unknown with what was checked.
-- [ ] The hosted lane passes the add-card case in ten consecutive local runs after the fix.
+- [ ] After the fix, the add-card case passes in ten consecutive local hosted runs and in the next scheduled hosted run on `main`.
 
 ## Related
 
