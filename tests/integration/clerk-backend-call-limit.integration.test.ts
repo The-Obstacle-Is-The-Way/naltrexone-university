@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, sql as drizzleSql, gte, inArray } from 'drizzle-orm';
+import { and, sql as drizzleSql, eq, gte, inArray, lte } from 'drizzle-orm';
 import { NextRequest } from 'next/server';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { rateLimits } from '@/db/schema';
@@ -16,9 +16,36 @@ const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 const limiter = new DrizzleRateLimiter(db);
 
+const SITE_KEY = 'clerk-backend-call:site';
+// The site counter is shared with every other request, so a test gives back
+// only the counts it added, by window, instead of deleting the counter.
+const siteCountsToGiveBack: Date[] = [];
+
 afterEach(async () => {
+  for (const windowStart of siteCountsToGiveBack.splice(0)) {
+    const where = and(
+      eq(rateLimits.key, SITE_KEY),
+      eq(rateLimits.windowStart, windowStart),
+    );
+    await db
+      .update(rateLimits)
+      .set({ count: drizzleSql`${rateLimits.count} - 1` })
+      .where(where);
+    await db.delete(rateLimits).where(and(where, lte(rateLimits.count, 0)));
+  }
   await cleanupAfterEach(db, cleanup);
 });
+
+// The site counter's count in each window from `since`.
+async function siteWindowsSince(since: Date) {
+  const rows = await db
+    .select({ windowStart: rateLimits.windowStart, count: rateLimits.count })
+    .from(rateLimits)
+    .where(
+      and(eq(rateLimits.key, SITE_KEY), gte(rateLimits.windowStart, since)),
+    );
+  return new Map(rows.map((row) => [row.windowStart.getTime(), row.count]));
+}
 afterAll(async () => {
   await closeConnection(sql);
 });
@@ -78,14 +105,15 @@ describe('limiting requests that make Clerk call its Backend API, on Postgres', 
     'counts a request with a session ID %s, and reports no failure',
     async (_shape, sid) => {
       const address = `2001:db8::${randomUUID().slice(0, 4)}`;
-      const keys = [
+      const ownKeys = [
         `clerk-backend-call:${address}`,
         `clerk-backend-call:session:sha256:${createHash('sha256').update(sid).digest('base64url')}`,
-        'clerk-backend-call:site',
       ];
-      cleanup.rateLimitKeys.push(...keys);
+      const keys = [...ownKeys, SITE_KEY];
+      cleanup.rateLimitKeys.push(...ownKeys);
       const since = new Date(Date.now() - 60 * 60_000);
       const before = await countsSince(keys, since);
+      const siteBefore = await siteWindowsSince(since);
       const failures: unknown[] = [];
 
       const response = await limitClerkBackendCalls(
@@ -94,6 +122,11 @@ describe('limiting requests that make Clerk call its Backend API, on Postgres', 
         (failure) => failures.push(failure),
       );
 
+      const siteAfter = await siteWindowsSince(since);
+      for (const [windowStart, count] of siteAfter) {
+        if (count > (siteBefore.get(windowStart) ?? 0))
+          siteCountsToGiveBack.push(new Date(windowStart));
+      }
       expect(response).toBeNull();
       expect(failures).toEqual([]);
       await expect(countsSince(keys, since)).resolves.toEqual(
