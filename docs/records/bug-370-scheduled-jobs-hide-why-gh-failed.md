@@ -1,6 +1,6 @@
 # BUG-370: Scheduled Jobs Hide Why a gh Call Failed
 
-**Status:** Verifying — promotion to main, then a passing run of each changed job; due 2026-11-07
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-11-07
 **Priority:** P3
 **Date:** 2026-10-24
 
@@ -61,7 +61,7 @@ A failure line reads `<fixed line> Cause: <reason>`, and an advisory or reposito
 - [x] The helper is tested through `createGhRunner` with a fake `gh`. A REST error, a GraphQL error and a two-line error each give their first line. A timeout, an output overflow and a missing executable each give their code, and a timeout's code wins over output written before it. A kill by signal and a silent exit give the signal and the exit status. An error the runner did not throw gives nothing, even one shaped like `gh`'s, and an overlong line is capped (2026-10-24).
 - [x] Each of the five callers prints the reason after its fixed line for a `gh` failure, and only the fixed line for any other error. The existing value-free tests and the advisory watcher's 404 and rate-limit handling keep passing (2026-10-24).
 - [x] The advisory watcher names the reason beside each advisory or repository it reports. It names a missing direct repository as not found, and names an advisory once (2026-10-24).
-- [ ] Promotion to `main`, followed by a passing scheduled or dispatched run of each changed job; due 2026-11-07. A hosted run that prints a failure line is claimed only once one has run.
+- [x] Promoted to `main` by #1619 (`130c6b80`) on 2026-11-01. Each changed job then passed on `main` at `518f94c7`. Four ran on schedule on 2026-11-02: the operational alert watcher (run 41523177040), the upstream advisory watch (41531130696, one of three runs, none failed), the overdue check (41536143721) and the CodeRabbit learnings review (41536739362). The security.txt renewal was dispatched on 2026-11-03 (41552963217): it found the renewal not due, so it made no `gh` call, and its next scheduled run is 12-01. No run has failed since the promotion, so no hosted run has printed a failure line, and none is claimed.
 
 ## Related
 
