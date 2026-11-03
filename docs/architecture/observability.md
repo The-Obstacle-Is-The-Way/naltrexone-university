@@ -83,7 +83,9 @@ between one row's `period_end` and the next one's `period_start`.
   roll up before a retuned limit deploys.
 - `counted` in `signed-in-session` shows whether production refreshes sessions
   Clerk signed. `session` counts every refresh-shaped request whose token the
-  proxy could not verify, forged ones included.
+  proxy could not verify, forged ones included. Rows from before BUG-374's fix
+  reached production overcount `signed-in-session`, `signed-in` and `site`: a
+  returning visitor's page counted up to six for one refresh.
 
 Each job's response reports `clerkBackendCallUsage`: `rolled_up`, `up_to_date`
 when every bucket was already rolled up to the minute before last, or
