@@ -242,6 +242,18 @@ function clerkJwtKeyOption(): { jwtKey?: string } {
   return jwtKey ? { jwtKey } : {};
 }
 
+// BUG-374: the limiter follows Clerk's choice of session cookie by the suffix
+// Clerk derives from the publishable key, so Clerk is handed the key the
+// limiter reads.
+function clerkPublishableKey(): string | undefined {
+  return process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || undefined;
+}
+
+function clerkPublishableKeyOption(): { publishableKey?: string } {
+  const publishableKey = clerkPublishableKey();
+  return publishableKey ? { publishableKey } : {};
+}
+
 async function getClerkMiddleware(): Promise<NextMiddleware> {
   if (cachedClerkMiddleware) return cachedClerkMiddleware;
 
@@ -259,6 +271,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
     },
     {
       ...clerkJwtKeyOption(),
+      ...clerkPublishableKeyOption(),
       contentSecurityPolicy: {
         directives: CLERK_CSP_DIRECTIVES,
         strict: true,
@@ -283,10 +296,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
 }
 
 function usesProductionClerkInstance(): boolean {
-  return (
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith('pk_live_') ===
-    true
-  );
+  return clerkPublishableKey()?.startsWith('pk_live_') === true;
 }
 
 const REFUSAL_ALERTS: Partial<
@@ -365,6 +375,7 @@ export function createProxy({
           }
         },
         readClerkJwtKey(),
+        clerkPublishableKey(),
       );
       if (limited) return limited;
     }

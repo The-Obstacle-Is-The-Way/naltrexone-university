@@ -87,7 +87,9 @@ function percentDecoded(value: string): string {
 }
 
 // Reads only the claims; Clerk verifies the token itself.
-function claims(token: string): { exp?: unknown; sid?: unknown } | undefined {
+function claims(
+  token: string,
+): { exp?: unknown; iat?: unknown; iss?: unknown; sid?: unknown } | undefined {
   try {
     const payload: unknown = JSON.parse(
       Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'),
@@ -101,10 +103,15 @@ function claims(token: string): { exp?: unknown; sid?: unknown } | undefined {
 // Clerk treats a session token as current until five seconds past its expiry.
 const CLERK_CLOCK_SKEW_SECONDS = 5;
 
+function hasExpired(exp: number, nowSeconds: number): boolean {
+  return exp + CLERK_CLOCK_SKEW_SECONDS <= nowSeconds;
+}
+
 // Clerk reads one plain and one suffixed session cookie, so a browser sends
 // one or two. Each check is a signature verification before any limit has
-// counted the request, so a header packed with tokens buys only this many; a
-// genuine token past them counts in the narrower buckets, as before.
+// counted the request, so a header packed with tokens buys only this many,
+// beside the two of BUG-374's check; a genuine token past them counts in the
+// narrower buckets, as before.
 const MAX_SESSIONS_CHECKED = 4;
 
 type ExpiredSession = { id: string; token: string };
@@ -123,25 +130,106 @@ function sessionKeyId(sid: unknown): string {
   return `sha256:${createHash('sha256').update(sid).digest('base64url')}`;
 }
 
+// The instance, as the limiter needs it to follow Clerk's choice of session
+// cookie: its signing key, and the suffix Clerk names its cookies with.
+type ClerkInstance = { key: KeyObject; suffix: string };
+
+// Clerk's suffix: the start of the publishable key's SHA-1 digest, in
+// URL-safe base64 (`getCookieSuffix` in `@clerk/shared`).
+const COOKIE_SUFFIX_LENGTH = 8;
+
+function cookieSuffix(publishableKey: string): string {
+  return createHash('sha1')
+    .update(publishableKey)
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .slice(0, COOKIE_SUFFIX_LENGTH);
+}
+
+// A token's claims as Clerk reads them, for a token Clerk signed. Clerk's
+// decoder rejects a stray character or leftover bits that Node's skips, and
+// then reads the token as having no claims, which changes the cookie it
+// chooses. A segment that re-encodes to itself is canonical, and both
+// decoders read it alike.
+function claimsOfTokenClerkSigned(token: string, key: KeyObject) {
+  const segments = token.split('.');
+  if (
+    segments.length !== JWT_SEGMENTS ||
+    segments.some(
+      (segment) =>
+        Buffer.from(segment, 'base64url').toString('base64url') !== segment,
+    ) ||
+    !signedByClerk(token, key)
+  )
+    return undefined;
+  const payload = claims(token);
+  return typeof payload?.iat === 'number' && typeof payload.exp === 'number'
+    ? { iat: payload.iat, exp: payload.exp, iss: payload.iss }
+    : undefined;
+}
+
+// BUG-374: a refresh on the server rewrites only the session cookie Clerk
+// reads, so a returning visitor's other one stays expired until Clerk's
+// browser script rewrites both, while the page's prefetches go out. Clerk
+// refreshes only an expired token it reads, so a request whose current
+// suffixed token Clerk reads costs it nothing. Clerk's choice on a production
+// instance (`usesSuffixedCookies` in `@clerk/backend` 3.26.2), for two tokens
+// it can read: the plain one if it names no issuer; otherwise the suffixed
+// one, unless the suffixed `__client_uat` is missing or empty, or "0" while
+// the plain one is not, or the plain token was issued later and the plain
+// `__client_uat` is not "0". Its one other check, that the plain token's
+// issuer is this instance's, can only choose the suffixed token, so leaving it
+// out never misses a refresh. Anything else counts as before.
+function readsCurrentSuffixedSession(
+  cookies: Map<string, string>,
+  { key, suffix }: ClerkInstance,
+  nowSeconds: number,
+): boolean {
+  const plainToken = cookies.get('__session');
+  const suffixedToken = cookies.get(`__session_${suffix}`);
+  if (!plainToken || !suffixedToken) return false;
+  const plain = claimsOfTokenClerkSigned(plainToken, key);
+  const suffixed = claimsOfTokenClerkSigned(suffixedToken, key);
+  if (!plain?.iss || !suffixed) return false;
+  // Clerk reads an empty cookie as a missing one.
+  const plainUat = cookies.get('__client_uat') || undefined;
+  const suffixedUat = cookies.get(`__client_uat_${suffix}`) || undefined;
+  const readsSuffixed =
+    suffixedUat === '0'
+      ? plainUat === '0'
+      : suffixedUat !== undefined &&
+        !(plainUat !== '0' && plain.iat > suffixed.iat);
+  return readsSuffixed && !hasExpired(suffixed.exp, nowSeconds);
+}
+
 // The sessions a GET could refresh: expired session tokens alongside a
 // refresh cookie. Clerk refreshes the suffixed cookie's or the plain one's, as
-// it decides. A session's ID keys the per-session limit.
+// it decides; given the instance, a request whose current suffixed token Clerk
+// reads has none. A session's ID keys the per-session limit.
 function expiredSessions(
   request: ClerkRequest,
   cookies: Map<string, string>,
   nowSeconds: number,
+  instance?: ClerkInstance,
 ): ExpiredSession[] {
   if (request.method !== 'GET') return [];
   if (![...cookies.keys()].some((name) => name.startsWith('__refresh_')))
+    return [];
+  // Clerk also refreshes a token sent in an Authorization header, which the
+  // proxy refuses before the limiter (BUG-369); the exception does not rely
+  // on that.
+  if (
+    instance &&
+    !request.headers.get('authorization') &&
+    readsCurrentSuffixedSession(cookies, instance, nowSeconds)
+  )
     return [];
   const sessions: ExpiredSession[] = [];
   for (const [name, value] of cookies) {
     if (name !== '__session' && !name.startsWith('__session_')) continue;
     const payload = claims(value);
-    if (
-      typeof payload?.exp === 'number' &&
-      payload.exp + CLERK_CLOCK_SKEW_SECONDS <= nowSeconds
-    )
+    if (typeof payload?.exp === 'number' && hasExpired(payload.exp, nowSeconds))
       sessions.push({
         id: sessionKeyId(payload.sid),
         token: value,
@@ -262,22 +350,28 @@ const SITE_BUCKET: Bucket = {
 function bucketsFor(
   request: ClerkRequest,
   jwtKey: string | undefined,
+  publishableKey: string | undefined,
 ): Bucket[] {
   const address = getClientIp(request.headers);
   const cookies = cookiesAsClerkReadsThem(request);
-  const sessions = expiredSessions(
-    request,
-    cookies,
-    Math.floor(Date.now() / 1000),
-  );
   // DEBT-503 item 4, step 2: with Clerk's key, a refresh of a session Clerk
   // signed counts in buckets of its own, which no other request can fill. A
   // handshake, which only Clerk can check, keeps the narrow per-address
   // limit, and so does every other request, a forged token's included: it
   // costs Clerk nothing, but counting it keeps any request the proxy misreads
   // within today's limits.
-  const key =
-    jwtKey && !carriesHandshake(request, cookies) && publicKey(jwtKey);
+  const handshake = carriesHandshake(request, cookies);
+  const key = jwtKey && !handshake ? publicKey(jwtKey) : undefined;
+  const sessions = expiredSessions(
+    request,
+    cookies,
+    Math.floor(Date.now() / 1000),
+    key && publishableKey
+      ? { key, suffix: cookieSuffix(publishableKey) }
+      : undefined,
+  );
+  // BUG-374: nothing here makes Clerk call its Backend API.
+  if (!handshake && sessions.length === 0) return [];
   const signed = key
     ? sessions
         .slice(0, MAX_SESSIONS_CHECKED)
@@ -336,7 +430,9 @@ function bucketsFor(
  * Limits these requests per client address, per refreshing session, then
  * site-wide, before they reach Clerk. With Clerk's signing key (`jwtKey`), a
  * refresh of a session Clerk signed counts per session first, then per
- * address in a wider bucket of its own (DEBT-503 item 4). Returns the 429
+ * address in a wider bucket of its own (DEBT-503 item 4). With the
+ * publishable key as well, a request whose current suffixed session Clerk
+ * reads counts nowhere, and the limiter is not loaded (BUG-374). Returns the 429
  * response, or null to continue. A limiter failure, including one while
  * loading it, lets the request through: failing closed would break every
  * real session refresh while the database is down, and the firewall rule
@@ -349,8 +445,10 @@ export async function limitClerkBackendCalls(
   report: (failure: unknown) => void,
   refused: (limit: ClerkBackendCallLimit) => void = () => {},
   jwtKey?: string,
+  publishableKey?: string,
 ): Promise<NextResponse | null> {
-  const buckets = bucketsFor(request, jwtKey);
+  const buckets = bucketsFor(request, jwtKey, publishableKey);
+  if (buckets.length === 0) return null;
   try {
     const limiter = await loadLimiter();
     for (const { limit, key, rate } of buckets) {
