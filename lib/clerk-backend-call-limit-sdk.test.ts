@@ -17,13 +17,15 @@ vi.mock('server-only', () => ({}));
 const ORIGINAL_ENV = snapshotProcessEnv();
 const FRONTEND_API = 'clerk.example.com';
 const PUBLISHABLE_KEY = `pk_live_${Buffer.from(`${FRONTEND_API}$`).toString('base64')}`;
-// Clerk names the refresh cookie with a suffix derived from the publishable key.
-const REFRESH_COOKIE = `__refresh_${createHash('sha1')
+// Clerk names its suffixed cookies with a suffix derived from the publishable
+// key.
+const SUFFIX = createHash('sha1')
   .update(PUBLISHABLE_KEY)
   .digest('base64')
   .replace(/\+/g, '-')
   .replace(/\//g, '_')
-  .slice(0, 8)}`;
+  .slice(0, 8);
+const REFRESH_COOKIE = `__refresh_${SUFFIX}`;
 
 // The instance's signing key, configured as CLERK_JWT_KEY, and a key Clerk
 // never used.
@@ -36,18 +38,32 @@ const CLERK_JWT_KEY = clerkKey.publicKey
 
 // A session token that expired a minute ago, signed with the given key.
 function expiredSessionToken(privateKey: typeof clerkKey.privateKey) {
+  return sessionToken(privateKey, { issuedSecondsAgo: 180 });
+}
+
+// A session token issued the given number of seconds ago, valid for two
+// minutes unless told otherwise, signed with the given key.
+function sessionToken(
+  privateKey: typeof clerkKey.privateKey,
+  {
+    issuedSecondsAgo,
+    validSeconds = 120,
+    issuer = `https://${FRONTEND_API}`,
+  }: { issuedSecondsAgo: number; validSeconds?: number; issuer?: string },
+) {
   const now = Math.floor(Date.now() / 1000);
+  const iat = now - issuedSecondsAgo;
   const part = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString('base64url');
   const unsigned = `${part({ alg: 'RS256', typ: 'JWT', kid: 'ins_sdk' })}.${part(
     {
       sid: 'sess_sdk',
       sub: 'user_sdk',
-      iss: `https://${FRONTEND_API}`,
+      ...(issuer ? { iss: issuer } : {}),
       azp: 'https://example.com',
-      iat: now - 180,
-      nbf: now - 190,
-      exp: now - 60,
+      iat,
+      nbf: iat - 10,
+      exp: iat + validSeconds,
     },
   )}`;
   const signature = sign(
@@ -95,6 +111,7 @@ async function clerkAndLimiterOn(cookie: string, method = 'GET') {
       () => {},
       () => {},
       CLERK_JWT_KEY,
+      PUBLISHABLE_KEY,
     );
   }
   const { clerkMiddleware } = await import('@clerk/nextjs/server');
@@ -167,6 +184,127 @@ describe("BUG-323's limiter and Clerk's middleware, with Clerk's key", () => {
       'clerk-backend-call:session:sess_sdk',
       'clerk-backend-call:site',
     ]);
+  });
+
+  // BUG-374: a returning visitor's first page load refreshes the suffixed
+  // session cookie, the one Clerk reads, and leaves the plain one expired
+  // until Clerk's browser script rewrites it. The page's other requests in
+  // that time cost Clerk nothing.
+  describe('beside an expired plain session', () => {
+    const genuine = (options: {
+      issuedSecondsAgo: number;
+      validSeconds?: number;
+      issuer?: string;
+    }) => sessionToken(clerkKey.privateKey, options);
+    const signedIn = String(now() - 600);
+    const returning = ({
+      plain = expiredSessionToken(clerkKey.privateKey),
+      plainUat = signedIn,
+      suffixed = genuine({ issuedSecondsAgo: 1 }),
+      suffix = SUFFIX,
+      suffixedUat = signedIn,
+    }: {
+      plain?: string;
+      plainUat?: string;
+      suffixed?: string;
+      suffix?: string;
+      suffixedUat?: string | null;
+    } = {}) =>
+      [
+        `__session=${plain}`,
+        `__client_uat=${plainUat}`,
+        `__session_${suffix}=${suffixed}`,
+        ...(suffixedUat === null
+          ? []
+          : [`__client_uat_${suffix}=${suffixedUat}`]),
+        `${REFRESH_COOKIE}=refresh_sdk`,
+      ].join('; ');
+
+    it.each([
+      ['a current suffixed session', () => returning()],
+      [
+        'a current suffixed session issued in the same second',
+        () =>
+          returning({
+            plain: genuine({ issuedSecondsAgo: 1, validSeconds: -60 }),
+          }),
+      ],
+      [
+        'a current suffixed session, both client cookies saying "0"',
+        () => returning({ plainUat: '0', suffixedUat: '0' }),
+      ],
+    ])('counts nothing for %s, which Clerk reads', async (_kind, cookie) => {
+      const { paths, counted } = await clerkAndLimiterOn(cookie());
+
+      expect(paths).toEqual([]);
+      expect(counted).toEqual([]);
+    });
+
+    // Clerk reads the plain session instead, refreshes it, and the limiter
+    // must count that.
+    it.each([
+      [
+        'a suffixed session Clerk cannot decode',
+        () => returning({ suffixed: `${genuine({ issuedSecondsAgo: 1 })}!` }),
+      ],
+      [
+        'a current session under another suffix',
+        () => returning({ suffix: 'decoy123' }),
+      ],
+      ['no suffixed client cookie', () => returning({ suffixedUat: null })],
+      ['an empty suffixed client cookie', () => returning({ suffixedUat: '' })],
+      [
+        'a suffixed client cookie saying "0"',
+        () => returning({ suffixedUat: '0' }),
+      ],
+      [
+        'a plain session issued later',
+        () =>
+          returning({
+            plain: genuine({ issuedSecondsAgo: 70, validSeconds: 60 }),
+            suffixed: genuine({ issuedSecondsAgo: 80, validSeconds: 600 }),
+          }),
+      ],
+      [
+        'a plain session without an issuer',
+        () =>
+          returning({
+            plain: genuine({ issuedSecondsAgo: 180, issuer: '' }),
+          }),
+      ],
+    ])('counts a refresh beside %s', async (_kind, cookie) => {
+      const { paths, counted } = await clerkAndLimiterOn(cookie());
+
+      expect(paths).toEqual(['/v1/sessions/sess_sdk/refresh']);
+      expect(counted).toEqual(SIGNED_IN);
+    });
+
+    // Neither costs Clerk a call, but the limiter counts each as before: one
+    // token Clerk did not sign, and a reverse no check has seen.
+    it.each([
+      [
+        'a current suffixed session Clerk did not sign',
+        () =>
+          returning({
+            suffixed: sessionToken(otherKey.privateKey, {
+              issuedSecondsAgo: 1,
+            }),
+          }),
+      ],
+      [
+        'an expired suffixed session beside a newer current plain one',
+        () =>
+          returning({
+            plain: genuine({ issuedSecondsAgo: 1 }),
+            suffixed: expiredSessionToken(clerkKey.privateKey),
+          }),
+      ],
+    ])('still counts %s', async (_kind, cookie) => {
+      const { paths, counted } = await clerkAndLimiterOn(cookie());
+
+      expect(paths).toEqual([]);
+      expect(counted).toEqual(SIGNED_IN);
+    });
   });
 
   // Cookie headers Clerk's parser and Next's read differently (DEBT-503 item

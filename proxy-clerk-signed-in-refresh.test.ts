@@ -1,4 +1,9 @@
-import { generateKeyPairSync, type KeyObject, sign } from 'node:crypto';
+import {
+  createHash,
+  generateKeyPairSync,
+  type KeyObject,
+  sign,
+} from 'node:crypto';
 import { getWaitUntilPromiseFromEvent } from 'next/dist/server/web/spec-extension/fetch-event';
 import { NextRequest, NextResponse } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -60,6 +65,43 @@ function signedSessionToken(
 const genuine = (sid: string) =>
   signedSessionToken(clerkKey.privateKey, 1, sid);
 const forged = (sid: string) => signedSessionToken(otherKey.privateKey, 1, sid);
+
+// BUG-374: a returning visitor's cookies just after Clerk refreshed the
+// suffixed session on the server. Clerk reads the suffixed one, which is
+// current; the plain one stays expired until Clerk's browser script runs.
+const PUBLISHABLE_KEY = 'pk_live_x';
+const SUFFIX = createHash('sha1')
+  .update(PUBLISHABLE_KEY)
+  .digest('base64')
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_')
+  .slice(0, 8);
+function issuedSessionToken(iat: number, exp: number): string {
+  const part = (value: object) =>
+    Buffer.from(JSON.stringify(value)).toString('base64url');
+  const unsigned = `${part({ alg: 'RS256', typ: 'JWT' })}.${part({
+    exp,
+    iat,
+    iss: 'https://clerk.example.com',
+    sid: 'sess_returning',
+  })}`;
+  const signature = sign(
+    'RSA-SHA256',
+    Buffer.from(unsigned),
+    clerkKey.privateKey,
+  ).toString('base64url');
+  return `${unsigned}.${signature}`;
+}
+const returningCookies = () => {
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    __session: issuedSessionToken(now - 180, now - 60),
+    __client_uat: String(now - 600),
+    [`__session_${SUFFIX}`]: issuedSessionToken(now - 1, now + 59),
+    [`__client_uat_${SUFFIX}`]: String(now - 600),
+    [`__refresh_${SUFFIX}`]: 'x',
+  };
+};
 
 // DEBT-503 item 4, step 2: with item 5's key, Clerk checks a session token's
 // signature before its expiry, and refreshes only a token it signed. A forged
@@ -382,6 +424,28 @@ describe("limiting a session refresh with Clerk's signing key", () => {
     ]);
   });
 
+  it('never loads the limiter when Clerk reads a current suffixed session', async () => {
+    let loaded = false;
+    const cookie = Object.entries(returningCookies())
+      .map(([name, value]) => `${name}=${value}`)
+      .join('; ');
+
+    const response = await limitClerkBackendCalls(
+      refreshFrom(cookie),
+      async () => {
+        loaded = true;
+        return new FakeRateLimiter();
+      },
+      () => {},
+      () => {},
+      CLERK_JWT_KEY,
+      PUBLISHABLE_KEY,
+    );
+
+    expect(response).toBeNull();
+    expect(loaded).toBe(false);
+  });
+
   it.each([
     ['signed-in-session', [OVER_LIMIT]],
     ['signed-in-address', [UNDER_LIMIT, OVER_LIMIT]],
@@ -412,7 +476,7 @@ describe('proxy with limits only sessions Clerk signed can fill', () => {
 
   async function proxyWith(limiter: FakeRateLimiter) {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_live_x';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = PUBLISHABLE_KEY;
     process.env.CLERK_JWT_KEY = CLERK_JWT_KEY;
     vi.doMock('@clerk/nextjs/server', () => ({
       clerkMiddleware: () => async () => NextResponse.next(),
@@ -464,4 +528,18 @@ describe('proxy with limits only sessions Clerk signed can fill', () => {
       expect(alerts.raised).toEqual(raised);
     },
   );
+
+  it("hands Clerk a returning visitor's request uncounted while Clerk reads a current suffixed session", async () => {
+    const limiter = new FakeRateLimiter([OVER_LIMIT]);
+    const { proxy } = await proxyWith(limiter);
+    const [request, event] = proxyInvocation('https://example.com/pricing');
+    request.headers.set('x-vercel-forwarded-for', '203.0.113.7');
+    for (const [name, value] of Object.entries(returningCookies()))
+      request.cookies.set(name, value);
+
+    const response = await proxy(request, event);
+
+    expect(response?.status).not.toBe(429);
+    expect(limiter.inputs).toEqual([]);
+  });
 });

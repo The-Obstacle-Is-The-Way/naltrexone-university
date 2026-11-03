@@ -365,6 +365,7 @@ export function createProxy({
           }
         },
         readClerkJwtKey(),
+        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
       );
       if (limited) return limited;
     }
