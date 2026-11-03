@@ -83,9 +83,14 @@ between one row's `period_end` and the next one's `period_start`.
   roll up before a retuned limit deploys.
 - `counted` in `signed-in-session` shows whether production refreshes sessions
   Clerk signed. `session` counts every refresh-shaped request whose token the
-  proxy could not verify, forged ones included. Rows from before BUG-374's fix
-  reached production overcount `signed-in-session`, `signed-in` and `site`: a
-  returning visitor's page counted up to six for one refresh.
+  proxy could not verify, forged ones included. `counted` includes refused
+  requests, so it measures demand; Clerk's dashboard shows the calls it served.
+- A row whose `period_start` is before 2026-11-03 18:08:12Z, when BUG-374's fix
+  reached production, overcounts `signed-in-session`, `signed-in` and `site`:
+  a returning visitor's page counted up to six for one refresh.
+- A production check counts like a visitor and can trip a limit on purpose.
+  Compare a row's busiest minute with the checks' times before reading it as
+  traffic.
 
 Each job's response reports `clerkBackendCallUsage`: `rolled_up`, `up_to_date`
 when every bucket was already rolled up to the minute before last, or
