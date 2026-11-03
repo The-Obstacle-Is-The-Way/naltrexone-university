@@ -344,6 +344,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-370 · Scheduled Jobs Hide Why a gh Call Failed · Resolved · 2026-11-03 · docs/records/bug-370-scheduled-jobs-hide-why-gh-failed.md · #1627 · 4a368402fe62f3de1f78b4dbca8c5638bdf24ea7
 - BUG-371 · An Answer Submitted a Day After Its Question Loaded Fails as Invalid Input · Resolved · 2026-11-02 · docs/records/bug-371-an-answer-after-a-day-fails-as-invalid-input.md · #1626 · 913e05043f8bd698798e981848cdc3e9079e1b13
 - BUG-372 · An Unverified Session ID the Key Column Could Not Hold Skipped the Clerk Limiter's Site-Wide Cap · Resolved · 2026-11-02 · docs/records/bug-372-unverified-session-id-skipped-the-site-cap.md · #1621 · 21d8dec87bac0f74dfcd56369d77355fe88d29b9
+- BUG-374 · A Returning Visitor's Page Load Counts as Several Clerk Refreshes · Resolved · 2026-11-03 · docs/records/bug-374-a-returning-visitor-counts-as-several-clerk-refreshes.md · #1632 · 352196d830ace979c43f8b8120bfc8d506ead98e
 
 ## Debt
 
