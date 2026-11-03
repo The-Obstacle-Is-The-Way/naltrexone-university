@@ -127,7 +127,13 @@ export function cookieHeaderWithoutRefresh(header: string): string {
  * session no bucket counted. Clerk refreshes only on a GET, so any other
  * request, and one without a refresh cookie, is handed over as it came.
  */
-export function withoutRefreshCookies(request: NextRequest): NextRequest {
+export function withoutRefreshCookies(
+  request: NextRequest,
+  copy: (from: NextRequest, headers: Headers) => NextRequest = (
+    from,
+    headers,
+  ) => new NextRequest(from, { headers }),
+): NextRequest {
   const header = request.headers.get('cookie');
   if (request.method !== 'GET' || header === null) return request;
   const stripped = cookieHeaderWithoutRefresh(header);
@@ -135,7 +141,19 @@ export function withoutRefreshCookies(request: NextRequest): NextRequest {
   const headers = new Headers(request.headers);
   if (stripped.trim() === '') headers.delete('cookie');
   else headers.set('cookie', stripped);
-  return new NextRequest(request, { headers });
+  try {
+    return copy(request, headers);
+  } catch (error) {
+    // This runs on nearly every signed-in production request, which no
+    // pre-production check runs (the limiter is off on Clerk's development
+    // instance). A runtime that refuses the copy hands Clerk the request as
+    // it came, as before this step, instead of failing every one of them.
+    console.error({
+      event: 'clerk_refresh_cookie_strip_failed',
+      error: projectSafeErrorDiagnostics(error),
+    });
+    return request;
+  }
 }
 
 function percentDecoded(value: string): string {

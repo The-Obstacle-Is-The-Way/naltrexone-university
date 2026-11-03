@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import {
   cookieHeaderAsClerkReadsIt,
@@ -64,6 +64,10 @@ describe('cookieHeaderWithoutRefresh', () => {
 });
 
 describe('withoutRefreshCookies', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('hands Clerk a GET without its refresh cookies, at the same URL and with its other headers', () => {
     const request = new NextRequest(
       'https://example.com/app/practice?mode=tutor',
@@ -90,6 +94,24 @@ describe('withoutRefreshCookies', () => {
     });
 
     expect(withoutRefreshCookies(request).headers.has('cookie')).toBe(false);
+  });
+
+  // It runs on nearly every signed-in production request, so a runtime that
+  // refuses the copy leaves the request as it came instead of failing it.
+  it('hands Clerk the request as it came, and logs, when the copy fails', () => {
+    const errored = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const request = new NextRequest('https://example.com/app/dashboard', {
+      headers: { cookie: '__session=t; __refresh_abc=r' },
+    });
+
+    const forClerk = withoutRefreshCookies(request, () => {
+      throw new Error('copy refused');
+    });
+
+    expect(forClerk).toBe(request);
+    expect(errored).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'clerk_refresh_cookie_strip_failed' }),
+    );
   });
 
   it.each([

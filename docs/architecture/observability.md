@@ -112,6 +112,9 @@ refreshing, and the proxy logs `clerk_refresh_withheld`, with nothing about the
 visitor. It should be rare: a steady stream means the limiter's prediction of
 when Clerk refreshes has drifted from Clerk's, so run
 `lib/clerk-backend-call-limit-sdk.test.ts` against the installed Clerk.
+If the runtime ever refuses to copy the request, Clerk gets it as it came and
+the proxy logs `clerk_refresh_cookie_strip_failed`. Any such line is a defect
+to fix, since every signed-in request would then go to Clerk unchanged.
 
 ## Operational alerts
 
