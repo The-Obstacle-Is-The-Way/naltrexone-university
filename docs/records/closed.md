@@ -338,7 +338,12 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-358 · Integration Setup Rejects IPv6 Loopback · Resolved · 2026-11-01 · docs/records/bug-358-integration-setup-rejects-ipv6-loopback.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
 - BUG-359 · The Ledger CLI Hides Usage and Target Errors · Resolved · 2026-11-01 · docs/records/bug-359-ledger-cli-hides-usage-and-target-errors.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
 - BUG-361 · The Rule Register Counts Unreachable Test Declarations · Resolved · 2026-11-01 · docs/records/bug-361-rule-register-counts-unreachable-tests.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-366 · The Playwright Install's Mirror Failover Misses the Runner's Mirror List · Resolved · 2026-11-02 · docs/records/bug-366-playwright-install-failover-misses-the-runner-mirror-list.md · #1626 · 913e05043f8bd698798e981848cdc3e9079e1b13
 - BUG-367 · CI's PgBouncer Stand-In Lacks Six CVE Fixes · Resolved · 2026-11-01 · docs/records/bug-367-ci-pgbouncer-stand-in-lacks-six-cve-fixes.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
+- BUG-369 · An Authorization Header Lets Requests Spend Clerk's Backend API Allowance Uncounted · Resolved · 2026-11-02 · docs/records/bug-369-authorization-header-spends-clerk-allowance.md · #1621 · 1ebae79c1a524ee13e86a639d89ea1f0e1f2d14e
+- BUG-370 · Scheduled Jobs Hide Why a gh Call Failed · Resolved · 2026-11-03 · docs/records/bug-370-scheduled-jobs-hide-why-gh-failed.md · #1627 · 4a368402fe62f3de1f78b4dbca8c5638bdf24ea7
+- BUG-371 · An Answer Submitted a Day After Its Question Loaded Fails as Invalid Input · Resolved · 2026-11-02 · docs/records/bug-371-an-answer-after-a-day-fails-as-invalid-input.md · #1626 · 913e05043f8bd698798e981848cdc3e9079e1b13
+- BUG-372 · An Unverified Session ID the Key Column Could Not Hold Skipped the Clerk Limiter's Site-Wide Cap · Resolved · 2026-11-02 · docs/records/bug-372-unverified-session-id-skipped-the-site-cap.md · #1621 · 21d8dec87bac0f74dfcd56369d77355fe88d29b9
 
 ## Debt
 
