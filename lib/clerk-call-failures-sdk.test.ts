@@ -6,7 +6,10 @@ import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
-import { clerkCallFailure } from './clerk-call-failures';
+import {
+  clerkCallFailure,
+  clerkRefreshFailureCode,
+} from './clerk-call-failures';
 
 vi.mock('server-only', () => ({}));
 
@@ -162,6 +165,7 @@ describe('Clerk calls the real middleware fails silently', () => {
     expect(paths).toContain('/v1/sessions/sess_sdk/refresh');
     expect(response.headers.get('x-clerk-auth-status')).toBe('handshake');
     expect(clerkCallFailure(request, response)).toBe('refresh');
+    expect(clerkRefreshFailureCode(response)).toBe('too_many_requests');
   });
 
   // A script's fetch cannot follow a handshake, so Clerk signs it out and
@@ -201,6 +205,7 @@ describe('Clerk calls the real middleware fails silently', () => {
       /^protect-rewrite, session-token-expired-refresh-/,
     );
     expect(clerkCallFailure(request, response)).toBe('refresh');
+    expect(clerkRefreshFailureCode(response)).toBe('too_many_requests');
   });
 
   it('names a refused handshake nonce lookup, which signs the visitor out', async () => {

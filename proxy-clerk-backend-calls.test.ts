@@ -749,6 +749,26 @@ describe('proxy with the Clerk Backend API limit', () => {
     expect(alerts.raised).toEqual([]);
   });
 
+  it('logs the code Clerk gave for a refresh it failed', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { proxy } = await proxyWith(
+      new FakeRateLimiter(),
+      'pk_live_x',
+      Promise.resolve(),
+      clerkFailed('session-token-expired-refresh-too_many_requests'),
+    );
+    const [request, event] = proxyInvocation();
+
+    await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(warned).toHaveBeenCalledWith({
+      event: 'clerk_backend_call_failed',
+      call: 'refresh',
+      code: 'too_many_requests',
+    });
+  });
+
   it("leaves a development instance's Clerk failures unreported", async () => {
     const { proxy, alerts, loadBackendCallLimiter } = await proxyWith(
       new FakeRateLimiter(),
