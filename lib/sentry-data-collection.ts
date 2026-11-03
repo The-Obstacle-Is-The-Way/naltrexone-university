@@ -50,6 +50,7 @@ export const SENTRY_DATA_COLLECTION = {
   urlQueryParams: DENIED,
   graphQL: { document: false, variables: false },
   genAI: { inputs: false, outputs: false },
+  mcp: { inputs: false, outputs: false },
   databaseQueryData: false,
   queues: false,
 } satisfies DataCollection;
@@ -68,6 +69,7 @@ type UnsetCategory =
       'stackFrameVariables' | 'frameContextLines'
     >
   | Unset<typeof SENTRY_DATA_COLLECTION.genAI, DataCollection['genAI']>
+  | Unset<typeof SENTRY_DATA_COLLECTION.mcp, DataCollection['mcp']>
   | Unset<typeof SENTRY_DATA_COLLECTION.graphQL, DataCollection['graphQL']>
   | Unset<typeof SENTRY_DATA_COLLECTION.httpHeaders, HttpHeadersByDirection>;
 export const EVERY_CATEGORY_IS_SET: [UnsetCategory] extends [never]

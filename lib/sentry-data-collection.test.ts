@@ -12,7 +12,7 @@ import {
 // bodies, unscrubbed headers and database query data when `dataCollection` is
 // unset. Every category is set here, at least as strictly as v10's default.
 describe('SENTRY_DATA_COLLECTION', () => {
-  it('collects no user info, cookies, bodies, database query data, queue arguments, GenAI or GraphQL content', () => {
+  it('collects no user info, cookies, bodies, database query data, queue arguments, GenAI, MCP or GraphQL content', () => {
     expect(SENTRY_DATA_COLLECTION).toMatchObject({
       userInfo: false,
       cookies: false,
@@ -20,6 +20,7 @@ describe('SENTRY_DATA_COLLECTION', () => {
       databaseQueryData: false,
       queues: false,
       genAI: { inputs: false, outputs: false },
+      mcp: { inputs: false, outputs: false },
       graphQL: { document: false, variables: false },
     });
   });
