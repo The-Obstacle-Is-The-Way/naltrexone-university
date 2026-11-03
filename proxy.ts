@@ -17,6 +17,7 @@ import {
 } from '@/lib/clerk-backend-call-limit';
 import {
   clerkCallFailure,
+  clerkRefreshFailureCode,
   clerkWantedWithheldRefresh,
   reportClerkCallFailure,
 } from '@/lib/clerk-call-failures';
@@ -408,10 +409,14 @@ export function createProxy({
         : null;
       if (failure) {
         event.waitUntil(
-          reportClerkCallFailure(failure, {
-            loadLimiter: loadBackendCallLimiter,
-            loadAlerts: loadOperationalAlerts,
-          }),
+          reportClerkCallFailure(
+            failure,
+            {
+              loadLimiter: loadBackendCallLimiter,
+              loadAlerts: loadOperationalAlerts,
+            },
+            clerkRefreshFailureCode(response),
+          ),
         );
       }
     }

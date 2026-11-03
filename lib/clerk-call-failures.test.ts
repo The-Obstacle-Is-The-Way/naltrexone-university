@@ -10,6 +10,7 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import {
   clerkCallFailure,
+  clerkRefreshFailureCode,
   reportClerkCallFailure,
 } from './clerk-call-failures';
 
@@ -142,6 +143,55 @@ describe('clerkCallFailure', () => {
   });
 });
 
+// DEBT-503 item 3: the code Clerk's Backend API gave for a refresh it failed,
+// which the log line carries so a check can read why.
+describe('clerkRefreshFailureCode', () => {
+  it.each(['too_many_requests', 'unexpected-bapi-error', 'fetch-error'])(
+    'reads the code of a refresh Clerk failed (%s)',
+    (code) => {
+      expect(
+        clerkRefreshFailureCode(
+          answer(`session-token-expired-refresh-${code}`),
+        ),
+      ).toBe(code);
+    },
+  );
+
+  it("reads the code behind auth.protect()'s rewrite", () => {
+    expect(
+      clerkRefreshFailureCode(
+        answer('protect-rewrite, session-token-expired-refresh-fetch-error'),
+      ),
+    ).toBe('fetch-error');
+  });
+
+  it('reads a code of 64 characters', () => {
+    const code = 'a'.repeat(64);
+
+    expect(
+      clerkRefreshFailureCode(answer(`session-token-expired-refresh-${code}`)),
+    ).toBe(code);
+  });
+
+  it.each([
+    ['longer than 64 characters', 'a'.repeat(65)],
+    ['in capitals', 'TOO_MANY_REQUESTS'],
+    ['with a space', 'too many'],
+    ['that is empty', ''],
+  ])('reads a code %s as unrecognized', (_shape, code) => {
+    expect(
+      clerkRefreshFailureCode(answer(`session-token-expired-refresh-${code}`)),
+    ).toBe('unrecognized');
+  });
+
+  it.each([
+    ['a failed signing-key fetch', 'jwk-remote-failed-to-load'],
+    ['no auth reason', undefined],
+  ])('reads nothing for %s', (_answer, reason) => {
+    expect(clerkRefreshFailureCode(answer(reason))).toBeUndefined();
+  });
+});
+
 describe('reportClerkCallFailure', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -150,14 +200,19 @@ describe('reportClerkCallFailure', () => {
   function report(
     failure: Parameters<typeof reportClerkCallFailure>[0],
     limiter = new FakeRateLimiter(),
+    code?: string,
   ) {
     const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const errored = vi.spyOn(console, 'error').mockImplementation(() => {});
     const alerts = new FakeOperationalAlerts();
-    const done = reportClerkCallFailure(failure, {
-      loadLimiter: async () => limiter,
-      loadAlerts: async () => alerts,
-    });
+    const done = reportClerkCallFailure(
+      failure,
+      {
+        loadLimiter: async () => limiter,
+        loadAlerts: async () => alerts,
+      },
+      code,
+    );
     return { done, alerts, limiter, warned, errored };
   }
 
@@ -192,6 +247,22 @@ describe('reportClerkCallFailure', () => {
       },
     ]);
     expect(alerts.raised).toEqual([]);
+  });
+
+  it('logs the code Clerk gave for a refresh it failed', async () => {
+    const { done, warned } = report(
+      'refresh',
+      new FakeRateLimiter(),
+      'too_many_requests',
+    );
+
+    await done;
+
+    expect(warned).toHaveBeenCalledWith({
+      event: 'clerk_backend_call_failed',
+      call: 'refresh',
+      code: 'too_many_requests',
+    });
   });
 
   it('alerts once failed refreshes and nonce lookups pass the threshold', async () => {

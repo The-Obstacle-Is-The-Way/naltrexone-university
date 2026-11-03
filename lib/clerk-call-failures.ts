@@ -61,6 +61,28 @@ export function clerkWantedWithheldRefresh(response: Response): boolean {
   );
 }
 
+// A failed refresh's reason ends in the code Clerk's Backend API gave, such as
+// `too_many_requests`. The log line carries it only as a short identifier.
+const REFRESH_FAILURE_CODE_MAX_LENGTH = 64;
+const REFRESH_FAILURE_CODE = new RegExp(
+  `^[a-z0-9_-]{1,${REFRESH_FAILURE_CODE_MAX_LENGTH}}$`,
+);
+
+/**
+ * DEBT-503 item 3: the code Clerk's Backend API gave for a refresh it failed,
+ * read from Clerk's auth reason; `unrecognized` when the reason ends in
+ * anything but a short identifier, and undefined when the answer is not a
+ * failed refresh.
+ */
+export function clerkRefreshFailureCode(
+  response: Response,
+): string | undefined {
+  const reason = clerkAuthReason(response);
+  if (!reason.startsWith(REFRESH_FAILED)) return undefined;
+  const code = reason.slice(REFRESH_FAILED.length);
+  return REFRESH_FAILURE_CODE.test(code) ? code : 'unrecognized';
+}
+
 type AnsweredRequest = {
   nextUrl: { searchParams: Pick<URLSearchParams, 'has'> };
 };
@@ -99,7 +121,8 @@ export type ClerkCallFailureReporting = {
 };
 
 /**
- * Logs the failure, then alerts the owner through the bounded alert path:
+ * Logs the failure, with the code Clerk gave when there is one, then alerts
+ * the owner through the bounded alert path:
  * at once for the signing keys, which never fail in normal operation, under
  * their own kind, since every visitor on the instance is signed out; and for
  * refreshes and nonce lookups once more than the threshold fail in a minute,
@@ -109,6 +132,7 @@ export type ClerkCallFailureReporting = {
 export async function reportClerkCallFailure(
   failure: ClerkCallFailure,
   { loadLimiter, loadAlerts }: ClerkCallFailureReporting,
+  code?: string,
 ): Promise<void> {
   // A rejected signature is its own condition: a forged token, or every
   // token when the configured key is wrong. It counts apart, so forgeries
@@ -117,7 +141,11 @@ export async function reportClerkCallFailure(
   console.warn(
     signature
       ? { event: 'clerk_session_token_rejected' }
-      : { event: 'clerk_backend_call_failed', call: failure },
+      : {
+          event: 'clerk_backend_call_failed',
+          call: failure,
+          ...(code === undefined ? {} : { code }),
+        },
   );
   if (failure !== 'keys') {
     try {
