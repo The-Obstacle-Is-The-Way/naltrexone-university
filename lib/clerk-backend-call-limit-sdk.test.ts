@@ -79,9 +79,13 @@ const refreshCookies = (token: string) =>
   `__session=${token}; __client_uat=${now() - 600}; ${REFRESH_COOKIE}=refresh_sdk`;
 
 // Runs the real Clerk middleware, with the key, on a page load carrying the
-// cookies, and returns the Backend API paths it called beside what BUG-323's
-// limiter counted for the same request.
-async function clerkAndLimiterOn(cookie: string, method = 'GET') {
+// cookies and any other headers, and returns the Backend API paths it called
+// beside what BUG-323's limiter counted for the same request.
+async function clerkAndLimiterOn(
+  cookie: string,
+  method = 'GET',
+  headers: Record<string, string> = {},
+) {
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = PUBLISHABLE_KEY;
   process.env.CLERK_SECRET_KEY = 'sk_live_sdk';
   const paths: string[] = [];
@@ -101,6 +105,7 @@ async function clerkAndLimiterOn(cookie: string, method = 'GET') {
       accept: 'text/html',
       'sec-fetch-dest': 'document',
       'x-vercel-forwarded-for': '203.0.113.7',
+      ...headers,
     },
   });
   const limiter = new FakeRateLimiter();
@@ -304,6 +309,84 @@ describe("BUG-323's limiter and Clerk's middleware, with Clerk's key", () => {
 
       expect(paths).toEqual([]);
       expect(counted).toEqual(SIGNED_IN);
+    });
+
+    // Clerk also refreshes a token sent in an Authorization header. The proxy
+    // refuses that header before the limiter (BUG-369); the limiter does not
+    // rely on it.
+    it('counts a refresh of an expired token in an Authorization header', async () => {
+      const { paths, counted } = await clerkAndLimiterOn(returning(), 'GET', {
+        authorization: `Bearer ${expiredSessionToken(clerkKey.privateKey)}`,
+      });
+
+      expect(paths).toEqual(['/v1/sessions/sess_sdk/refresh']);
+      expect(counted).toEqual(SIGNED_IN);
+    });
+
+    // Against a Clerk upgrade that changes which cookie it reads: across the
+    // shapes each condition turns on, wherever Clerk calls its Backend API,
+    // the limiter counts.
+    it('leaves no Backend API call uncounted, across session and client cookies', async () => {
+      const plains = {
+        none: undefined,
+        expired: expiredSessionToken(clerkKey.privateKey),
+        current: genuine({ issuedSecondsAgo: 1 }),
+        'expired, forged': expiredSessionToken(otherKey.privateKey),
+        'expired, undecodable': `${expiredSessionToken(clerkKey.privateKey)}!`,
+        'expired, no issuer': genuine({ issuedSecondsAgo: 180, issuer: '' }),
+        'expired, issued later': genuine({
+          issuedSecondsAgo: 70,
+          validSeconds: 60,
+        }),
+      };
+      const suffixeds = {
+        none: undefined,
+        current: genuine({ issuedSecondsAgo: 1 }),
+        expired: expiredSessionToken(clerkKey.privateKey),
+        'current, forged': sessionToken(otherKey.privateKey, {
+          issuedSecondsAgo: 1,
+        }),
+        'current, undecodable': `${genuine({ issuedSecondsAgo: 1 })}!`,
+        'current, issued earlier': genuine({
+          issuedSecondsAgo: 80,
+          validSeconds: 600,
+        }),
+      };
+      const clientUats = [undefined, '', '0', signedIn];
+      const uncounted: string[] = [];
+      let skipped = 0;
+
+      for (const [plainKind, plain] of Object.entries(plains))
+        for (const [suffixedKind, suffixed] of Object.entries(suffixeds))
+          for (const plainUat of clientUats)
+            for (const suffixedUat of clientUats)
+              for (const suffix of [SUFFIX, 'decoy123']) {
+                const cookie = [
+                  plain && `__session=${plain}`,
+                  plainUat !== undefined && `__client_uat=${plainUat}`,
+                  suffixed && `__session_${suffix}=${suffixed}`,
+                  suffixedUat !== undefined &&
+                    `__client_uat_${suffix}=${suffixedUat}`,
+                  `${REFRESH_COOKIE}=refresh_sdk`,
+                ]
+                  .filter(Boolean)
+                  .join('; ');
+                const { paths, counted } = await clerkAndLimiterOn(cookie);
+                if (paths.length > 0 && counted.length === 0)
+                  uncounted.push(
+                    `plain ${plainKind} (${plainUat}), suffixed ${suffixedKind} (${suffixedUat}) under ${suffix}`,
+                  );
+                if (
+                  plain &&
+                  plainKind.startsWith('expired') &&
+                  counted.length === 0
+                )
+                  skipped += 1;
+              }
+
+      expect(uncounted).toEqual([]);
+      // The exception does apply somewhere in the table.
+      expect(skipped).toBeGreaterThan(0);
     });
   });
 

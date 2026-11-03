@@ -109,8 +109,9 @@ function hasExpired(exp: number, nowSeconds: number): boolean {
 
 // Clerk reads one plain and one suffixed session cookie, so a browser sends
 // one or two. Each check is a signature verification before any limit has
-// counted the request, so a header packed with tokens buys only this many; a
-// genuine token past them counts in the narrower buckets, as before.
+// counted the request, so a header packed with tokens buys only this many,
+// beside the two of BUG-374's check; a genuine token past them counts in the
+// narrower buckets, as before.
 const MAX_SESSIONS_CHECKED = 4;
 
 type ExpiredSession = { id: string; token: string };
@@ -215,7 +216,14 @@ function expiredSessions(
   if (request.method !== 'GET') return [];
   if (![...cookies.keys()].some((name) => name.startsWith('__refresh_')))
     return [];
-  if (instance && readsCurrentSuffixedSession(cookies, instance, nowSeconds))
+  // Clerk also refreshes a token sent in an Authorization header, which the
+  // proxy refuses before the limiter (BUG-369); the exception does not rely
+  // on that.
+  if (
+    instance &&
+    !request.headers.get('authorization') &&
+    readsCurrentSuffixedSession(cookies, instance, nowSeconds)
+  )
     return [];
   const sessions: ExpiredSession[] = [];
   for (const [name, value] of cookies) {

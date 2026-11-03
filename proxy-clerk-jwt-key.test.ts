@@ -9,13 +9,15 @@ import {
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
-// Runs the proxy once through a stubbed Clerk middleware and returns the key
-// the proxy handed it.
-async function jwtKeyHandedToClerk(): Promise<string | undefined> {
+type ClerkOptions = { jwtKey?: string; publishableKey?: string };
+
+// Runs the proxy once through a stubbed Clerk middleware and returns the
+// options the proxy handed it.
+async function optionsHandedToClerk(): Promise<ClerkOptions | undefined> {
   process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-  const handed: { jwtKey?: string }[] = [];
+  const handed: ClerkOptions[] = [];
   vi.doMock('@clerk/nextjs/server', () => ({
-    clerkMiddleware: (_handler: unknown, options: { jwtKey?: string }) => {
+    clerkMiddleware: (_handler: unknown, options: ClerkOptions) => {
       handed.push(options);
       return async () => NextResponse.next();
     },
@@ -25,7 +27,11 @@ async function jwtKeyHandedToClerk(): Promise<string | undefined> {
 
   await proxy(...proxyInvocation());
 
-  return handed[0]?.jwtKey;
+  return handed[0];
+}
+
+async function jwtKeyHandedToClerk(): Promise<string | undefined> {
+  return (await optionsHandedToClerk())?.jwtKey;
 }
 
 // DEBT-503 item 5: with Clerk's signing key configured, the middleware
@@ -62,5 +68,24 @@ describe("the proxy's Clerk JWT key", () => {
       event: 'clerk_jwt_key_unreadable',
       reason: { name: 'Error' },
     });
+  });
+});
+
+// BUG-374: the limiter follows Clerk's choice of session cookie by the suffix
+// Clerk derives from the publishable key, so the proxy hands Clerk the key the
+// limiter reads.
+describe("the proxy's Clerk publishable key", () => {
+  afterEach(() => {
+    restoreProcessEnv(ORIGINAL_ENV);
+    vi.resetModules();
+    vi.restoreAllMocks();
+  });
+
+  it('hands Clerk the publishable key the limiter reads', async () => {
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_live_handed';
+
+    expect((await optionsHandedToClerk())?.publishableKey).toBe(
+      'pk_live_handed',
+    );
   });
 });

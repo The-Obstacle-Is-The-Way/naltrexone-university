@@ -34,6 +34,7 @@ The cause is in `expiredSessions` (`lib/clerk-backend-call-limit.ts`). A browser
      - it is "0" and `__client_uat` is "0";
      - it is not "0", and the plain token was not issued strictly later while `__client_uat` is not "0".
    - The suffixed token has not expired, within Clerk's five seconds of clock skew.
+   - The request carries no `Authorization` header. Clerk also refreshes a token sent there, and the proxy refuses that header before the limiter (BUG-369), but the exception does not rely on that.
 
    Clerk refreshes only an expired token it reads, so such a request costs it nothing. The one part of Clerk's rule left out, whether the plain token's issuer is this instance's, can only move its choice to the suffixed token, so leaving it out cannot under-count. A current plain token beside an expired suffixed one keeps counting: no check has seen it, and deciding it needs that instance check. Real-SDK cases pin each condition, so a Clerk upgrade that changes the rule fails the tests.
 2. **Mirror Clerk's whole choice.** Count a request only if the token Clerk reads has expired. Clerk itself chooses by claims the sender picks, so an exact mirror cannot under-count, and it covers the reverse case too. But it also needs the instance's frontend API from the publishable key, and it replaces the limiter's reading of every request, where option 1 changes only the case seen in production.
@@ -43,12 +44,12 @@ The cause is in `expiredSessions` (`lib/clerk-backend-call-limit.ts`). A browser
 
 ## Resolution (decided)
 
-Option 1, decided 2026-11-03 under the owner's standing delegation, after a second agent's challenge: it found that the first draft of this option read claims the way Node does rather than the way Clerk does, and missed the exact suffix and empty cookies. Each now has a condition above. It removes the overcount the check saw and changes nothing for a token Clerk did not sign.
+Option 1, decided 2026-11-03 under the owner's standing delegation, after a second agent's challenge: it found that the first draft of this option read claims the way Node does rather than the way Clerk does, and missed the exact suffix and empty cookies. Each now has a condition above. It removes the overcount the check saw and changes nothing for a token Clerk did not sign. An adversarial review of the fix found no request on which Clerk calls its Backend API while the limiter counts nothing, as the proxy is wired. On its advice, the exception also requires no `Authorization` header, and the proxy hands Clerk's middleware the same publishable key the limiter reads, so the two cannot derive different suffixes.
 
 ## Verification
 
 - [x] Red first: the real-SDK reproduction above failed before the fix, on what the limiter counted, and passes after it.
-- [x] Each condition of option 1 has a real-SDK case in `lib/clerk-backend-call-limit-sdk.test.ts`, including a token Node reads but Clerk cannot, a decoy suffix and an empty `__client_uat_<suffix>`: wherever Clerk refreshes, the limiter counts. Two cases pin what still counts though Clerk calls nothing: a suffixed token Clerk did not sign, and the reverse gap.
+- [x] Each condition of option 1 has a real-SDK case in `lib/clerk-backend-call-limit-sdk.test.ts`, including a token Node reads but Clerk cannot, a decoy suffix and an empty `__client_uat_<suffix>`: wherever Clerk refreshes, the limiter counts. Two cases pin what still counts though Clerk calls nothing: a suffixed token Clerk did not sign, and the reverse gap. A decision table of 1,344 cookie combinations checks that wherever Clerk calls its Backend API, the limiter counts. With any one of three conditions broken on purpose, it failed, naming the shapes.
 - [ ] After the promotion that carries the fix, a signed-in production check reloads `/app/dashboard` after both tokens have expired. It logs no `clerk_backend_call_refused` line, and the log shows no 429 from the proxy. If the check can see them, it records the refreshing response's `Set-Cookie` names, never values.
 
 ## Related
