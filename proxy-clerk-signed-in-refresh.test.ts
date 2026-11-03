@@ -76,7 +76,7 @@ const SUFFIX = createHash('sha1')
   .replace(/\+/g, '-')
   .replace(/\//g, '_')
   .slice(0, 8);
-function issuedSessionToken(iat: number, exp: number): string {
+function issuedSessionToken(iat: number | undefined, exp: number): string {
   const part = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString('base64url');
   const unsigned = `${part({ alg: 'RS256', typ: 'JWT' })}.${part({
@@ -420,6 +420,40 @@ describe("limiting a session refresh with Clerk's signing key", () => {
     expect(limiter.inputs.map(({ key }) => key)).toEqual([
       'clerk-backend-call:203.0.113.7',
       'clerk-backend-call:session:sess_real',
+      'clerk-backend-call:site',
+    ]);
+  });
+
+  // Clerk mints every session token with an issue time; one without cannot
+  // be placed in Clerk's choice, so it counts as before.
+  it('counts as before when a session token has no issue time', async () => {
+    const limiter = new FakeRateLimiter([
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+    ]);
+    const cookie = Object.entries({
+      ...returningCookies(),
+      __session: issuedSessionToken(
+        undefined,
+        Math.floor(Date.now() / 1000) - 60,
+      ),
+    })
+      .map(([name, value]) => `${name}=${value}`)
+      .join('; ');
+
+    await limitClerkBackendCalls(
+      refreshFrom(cookie),
+      async () => limiter,
+      () => {},
+      () => {},
+      CLERK_JWT_KEY,
+      PUBLISHABLE_KEY,
+    );
+
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:signed-in-session:sess_returning',
+      'clerk-backend-call:signed-in:203.0.113.7',
       'clerk-backend-call:site',
     ]);
   });
