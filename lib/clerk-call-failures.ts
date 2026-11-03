@@ -48,6 +48,19 @@ function clerkAuthReason(response: Response): string {
   return reasons.at(-1) ?? '';
 }
 
+/**
+ * DEBT-503 item 4: whether Clerk found the session token expired and, handed
+ * no refresh cookie, sent the visitor through its handshake instead of
+ * refreshing. The proxy withholds that cookie from a request the limiter did
+ * not count.
+ */
+export function clerkWantedWithheldRefresh(response: Response): boolean {
+  return (
+    clerkAuthReason(response) ===
+    `${REFRESH_FAILED}non-eligible-no-refresh-cookie`
+  );
+}
+
 type AnsweredRequest = {
   nextUrl: { searchParams: Pick<URLSearchParams, 'has'> };
 };

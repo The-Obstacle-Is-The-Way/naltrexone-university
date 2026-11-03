@@ -4,7 +4,7 @@ import {
   type KeyObject,
   verify,
 } from 'node:crypto';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getClientIp } from '@/lib/request-ip';
 import { clerkBackendCallKeys } from '@/src/adapters/shared/clerk-backend-call-keys';
 import {
@@ -43,9 +43,12 @@ const SPACE = 0x20;
 const TAB = 0x09;
 const JWT_SEGMENTS = 3;
 
-function cookiesAsClerkReadsThem(request: ClerkRequest): Map<string, string> {
-  const header = request.headers.get('cookie') ?? '';
-  const cookies = new Map<string, string>();
+type CookiePair = { name: string; value: string; start: number; end: number };
+
+// The pairs in a cookie header, where Clerk's parser finds them: each runs
+// from `start` to `end`, the semicolon after it or the header's end.
+function cookiePairs(header: string): CookiePair[] {
+  const pairs: CookiePair[] = [];
   // Scanned, as Clerk's parser does: a trimming regex backtracks
   // quadratically over a long run of spaces inside a value.
   const blank = (at: number) =>
@@ -67,13 +70,72 @@ function cookiesAsClerkReadsThem(request: ClerkRequest): Map<string, string> {
       index = header.lastIndexOf(';', equals - 1) + 1;
       continue;
     }
-    const name = trimmed(index, equals);
-    if (!cookies.has(name)) {
-      cookies.set(name, percentDecoded(trimmed(equals + 1, end)));
-    }
+    pairs.push({
+      name: trimmed(index, equals),
+      value: trimmed(equals + 1, end),
+      start: index,
+      end,
+    });
     index = end + 1;
   }
+  return pairs;
+}
+
+/** The cookies in a header as Clerk's parser reads them: the first of a name wins. */
+export function cookieHeaderAsClerkReadsIt(
+  header: string,
+): Map<string, string> {
+  const cookies = new Map<string, string>();
+  for (const { name, value } of cookiePairs(header)) {
+    if (!cookies.has(name)) cookies.set(name, percentDecoded(value));
+  }
   return cookies;
+}
+
+function cookiesAsClerkReadsThem(request: ClerkRequest): Map<string, string> {
+  return cookieHeaderAsClerkReadsIt(request.headers.get('cookie') ?? '');
+}
+
+// Clerk reads a session's refresh token only from its `__refresh_<suffix>`
+// cookie, and refreshes an expired session only with it.
+const REFRESH_COOKIE_PREFIX = '__refresh';
+
+/**
+ * DEBT-503 item 4: the header without its refresh cookies. Each is removed
+ * at the boundaries Clerk's parser finds it, leaving every other byte, so
+ * Clerk reads every other cookie as before. Should a refresh cookie still
+ * read in what is left, Clerk gets no cookies rather than one to refresh with.
+ */
+export function cookieHeaderWithoutRefresh(header: string): string {
+  let kept = '';
+  let from = 0;
+  for (const { name, start, end } of cookiePairs(header)) {
+    if (!name.startsWith(REFRESH_COOKIE_PREFIX)) continue;
+    kept += header.slice(from, start);
+    from = end + 1;
+  }
+  const stripped = kept + header.slice(from);
+  const refreshLeft = [...cookieHeaderAsClerkReadsIt(stripped).keys()].some(
+    (name) => name.startsWith(REFRESH_COOKIE_PREFIX),
+  );
+  return refreshLeft ? '' : stripped;
+}
+
+/**
+ * The GET to hand Clerk's middleware when the limiter did not count it: the
+ * same request without its refresh cookies, so Clerk cannot refresh a
+ * session no bucket counted. Clerk refreshes only on a GET, so any other
+ * request, and one without a refresh cookie, is handed over as it came.
+ */
+export function withoutRefreshCookies(request: NextRequest): NextRequest {
+  const header = request.headers.get('cookie');
+  if (request.method !== 'GET' || header === null) return request;
+  const stripped = cookieHeaderWithoutRefresh(header);
+  if (stripped === header) return request;
+  const headers = new Headers(request.headers);
+  if (stripped.trim() === '') headers.delete('cookie');
+  else headers.set('cookie', stripped);
+  return new NextRequest(request, { headers });
 }
 
 function percentDecoded(value: string): string {
@@ -447,8 +509,35 @@ export async function limitClerkBackendCalls(
   jwtKey?: string,
   publishableKey?: string,
 ): Promise<NextResponse | null> {
+  const verdict = await countClerkBackendCalls(
+    request,
+    loadLimiter,
+    report,
+    refused,
+    jwtKey,
+    publishableKey,
+  );
+  return verdict instanceof NextResponse ? verdict : null;
+}
+
+/**
+ * What the limiter did with a request: the 429 that refused it, or whether
+ * it counted the request, found nothing in it that makes Clerk call its
+ * Backend API, or let it through on a limiter failure.
+ */
+export type ClerkBackendCallCount = 'counted' | 'uncounted' | 'failed-open';
+
+/** `limitClerkBackendCalls`, saying what it counted. */
+export async function countClerkBackendCalls(
+  request: ClerkRequest,
+  loadLimiter: () => Promise<RateLimiter>,
+  report: (failure: unknown) => void,
+  refused: (limit: ClerkBackendCallLimit) => void = () => {},
+  jwtKey?: string,
+  publishableKey?: string,
+): Promise<NextResponse | ClerkBackendCallCount> {
   const buckets = bucketsFor(request, jwtKey, publishableKey);
-  if (buckets.length === 0) return null;
+  if (buckets.length === 0) return 'uncounted';
   try {
     const limiter = await loadLimiter();
     for (const { limit, key, rate } of buckets) {
@@ -458,13 +547,13 @@ export async function limitClerkBackendCalls(
         return tooManyRequests(request, result.retryAfterSeconds);
       }
     }
-    return null;
+    return 'counted';
   } catch (error) {
     report({
       event: 'clerk_backend_call_limiter_failed',
       error: projectSafeErrorDiagnostics(error),
     });
-    return null;
+    return 'failed-open';
   }
 }
 
