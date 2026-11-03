@@ -21,7 +21,7 @@ The cause is in `expiredSessions` (`lib/clerk-backend-call-limit.ts`). A browser
 
 ## Impact
 
-- **A returning visitor can get the 429 page.** It needs a click inside the gap of a second or two after Clerk's refresh, while the session's bucket is full. A refused client navigation falls back to a full page load, which then gets the "Too many sign-in checks came from your network" page. In the check, only prefetches were refused, so the visitor saw nothing.
+- **A returning visitor can get the 429 page.** It needs a click inside the gap of a second or two after Clerk's refresh, while the session's bucket is full. A refused client-side navigation falls back to a full page load, which then gets the "Too many sign-in checks came from your network" page. In the check, only prefetches were refused, so the visitor saw nothing.
 - **Shared networks have about a sixth of their intended headroom.** Each falsely counted request that the session's bucket lets through also counts in the signed-in-address bucket (200 a minute) and the site-wide bucket (1,000 a minute). One return costs Clerk one refresh but counts up to 6. So about 33 returning visitors a minute behind one address fill the bucket DEBT-503 item 4 sized for 200. That is the hospital-network case item 4 exists for, and it raises `clerk_signed_in_limit_reached`.
 - **DEBT-503 item 4's measurement overcounts.** The `clerk_backend_call_usage` rows the owner reads by 2026-11-08 count these requests. They overstate signed-in refreshes until this fix is in production.
 
