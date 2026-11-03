@@ -50,6 +50,7 @@ Option 1, decided 2026-11-03 under the owner's standing delegation, after a seco
 
 - [x] Red first: the real-SDK reproduction above failed before the fix, on what the limiter counted, and passes after it.
 - [x] Each condition of option 1 has a real-SDK case in `lib/clerk-backend-call-limit-sdk.test.ts`, including a token Node reads but Clerk cannot, a decoy suffix and an empty `__client_uat_<suffix>`: wherever Clerk refreshes, the limiter counts. Two cases pin what still counts though Clerk calls nothing: a suffixed token Clerk did not sign, and the reverse gap. A decision table of 1,344 cookie combinations checks that wherever Clerk calls its Backend API, the limiter counts. With any one of three conditions broken on purpose, it failed, naming the shapes.
+- [x] Rechecked on 2026-11-03 against `@clerk/backend` 3.26.2 and `@clerk/shared` 4.41.1, which #1629 installed. `usesSuffixedCookies`, the cookie reads and `getCookieSuffix` are unchanged. The bundle's one logic change rejects a handshake token whose category is not a session token's, and the limiter counts a handshake as before. The real-SDK cases and the decision table pass on the new versions.
 - [ ] After the promotion that carries the fix, a signed-in production check reloads `/app/dashboard` after both tokens have expired. It logs no `clerk_backend_call_refused` line, and the log shows no 429 from the proxy. If the check can see them, it records the refreshing response's `Set-Cookie` names, never values.
 
 ## Related

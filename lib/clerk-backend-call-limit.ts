@@ -174,7 +174,7 @@ function claimsOfTokenClerkSigned(token: string, key: KeyObject) {
 // browser script rewrites both, while the page's prefetches go out. Clerk
 // refreshes only an expired token it reads, so a request whose current
 // suffixed token Clerk reads costs it nothing. Clerk's choice on a production
-// instance (`usesSuffixedCookies` in `@clerk/backend` 3.25.0), for two tokens
+// instance (`usesSuffixedCookies` in `@clerk/backend` 3.26.2), for two tokens
 // it can read: the plain one if it names no issuer; otherwise the suffixed
 // one, unless the suffixed `__client_uat` is missing or empty, or "0" while
 // the plain one is not, or the plain token was issued later and the plain
