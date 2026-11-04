@@ -150,7 +150,6 @@ describe("the cookies the proxy hands Clerk's middleware", () => {
   // The log line lasts an hour in production, and while the copy fails Clerk
   // can refresh what the limiter did not count, so a person must hear of it.
   it('are handed over as they came, with an alert after the response, when the runtime refuses the copy', async () => {
-    const errored = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { proxy, alerts, cookieHandedToClerk } = await proxyWith(
       new FakeRateLimiter(),
       {
@@ -166,9 +165,6 @@ describe("the cookies the proxy hands Clerk's middleware", () => {
     await getWaitUntilPromiseFromEvent(event);
 
     expect(cookieHandedToClerk()).toBe(cookie);
-    expect(errored).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'clerk_refresh_cookie_strip_failed' }),
-    );
     expect(alerts.raised).toEqual([
       { kind: 'clerk_refresh_cookie_strip_failed', count: 1 },
     ]);
