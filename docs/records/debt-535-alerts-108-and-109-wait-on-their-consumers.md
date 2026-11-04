@@ -10,7 +10,7 @@
 
 Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4)) and #109 (`minimatch`, [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)), both moderate, on 2026-11-01. Each fix ships only in a new major, `glob` 14.0.2 and `minimatch` 11.0.1, published 2026-10-27, and no package here accepts those majors yet. Neither advisory is reachable here. This record decides not to override the consumers onto the new majors.
 - **#108** closes with Sentry's next release, which has merged the change.
-- **The `minimatch` alert** closes only with a Stryker release on `minimatch` 11, and Stryker has not published one.
+- **The `minimatch` advisory** stays reported, and any alert Dependabot raises again for it stays open, until Stryker releases on `minimatch` 11. Stryker has not published such a release.
 - **#109 was withdrawn.** GitHub edited the `minimatch` advisory at 2026-11-04T16:50Z and then withdrew alert #109. The edit changed its range to `>= 7.0.0, < 11.0.1`.
   - The advisory still covers the installed 10.2.6, and `pnpm audit` still reports it.
   - At 17:11Z Dependabot had not raised it again, so this record names it by its advisory.
@@ -58,13 +58,13 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
 
 ## Options
 
-1. **Override `glob` 13 to 14 and `minimatch` 10 to 11.** This closes both alerts now. It forces both consumers outside their declared ranges, as the `esbuild` override already does for `drizzle-kit`, but onto the week-old rewrite.
+1. **Override `glob` 13 to 14 and `minimatch` 10 to 11.** This closes #108 and clears the `minimatch` advisory now. It forces both consumers outside their declared ranges, as the `esbuild` override already does for `drizzle-kit`, but onto the week-old rewrite.
    - Stryker's ignore rules use `partial` matching and paths with a trailing slash, the two behaviors `minimatch` 11 changes.
    - All for no reachable benefit.
 2. **Override Sentry's `glob` alone.** `glob` 14.0.3, published 2026-10-28T04:08Z, cleared the 7-day gate at 2026-11-04T04:08Z. An override now would close #108 at least 7 days sooner than Sentry's route, which starts only once Sentry publishes. The cost is an override outside Sentry's range, to remove afterward.
 3. **Dismiss the `minimatch` alert against this record,** if Dependabot raises it again. `docs/policies/supply-chain.md` (Audit hygiene) allows this only once the owner explicitly approves. Until then the alert stays open with the record linked.
 4. **Watch Stryker's `minimatch` 11 change in the upstream fix watch.** No upstream issue or fix pull request will close when it lands: stryker-mutator/stryker-js#3515 is a dashboard that stays open. The registry check in the Waiting trigger below covers it instead.
-5. **Keep both alerts open and close each with its consumer's release (chosen).**
+5. **Wait for each consumer's release: #108 stays open and the `minimatch` advisory stays reported (chosen).**
 
 ## Resolution (decided)
 
@@ -74,7 +74,7 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
   - If the release is published but has not cleared the gate, re-date the status to its npm publish date plus 7 days.
   - If it is not published, re-date the status by 7 days, to 2026-11-19, and check again then.
   - A `glob` 13.x release with the fix (isaacs/node-glob#664) closes #108 only if the advisory's range is amended to exclude it. Check both on each due date.
-- **The `minimatch` alert.** Once #108 closes, close this record with a Waiting row for it that names GHSA-g3hv-75wg-m249.
+- **The `minimatch` advisory.** Once #108 closes, close this record with a Waiting row for GHSA-g3hv-75wg-m249.
   - Its trigger is an `@stryker-mutator/core` release whose `minimatch` range resolves to 11.0.1 or later in the lockfile. `npm view @stryker-mutator/core dependencies.minimatch` and stryker-mutator/stryker-js#3515 show it.
   - DEBT-500's upgrade (#1609) does not meet it, because 10.1.1 declares `~10.2.4`.
   - If Dependabot raises an alert for GHSA-g3hv-75wg-m249 again, it is this one.
