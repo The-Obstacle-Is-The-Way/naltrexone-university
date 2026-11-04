@@ -52,7 +52,7 @@ function clerkAuthReason(response: Response): string {
  * DEBT-503 item 4: whether Clerk found the session token expired and, handed
  * no refresh cookie, did not refresh it: a page load goes through Clerk's
  * handshake, and a router request is answered signed out (on a protected
- * page, the browser then asks again). The proxy withholds
+ * page, turned away). The proxy withholds
  * that cookie from a request the limiter did not count.
  */
 export function clerkWantedWithheldRefresh(response: Response): boolean {
