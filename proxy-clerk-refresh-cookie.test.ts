@@ -1,4 +1,7 @@
-import { NextFetchEvent } from 'next/dist/server/web/spec-extension/fetch-event';
+import {
+  getWaitUntilPromiseFromEvent,
+  NextFetchEvent,
+} from 'next/dist/server/web/spec-extension/fetch-event';
 import { NextRequest, NextResponse } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -38,6 +41,7 @@ async function proxyWith(
   limiter: FakeRateLimiter,
   { publishableKey = 'pk_live_x', authReason = '' } = {},
 ) {
+  const alerts = new FakeOperationalAlerts();
   process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = publishableKey;
   const handedToClerk: NextRequest[] = [];
@@ -55,11 +59,27 @@ async function proxyWith(
   return {
     proxy: createProxy({
       loadBackendCallLimiter,
-      loadOperationalAlerts: async () => new FakeOperationalAlerts(),
+      loadOperationalAlerts: async () => alerts,
     }),
+    alerts,
     cookieHandedToClerk: () => handedToClerk[0]?.headers.get('cookie'),
     loadBackendCallLimiter,
   };
+}
+
+// A runtime that refuses to copy a request: Next's own class, which nothing
+// can inject, refusing to be built from another request.
+function refuseRequestCopies() {
+  vi.doMock('next/server', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('next/server')>();
+    class RefusesCopies extends actual.NextRequest {
+      constructor(...[input, init]: ConstructorParameters<typeof NextRequest>) {
+        if (input instanceof Request) throw new Error('copy refused');
+        super(input, init);
+      }
+    }
+    return { ...actual, NextRequest: RefusesCopies };
+  });
 }
 
 // DEBT-503 item 4: Clerk refreshes an expired session only with its refresh
@@ -68,6 +88,7 @@ async function proxyWith(
 describe("the cookies the proxy hands Clerk's middleware", () => {
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
+    vi.doUnmock('next/server');
     vi.resetModules();
     vi.restoreAllMocks();
   });
@@ -131,6 +152,26 @@ describe("the cookies the proxy hands Clerk's middleware", () => {
     );
 
     expect(warned).toHaveBeenCalledWith({ event: 'clerk_refresh_withheld' });
+  });
+
+  // The log line lasts an hour in production, and while the copy fails Clerk
+  // can refresh what the limiter did not count, so a person must hear of it.
+  it('are handed over as they came, with an alert after the response, when the runtime refuses the copy', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    refuseRequestCopies();
+    const { proxy, alerts, cookieHandedToClerk } = await proxyWith(
+      new FakeRateLimiter(),
+    );
+    const cookie = `__session=${sessionToken(nowSeconds() + 60)}; __refresh_abc=r`;
+    const [request, event] = pageLoad(cookie);
+
+    await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(cookieHandedToClerk()).toBe(cookie);
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_refresh_cookie_strip_failed', count: 1 },
+    ]);
   });
 
   it('are not logged when the visitor sent no refresh cookie to leave out', async () => {

@@ -97,14 +97,16 @@ describe('withoutRefreshCookies', () => {
   });
 
   // It runs on nearly every signed-in production request, so a runtime that
-  // refuses the copy leaves the request as it came instead of failing it.
-  it('hands Clerk the request as it came, and logs, when the copy fails', () => {
+  // refuses the copy leaves the request as it came instead of failing it, and
+  // says so: Clerk can then refresh what the limiter did not count.
+  it('hands Clerk the request as it came, logs and reports, when the copy fails', () => {
     const errored = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const failed = vi.fn();
     const request = new NextRequest('https://example.com/app/dashboard', {
       headers: { cookie: '__session=t; __refresh_abc=r' },
     });
 
-    const forClerk = withoutRefreshCookies(request, () => {
+    const forClerk = withoutRefreshCookies(request, failed, () => {
       throw new Error('copy refused');
     });
 
@@ -112,6 +114,18 @@ describe('withoutRefreshCookies', () => {
     expect(errored).toHaveBeenCalledWith(
       expect.objectContaining({ event: 'clerk_refresh_cookie_strip_failed' }),
     );
+    expect(failed).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports no failure when the copy succeeds', () => {
+    const failed = vi.fn();
+    const request = new NextRequest('https://example.com/app/dashboard', {
+      headers: { cookie: '__session=t; __refresh_abc=r' },
+    });
+
+    withoutRefreshCookies(request, failed);
+
+    expect(failed).not.toHaveBeenCalled();
   });
 
   it.each([

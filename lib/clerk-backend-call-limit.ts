@@ -126,9 +126,11 @@ export function cookieHeaderWithoutRefresh(header: string): string {
  * same request without its refresh cookies, so Clerk cannot refresh a
  * session no bucket counted. Clerk refreshes only on a GET, so any other
  * request, and one without a refresh cookie, is handed over as it came.
+ * `failed` hears of a runtime that refused the copy.
  */
 export function withoutRefreshCookies(
   request: NextRequest,
+  failed: () => void = () => {},
   copy: (from: NextRequest, headers: Headers) => NextRequest = (
     from,
     headers,
@@ -152,6 +154,7 @@ export function withoutRefreshCookies(
       event: 'clerk_refresh_cookie_strip_failed',
       error: projectSafeErrorDiagnostics(error),
     });
+    failed();
     return request;
   }
 }

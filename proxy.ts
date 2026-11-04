@@ -387,12 +387,23 @@ export function createProxy({
 
     // DEBT-503 item 4: Clerk refreshes an expired session only with its
     // refresh cookie, so a GET the limiter did not count reaches Clerk
-    // without one. Clerk then refreshes only what the limiter counted, and
-    // sends an expired token it was not handed the cookie for through its
-    // handshake, which costs no Backend API call and whose return counts.
+    // without one. Clerk then refreshes only what the limiter counted. An
+    // expired token it was not handed the cookie for goes through its
+    // handshake on a page load, which costs no Backend API call and whose
+    // return counts; a router request is answered signed out.
     const clerkRequest =
       usesProductionClerkInstance() && counted === 'uncounted'
-        ? withoutRefreshCookies(request)
+        ? withoutRefreshCookies(request, () => {
+            // The log line lasts an hour, and while the copy fails Clerk can
+            // refresh what the limiter did not count: the owner hears of it,
+            // after the response.
+            event.waitUntil(
+              raiseOperationalAlert(
+                loadOperationalAlerts,
+                'clerk_refresh_cookie_strip_failed',
+              ),
+            );
+          })
         : request;
     const clerkMw = await getClerkMiddleware();
     const response = await clerkMw(clerkRequest, event);
