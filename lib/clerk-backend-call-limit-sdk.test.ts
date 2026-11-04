@@ -10,7 +10,9 @@ import {
 import {
   limitClerkBackendCalls,
   triggersClerkBackendCall,
+  withoutRefreshCookies,
 } from './clerk-backend-call-limit';
+import { clerkWantedWithheldRefresh } from './clerk-call-failures';
 
 vi.mock('server-only', () => ({}));
 
@@ -434,5 +436,121 @@ describe("BUG-323's limiter and Clerk's middleware, with Clerk's key", () => {
       'clerk-backend-call:203.0.113.7',
       'clerk-backend-call:site',
     ]);
+  });
+});
+
+// DEBT-503 item 4: a GET the limiter did not count reaches Clerk without its
+// refresh cookies. Against the installed SDK, Clerk then calls nothing for an
+// expired token, and reads a current one as before.
+describe("Clerk's middleware, handed a GET without its refresh cookies", () => {
+  afterEach(() => {
+    restoreProcessEnv(ORIGINAL_ENV);
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  async function clerkOn(
+    cookie: string,
+    { withheld = true, headers = {} as Record<string, string> } = {},
+  ) {
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = PUBLISHABLE_KEY;
+    process.env.CLERK_SECRET_KEY = 'sk_live_sdk';
+    const paths: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      paths.push(
+        new URL(input instanceof Request ? input.url : String(input)).pathname,
+      );
+      return new Response(JSON.stringify({ errors: [] }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    const sent = new NextRequest('https://example.com/app/dashboard', {
+      headers: {
+        cookie,
+        accept: 'text/html',
+        'sec-fetch-dest': 'document',
+        'x-vercel-forwarded-for': '203.0.113.7',
+        ...headers,
+      },
+    });
+    const request = withheld ? withoutRefreshCookies(sent) : sent;
+    const { clerkMiddleware } = await import('@clerk/nextjs/server');
+    const response = await clerkMiddleware({ jwtKey: CLERK_JWT_KEY })(
+      request,
+      new NextFetchEvent({ request, page: '/', context: undefined }),
+    );
+    return { paths, response: response as Response };
+  }
+
+  const uat = () => `__client_uat=${now() - 600}`;
+  const expired = () => expiredSessionToken(clerkKey.privateKey);
+  const refresh = `${REFRESH_COOKIE}=refresh_sdk`;
+
+  it.each([
+    ['last', () => `__session=${expired()}; ${uat()}; ${refresh}`],
+    ['first', () => `${refresh}; __session=${expired()}; ${uat()}`],
+    [
+      'twice',
+      () => `${refresh}; __session=${expired()}; ${refresh}2; ${uat()}`,
+    ],
+    [
+      'after a segment without "="',
+      () => `x; ${refresh}; __session=${expired()}; ${uat()}`,
+    ],
+    [
+      'with spaces and tabs around its name',
+      () =>
+        ` \t${REFRESH_COOKIE} =refresh_sdk;__session=${expired()}; ${uat()}`,
+    ],
+  ])(
+    'calls nothing for an expired token, its refresh cookie %s, and sends a page load through its handshake',
+    async (_shape, cookie) => {
+      const { paths, response } = await clerkOn(cookie());
+
+      expect(paths).toEqual([]);
+      expect(response.headers.get('x-clerk-auth-status')).toBe('handshake');
+      expect(clerkWantedWithheldRefresh(response)).toBe(true);
+    },
+  );
+
+  it('refreshes the same expired token when handed its refresh cookie', async () => {
+    const { paths, response } = await clerkOn(
+      `__session=${expired()}; ${uat()}; ${refresh}`,
+      { withheld: false },
+    );
+
+    expect(paths).toEqual(['/v1/sessions/sess_sdk/refresh']);
+    expect(clerkWantedWithheldRefresh(response)).toBe(false);
+  });
+
+  it('calls nothing for an expired token on a router request, and answers it signed out', async () => {
+    const { paths, response } = await clerkOn(
+      `__session=${expired()}; ${uat()}; ${refresh}`,
+      {
+        headers: {
+          rsc: '1',
+          accept: 'text/x-component',
+          'sec-fetch-dest': 'empty',
+        },
+      },
+    );
+
+    expect(paths).toEqual([]);
+    expect(response.headers.get('x-clerk-auth-status')).toBe('signed-out');
+  });
+
+  it('reads a current session as signed in, as it does with the refresh cookie', async () => {
+    const current = sessionToken(clerkKey.privateKey, { issuedSecondsAgo: 1 });
+    const cookie = `__session=${current}; ${uat()}; ${refresh}`;
+
+    for (const withheld of [true, false]) {
+      const { paths, response } = await clerkOn(cookie, { withheld });
+
+      expect(paths).toEqual([]);
+      expect(
+        response.headers.get('x-middleware-request-x-clerk-auth-status'),
+      ).toBe('signed-in');
+    }
   });
 });

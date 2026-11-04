@@ -5,17 +5,20 @@ import {
   NextResponse,
 } from 'next/server';
 import {
+  type ClerkBackendCallCount,
   type ClerkBackendCallLimit,
-  limitClerkBackendCalls,
+  countClerkBackendCalls,
   loadContainerOperationalAlerts,
   loadContainerRateLimiter,
   raiseLimiterFailureAlert,
   raiseOperationalAlert,
   triggersClerkBackendCall,
+  withoutRefreshCookies,
 } from '@/lib/clerk-backend-call-limit';
 import {
   clerkCallFailure,
   clerkRefreshFailureCode,
+  clerkWantedWithheldRefresh,
   reportClerkCallFailure,
 } from '@/lib/clerk-call-failures';
 import { parseClerkJwtKey } from '@/lib/clerk-jwt-key';
@@ -352,8 +355,9 @@ export function createProxy({
     // limit every signed-in page shares, before Clerk sees them. Only a
     // production instance: a development instance handshakes every new browser
     // session, so E2E, local work and Preview would trip the limit.
+    let counted: NextResponse | ClerkBackendCallCount = 'uncounted';
     if (usesProductionClerkInstance() && triggersClerkBackendCall(request)) {
-      const limited = await limitClerkBackendCalls(
+      counted = await countClerkBackendCalls(
         request,
         loadBackendCallLimiter,
         (failure) => {
@@ -378,13 +382,36 @@ export function createProxy({
         readClerkJwtKey(),
         clerkPublishableKey(),
       );
-      if (limited) return limited;
+      if (counted instanceof NextResponse) return counted;
     }
 
+    // DEBT-503 item 4: Clerk refreshes an expired session only with its
+    // refresh cookie, so a GET the limiter did not count reaches Clerk
+    // without one. Clerk then refreshes only what the limiter counted. An
+    // expired token it was not handed the cookie for goes through its
+    // handshake on a page load, which costs no Backend API call and whose
+    // return counts; a router request is answered signed out.
+    const clerkRequest =
+      usesProductionClerkInstance() && counted === 'uncounted'
+        ? withoutRefreshCookies(request, () => {
+            // The log line lasts an hour, and while the copy fails Clerk can
+            // refresh what the limiter did not count: the owner hears of it,
+            // after the response.
+            event.waitUntil(
+              raiseOperationalAlert(
+                loadOperationalAlerts,
+                'clerk_refresh_cookie_strip_failed',
+              ),
+            );
+          })
+        : request;
     const clerkMw = await getClerkMiddleware();
-    const response = await clerkMw(request, event);
+    const response = await clerkMw(clerkRequest, event);
     if (response) {
       logCheckoutSuccessAuthBounce(request, response);
+      if (clerkRequest !== request && clerkWantedWithheldRefresh(response)) {
+        console.warn({ event: 'clerk_refresh_withheld' });
+      }
       // DEBT-503 item 3: Clerk's middleware swallows Clerk failing its own
       // calls; its answer still says which, and the owner hears of it after
       // the response. Only production's allowance is at stake.
