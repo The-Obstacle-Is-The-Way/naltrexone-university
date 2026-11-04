@@ -28,6 +28,10 @@ export const OPERATIONAL_ALERT_KINDS = [
   // DEBT-503 item 5: session tokens failed their signature check past a
   // threshold, as every token does when CLERK_JWT_KEY is not Clerk's key.
   'clerk_session_tokens_rejected',
+  // DEBT-503 item 4: the runtime refused to copy a request without its
+  // refresh cookies, so Clerk was handed them on a GET the limiter did not
+  // count, and can refresh it uncounted.
+  'clerk_refresh_cookie_strip_failed',
   // DEBT-501 item 1: the Stripe reconcile run stopped before its last page,
   // and nothing resumes it, so later rows go unrepaired.
   'stripe_reconcile_stopped_early',

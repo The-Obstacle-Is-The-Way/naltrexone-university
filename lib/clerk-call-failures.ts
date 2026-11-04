@@ -48,6 +48,20 @@ function clerkAuthReason(response: Response): string {
   return reasons.at(-1) ?? '';
 }
 
+/**
+ * DEBT-503 item 4: whether Clerk found the session token expired and, handed
+ * no refresh cookie, did not refresh it: a page load goes through Clerk's
+ * handshake, and a router request is answered signed out (on a protected
+ * page, turned away). The proxy withholds
+ * that cookie from a request the limiter did not count.
+ */
+export function clerkWantedWithheldRefresh(response: Response): boolean {
+  return (
+    clerkAuthReason(response) ===
+    `${REFRESH_FAILED}non-eligible-no-refresh-cookie`
+  );
+}
+
 // A failed refresh's reason ends in the code Clerk's Backend API gave, such as
 // `too_many_requests`. The log line carries it only as a short identifier.
 const REFRESH_FAILURE_CODE_MAX_LENGTH = 64;

@@ -512,8 +512,12 @@ describe('proxy with limits only sessions Clerk signed can fill', () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = PUBLISHABLE_KEY;
     process.env.CLERK_JWT_KEY = CLERK_JWT_KEY;
+    const handedToClerk: NextRequest[] = [];
     vi.doMock('@clerk/nextjs/server', () => ({
-      clerkMiddleware: () => async () => NextResponse.next(),
+      clerkMiddleware: () => async (request: NextRequest) => {
+        handedToClerk.push(request);
+        return NextResponse.next();
+      },
       createRouteMatcher: () => () => true,
     }));
     const alerts = new FakeOperationalAlerts();
@@ -524,6 +528,7 @@ describe('proxy with limits only sessions Clerk signed can fill', () => {
         loadOperationalAlerts: async () => alerts,
       }),
       alerts,
+      handedToClerk,
     };
   }
 
@@ -563,9 +568,11 @@ describe('proxy with limits only sessions Clerk signed can fill', () => {
     },
   );
 
-  it("hands Clerk a returning visitor's request uncounted while Clerk reads a current suffixed session", async () => {
+  // DEBT-503 item 4, step 4: uncounted, so Clerk gets no refresh cookie,
+  // and reads the current suffixed session without one.
+  it("hands Clerk a returning visitor's request uncounted, and without its refresh cookie, while Clerk reads a current suffixed session", async () => {
     const limiter = new FakeRateLimiter([OVER_LIMIT]);
-    const { proxy } = await proxyWith(limiter);
+    const { proxy, handedToClerk } = await proxyWith(limiter);
     const [request, event] = proxyInvocation('https://example.com/pricing');
     request.headers.set('x-vercel-forwarded-for', '203.0.113.7');
     for (const [name, value] of Object.entries(returningCookies()))
@@ -575,5 +582,11 @@ describe('proxy with limits only sessions Clerk signed can fill', () => {
 
     expect(response?.status).not.toBe(429);
     expect(limiter.inputs).toEqual([]);
+    expect(handedToClerk).toHaveLength(1);
+    const handed = handedToClerk[0]?.cookies;
+    expect(handed?.has(`__refresh_${SUFFIX}`)).toBe(false);
+    expect(handed?.get(`__session_${SUFFIX}`)?.value).toBe(
+      request.cookies.get(`__session_${SUFFIX}`)?.value,
+    );
   });
 });
