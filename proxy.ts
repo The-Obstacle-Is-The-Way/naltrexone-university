@@ -394,8 +394,8 @@ export function createProxy({
     // expired token it was not handed the cookie for goes through its
     // handshake on a page load, which costs no Backend API call and whose
     // return counts. A router request is answered signed out; on a
-    // protected page, the browser's next request, for that page or the
-    // sign-in page, counts.
+    // protected page, the browser then asks again, for that page or the
+    // sign-in page, and the limiter judges that request afresh.
     const clerkRequest =
       usesProductionClerkInstance() && counted === 'uncounted'
         ? withoutRefreshCookies(
