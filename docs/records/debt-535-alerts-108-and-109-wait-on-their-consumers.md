@@ -56,7 +56,7 @@ Nothing reaches users or production. Two moderate alerts stay open beside any re
    - Sentry needed code changes to move: the Windows path in getsentry/sentry-javascript#26014.
    - Stryker's ignore rules use `partial` matching and paths with a trailing slash, the two behaviors `minimatch` 11 changes.
    - All for no reachable benefit.
-2. **Override Sentry's `glob` alone.** `glob` 14.0.3 is past the 7-day gate. That would close #108 about a week before Sentry's release does, at the cost of an override outside Sentry's range to remove afterwards.
+2. **Override Sentry's `glob` alone.** `glob` 14.0.3, published 2026-10-28T04:08Z, cleared the 7-day gate at 2026-11-04T04:08Z. An override now would close #108 at least 7 days sooner than Sentry's route, which starts only once Sentry publishes. The cost is an override outside Sentry's range, to remove afterward.
 3. **Dismiss #109 against this record.** `docs/policies/supply-chain.md` (Audit hygiene) allows this only once the owner explicitly approves. Until then the alert stays open with the record linked.
 4. **Watch Stryker's `minimatch` 11 change in the upstream fix watch.** There is no upstream issue or fix pull request to watch yet. DEBT-500's watch already triggers the Stryker upgrade, which is the only route to the fix.
 5. **Keep both alerts open and close each with its consumer's release (chosen).**
@@ -66,7 +66,9 @@ Nothing reaches users or production. Two moderate alerts stay open beside any re
 - **No override.** Both alerts stay open, with this record as their reason.
 - **#108, on the due date.**
   - If Sentry's release carrying getsentry/sentry-javascript#26014 has cleared the 7-day gate, update `@sentry/nextjs` in a repo-owned bundle. That removes `glob` 13 and Sentry's copy of `minimatch` 10, so #108 closes as fixed.
-  - If no such release exists, re-date the status to its publish date plus 7 days. A `glob` 13.x release with the fix (isaacs/node-glob#664) would also close #108.
+  - If the release is published but has not cleared the gate, re-date the status to its npm publish date plus 7 days.
+  - If it is not published, re-date the status by 7 days, to 2026-11-19, and check again then.
+  - A `glob` 13.x release with the fix (isaacs/node-glob#664) would also close #108. Check it on each due date.
 - **#109.** Once #108 closes, close this record with a Waiting row for #109.
   - It revives with DEBT-500's Stryker upgrade, raised by the upstream fix watch.
   - That upgrade must take a Stryker release declaring `minimatch` `>=11.0.1`, which shows on stryker-mutator/stryker-js#3515 and in Stryker's release notes.
