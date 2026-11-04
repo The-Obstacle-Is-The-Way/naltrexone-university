@@ -9,7 +9,7 @@
 ## Summary
 
 Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4)) and #109 (`minimatch`, [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)), both moderate, on 2026-11-01. Each fix ships only in a new major, `glob` 14.0.2 and `minimatch` 11.0.1, published 2026-10-27, and no package here accepts those majors yet. Neither advisory is reachable here. This record decides not to override the consumers onto the new majors.
-- **#108** closes with Sentry's next release, which has merged the change.
+- **#108** closes once a repo-owned `@sentry/nextjs` update takes Sentry's release carrying getsentry/sentry-javascript#26014, after that release clears the 7-day gate. On 2026-11-04 Sentry had merged the change but not released it.
 - **The `minimatch` advisory** stays reported, and any alert Dependabot raises again for it stays open, until the lockfile takes both the `@sentry/nextjs` update and a Stryker release whose `minimatch` range resolves to 11.0.1 or later. Stryker has not published such a release.
 - **#109 was withdrawn.** GitHub edited the `minimatch` advisory at 2026-11-04T16:50Z and then withdrew alert #109. The edit changed its range to `>= 7.0.0, < 11.0.1`.
   - The advisory still covers the installed 10.2.6, and `pnpm audit` still reports it.
@@ -79,6 +79,7 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
 - **The `minimatch` advisory.** Once #108 closes, close this record with a Waiting row for GHSA-g3hv-75wg-m249.
   - Its trigger is an `@stryker-mutator/core` release whose `minimatch` range resolves to 11.0.1 or later in the lockfile. `npm view @stryker-mutator/core dependencies.minimatch` and stryker-mutator/stryker-js#3515 show it.
   - DEBT-500's upgrade (#1609) does not meet it, because 10.1.1 declares `~10.2.4`.
+  - If #108 closed through the `glob` 13.x backport instead, Sentry's `glob` 13 still brings `minimatch` 10, so the row also waits on the `@sentry/nextjs` update.
   - If Dependabot raises an alert for GHSA-g3hv-75wg-m249 again, it is this one.
   - If the wait proves open-ended, the owner decides on option 3.
 - **If a path becomes reachable,** for example a Sentry build step or a glob pattern taken from input, reconsider option 1 for that path at once.
@@ -86,7 +87,7 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
 ## Verification
 
 - [ ] Dependabot marks #108 fixed on `main`, because the `@sentry/nextjs` update leaves no `glob` 13 in the lockfile, or because the lockfile resolves `glob` to a 13.x release that the advisory's amended range excludes.
-- [ ] `pnpm audit` no longer reports GHSA-g3hv-75wg-m249, because the lockfile holds no `minimatch` below 11.0.1, or the Waiting row carries it with the Stryker release trigger.
+- [ ] `pnpm audit` no longer reports GHSA-g3hv-75wg-m249, because the lockfile holds no `minimatch` below 11.0.1, or the Waiting row carries it with the trigger Resolution sets.
 
 ## Related
 
