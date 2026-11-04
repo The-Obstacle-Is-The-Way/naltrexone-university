@@ -10,10 +10,12 @@
 
 Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4)) and #109 (`minimatch`, [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)), both moderate, on 2026-11-01. Each fix ships only in a new major, `glob` 14.0.2 and `minimatch` 11.0.1, published 2026-10-27, and no package here accepts those majors yet. Neither advisory is reachable here. This record decides not to override the consumers onto the new majors.
 - **#108** closes with Sentry's next release, which has merged the change.
-- **The `minimatch` advisory** stays reported, and any alert Dependabot raises again for it stays open, until Stryker releases on `minimatch` 11. Stryker has not published such a release.
+- **The `minimatch` advisory** stays reported, and any alert Dependabot raises again for it stays open, until the lockfile takes both the `@sentry/nextjs` update and a Stryker release whose `minimatch` range resolves to 11.0.1 or later. Stryker has not published such a release.
 - **#109 was withdrawn.** GitHub edited the `minimatch` advisory at 2026-11-04T16:50Z and then withdrew alert #109. The edit changed its range to `>= 7.0.0, < 11.0.1`.
   - The advisory still covers the installed 10.2.6, and `pnpm audit` still reports it.
   - At 17:11Z Dependabot had not raised it again, so this record names it by its advisory.
+
+*Corrected 2026-11-04: the record first tied the `minimatch` alert to DEBT-500's Stryker upgrade, which keeps `minimatch` 10. It also said that a `glob` 13.x backport would close #108 without an amendment to the advisory's range, and that Sentry's change fixed a Windows path that `glob` 14 broke. GitHub has since withdrawn #109 and changed the advisory's range to `>= 7.0.0, < 11.0.1`.*
 
 ## Evidence
 
@@ -83,7 +85,7 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
 
 ## Verification
 
-- [ ] The `@sentry/nextjs` update leaves no `glob` 13 in the lockfile, and Dependabot marks #108 fixed on `main`.
+- [ ] Dependabot marks #108 fixed on `main`, because the `@sentry/nextjs` update leaves no `glob` 13 in the lockfile, or because the lockfile resolves `glob` to a 13.x release that the advisory's amended range excludes.
 - [ ] `pnpm audit` no longer reports GHSA-g3hv-75wg-m249, because the lockfile holds no `minimatch` below 11.0.1, or the Waiting row carries it with the Stryker release trigger.
 
 ## Related
