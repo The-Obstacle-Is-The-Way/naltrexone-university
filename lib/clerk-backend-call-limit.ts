@@ -510,17 +510,8 @@ function bucketsFor(
 }
 
 /**
- * Limits these requests per client address, per refreshing session, then
- * site-wide, before they reach Clerk. With Clerk's signing key (`jwtKey`), a
- * refresh of a session Clerk signed counts per session first, then per
- * address in a wider bucket of its own (DEBT-503 item 4). With the
- * publishable key as well, a request whose current suffixed session Clerk
- * reads counts nowhere, and the limiter is not loaded (BUG-374). Returns the 429
- * response, or null to continue. A limiter failure, including one while
- * loading it, lets the request through: failing closed would break every
- * real session refresh while the database is down, and the firewall rule
- * still bounds the volume. A refusal names the limit that tripped (DEBT-503
- * item 3), never the address or session.
+ * `countClerkBackendCalls`, answering only the 429 response, or null to
+ * continue.
  */
 export async function limitClerkBackendCalls(
   request: ClerkRequest,
@@ -548,7 +539,19 @@ export async function limitClerkBackendCalls(
  */
 export type ClerkBackendCallCount = 'counted' | 'uncounted' | 'failed-open';
 
-/** `limitClerkBackendCalls`, saying what it counted. */
+/**
+ * Limits these requests per client address, per refreshing session, then
+ * site-wide, before they reach Clerk. With Clerk's signing key (`jwtKey`), a
+ * refresh of a session Clerk signed counts per session first, then per
+ * address in a wider bucket of its own (DEBT-503 item 4). With the
+ * publishable key as well, a request whose current suffixed session Clerk
+ * reads counts nowhere, and the limiter is not loaded (BUG-374). Returns the
+ * 429 response, or what it did: `counted`, `uncounted` or `failed-open`. A
+ * limiter failure, including one while loading it, lets the request through:
+ * failing closed would break every real session refresh while the database
+ * is down, and the firewall rule still bounds the volume. A refusal names the
+ * limit that tripped (DEBT-503 item 3), never the address or session.
+ */
 export async function countClerkBackendCalls(
   request: ClerkRequest,
   loadLimiter: () => Promise<RateLimiter>,
