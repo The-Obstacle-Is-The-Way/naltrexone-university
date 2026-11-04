@@ -39,11 +39,11 @@ Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/
   - `glob` 14 moves to it and to `path-scurry` 3, renames `Pattern` methods, and changes where an `ignore` pattern that starts with `/` begins.
   - From 2026-10-26 to 11-02 the four packages shipped 14 releases: `glob` 14.0.0 to 14.0.3, `minimatch` 11.0.0 to 11.0.4, the matcher 1.0.0 to 1.0.3, and `path-scurry` 3.0.0.
 - **Upstream.**
-  - **Sentry.** getsentry/sentry-javascript#25969 asked for `glob` 14. #26014 made the change, merged into `develop` on 2026-11-03.
+  - **Sentry.** getsentry/sentry-javascript#25969 asked for `glob` 14. getsentry/sentry-javascript#26014 made the change, merged into `develop` on 2026-11-03.
     - It also fixed a Windows path that `glob` 14 broke, and added a test of the upload patterns.
     - The latest release, 11.10.0 (2026-10-28), still declares `^13.0.6`.
   - **Stryker.** 10.1.1 (2026-10-23) still declares `minimatch` `~10.2.4`.
-    - Its Renovate dashboard (stryker-js#3515) lists the `minimatch` 11 and `glob` 14 updates as waiting.
+    - Its Renovate dashboard (stryker-mutator/stryker-js#3515) lists the `minimatch` 11 and `glob` 14 updates as waiting.
     - This repository pins Stryker at 9.6.1, and DEBT-500's runner patch keeps Dependabot from opening that update. So any Stryker release carrying `minimatch` 11 reaches this tree only through the major upgrade DEBT-500's watch triggers.
 
 ## Impact
@@ -53,7 +53,7 @@ Nothing reaches users or production. Two moderate alerts stay open beside any re
 ## Options
 
 1. **Override `glob` 13 to 14 and `minimatch` 10 to 11.** This closes both alerts now. It forces both consumers outside their declared ranges, as the `esbuild` override already does for `drizzle-kit`, but onto the week-old rewrite.
-   - Sentry needed code changes to move: the Windows path in #26014.
+   - Sentry needed code changes to move: the Windows path in getsentry/sentry-javascript#26014.
    - Stryker's ignore rules use `partial` matching and paths with a trailing slash, the two behaviors `minimatch` 11 changes.
    - All for no reachable benefit.
 2. **Override Sentry's `glob` alone.** `glob` 14.0.3 is past the 7-day gate. That would close #108 about a week before Sentry's release does, at the cost of an override outside Sentry's range to remove afterwards.
@@ -65,11 +65,11 @@ Nothing reaches users or production. Two moderate alerts stay open beside any re
 
 - **No override.** Both alerts stay open, with this record as their reason.
 - **#108, on the due date.**
-  - If Sentry's release carrying #26014 has cleared the 7-day gate, update `@sentry/nextjs` in a repo-owned bundle. That removes `glob` 13 and Sentry's copy of `minimatch` 10, so #108 closes as fixed.
+  - If Sentry's release carrying getsentry/sentry-javascript#26014 has cleared the 7-day gate, update `@sentry/nextjs` in a repo-owned bundle. That removes `glob` 13 and Sentry's copy of `minimatch` 10, so #108 closes as fixed.
   - If no such release exists, re-date the status to its publish date plus 7 days. A `glob` 13.x release with the fix (isaacs/node-glob#664) would also close #108.
 - **#109.** Once #108 closes, close this record with a Waiting row for #109.
   - It revives with DEBT-500's Stryker upgrade, raised by the upstream fix watch.
-  - That upgrade must take a Stryker release declaring `minimatch` `>=11.0.1`, which shows on stryker-js#3515 and in Stryker's release notes.
+  - That upgrade must take a Stryker release declaring `minimatch` `>=11.0.1`, which shows on stryker-mutator/stryker-js#3515 and in Stryker's release notes.
   - If the wait proves open-ended, the owner decides on option 3.
 - **If a path becomes reachable,** for example a Sentry build step or a glob pattern taken from input, reconsider option 1 for that path at once.
 
