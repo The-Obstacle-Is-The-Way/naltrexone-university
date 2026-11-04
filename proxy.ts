@@ -313,11 +313,14 @@ const REFUSAL_ALERTS: Partial<
 export type ProxyDependencies = {
   loadBackendCallLimiter: () => Promise<RateLimiter>;
   loadOperationalAlerts: () => Promise<OperationalAlerts>;
+  /** How a GET is copied without its refresh cookies; Next's by default. */
+  copyRequest?: (from: NextRequest, headers: Headers) => NextRequest;
 };
 
 export function createProxy({
   loadBackendCallLimiter,
   loadOperationalAlerts,
+  copyRequest,
 }: ProxyDependencies) {
   return async function proxy(request: NextRequest, event: NextFetchEvent) {
     // The cron routes check CRON_SECRET themselves and need no Clerk session,
@@ -390,20 +393,26 @@ export function createProxy({
     // without one. Clerk then refreshes only what the limiter counted. An
     // expired token it was not handed the cookie for goes through its
     // handshake on a page load, which costs no Backend API call and whose
-    // return counts; a router request is answered signed out.
+    // return counts. A router request is answered signed out; on a
+    // protected page, the browser's next request, for that page or the
+    // sign-in page, counts.
     const clerkRequest =
       usesProductionClerkInstance() && counted === 'uncounted'
-        ? withoutRefreshCookies(request, () => {
-            // The log line lasts an hour, and while the copy fails Clerk can
-            // refresh what the limiter did not count: the owner hears of it,
-            // after the response.
-            event.waitUntil(
-              raiseOperationalAlert(
-                loadOperationalAlerts,
-                'clerk_refresh_cookie_strip_failed',
-              ),
-            );
-          })
+        ? withoutRefreshCookies(
+            request,
+            () => {
+              // The log line lasts an hour, and while the copy fails Clerk
+              // can refresh what the limiter did not count: the owner hears
+              // of it, after the response.
+              event.waitUntil(
+                raiseOperationalAlert(
+                  loadOperationalAlerts,
+                  'clerk_refresh_cookie_strip_failed',
+                ),
+              );
+            },
+            copyRequest,
+          )
         : request;
     const clerkMw = await getClerkMiddleware();
     const response = await clerkMw(clerkRequest, event);

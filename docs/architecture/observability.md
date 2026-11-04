@@ -108,10 +108,11 @@ ORDER BY bucket, period_start;
 The proxy hands Clerk's middleware a GET the limiter did not count without its
 refresh cookies (DEBT-503 item 4, step 4). When Clerk then finds the session
 token expired, it does not refresh it: a page load goes through its handshake,
-and a router request is answered signed out. The proxy logs
-`clerk_refresh_withheld`, with nothing about the visitor. It should be rare: a
-steady stream means the limiter's prediction of when Clerk refreshes has
-drifted from Clerk's, so run
+and a router request is answered signed out; on a protected page, the
+browser's next request, for that page or the sign-in page, is counted and
+refreshed. The proxy logs `clerk_refresh_withheld`, with nothing about the visitor. It should
+be rare: a steady stream means the limiter's prediction of when Clerk
+refreshes has drifted from Clerk's, so run
 `lib/clerk-backend-call-limit-sdk.test.ts` against the installed Clerk.
 If the runtime ever refuses to copy the request, Clerk gets it as it came, and
 the proxy logs `clerk_refresh_cookie_strip_failed` and raises the alert of that
