@@ -52,7 +52,7 @@ Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/
   - **Stryker.** 10.1.1 (2026-10-23) still declares `minimatch` `~10.2.4`.
     - Its Renovate dashboard (stryker-mutator/stryker-js#3515) lists the `minimatch` 11 and `glob` 14 updates as waiting.
     - This repository pins Stryker at 10.1.1. Dependabot has never opened a Stryker update here, so the registry check in the Waiting trigger below is the trigger, not Dependabot.
-    - DEBT-500's watch raised #1609 on 2026-10-26 for the runner fix in 10.1.1. That upgrade, now made, keeps `minimatch` 10, so it does not fix this advisory.
+    - DEBT-500's watch raised #1609 on 2026-10-26 for the runner fix in 10.1.1. That upgrade, now made (DEBT-536), keeps `minimatch` 10, so it does not fix this advisory.
 
 ## Impact
 
@@ -78,7 +78,7 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
   - A `glob` 13.x release with the fix (isaacs/node-glob#664) closes #108 only if the advisory's range is amended to exclude it. Check both on each due date.
 - **The `minimatch` advisory.** Once #108 closes, close this record with a Waiting row for GHSA-g3hv-75wg-m249.
   - Its trigger is an `@stryker-mutator/core` release whose `minimatch` range resolves to 11.0.1 or later in the lockfile. `npm view @stryker-mutator/core dependencies.minimatch` and stryker-mutator/stryker-js#3515 show it.
-  - DEBT-500's upgrade (#1609) does not meet it, because 10.1.1 declares `~10.2.4`.
+  - The Stryker 10.1.1 upgrade (DEBT-536) does not meet it, because 10.1.1 declares `~10.2.4`.
   - If #108 closed through the `glob` 13.x backport instead, Sentry's `glob` 13 still brings `minimatch` 10, so the row also waits on the `@sentry/nextjs` update.
   - If Dependabot raises an alert for GHSA-g3hv-75wg-m249 again, it is this one.
   - If the wait proves open-ended, the owner decides on option 3.
@@ -91,6 +91,6 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
 
 ## Related
 
-- DEBT-500: Stryker's runner patch, removed by the upgrade to Stryker 10.1.1 (#1609), which still declares `minimatch` `~10.2.4`.
+- DEBT-500: Stryker's runner patch. DEBT-536 removed it with the upgrade to Stryker 10.1.1, which still declares `minimatch` `~10.2.4`.
 - DEBT-476 § F, closed by DEBT-506: an earlier advisory left open until upstream upgraded.
 - DEBT-517: replaced the direct dependencies behind alerts #77 and #81, after rejecting waiting with them open.
