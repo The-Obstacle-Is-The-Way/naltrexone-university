@@ -25,18 +25,10 @@ export type UpstreamFixWatch = {
   npmPackage: string;
 };
 
-export const UPSTREAM_FIX_WATCHES: readonly UpstreamFixWatch[] = [
-  {
-    // patches/@stryker-mutator__vitest-runner@9.6.1.patch: on Vitest 5 the
-    // runner's test filter matched no nested test.
-    record: 'DEBT-500',
-    trackingIssue: 1500,
-    repository: 'stryker-mutator/stryker-js',
-    issue: 6210,
-    fixPullRequests: [6214, 6220, 6247],
-    npmPackage: '@stryker-mutator/vitest-runner',
-  },
-];
+// No workaround waits on an upstream fix now. DEBT-500's runner patch, the
+// first watch, went with Stryker 10.1.1, which ships the fix. Add a watch here
+// when a new workaround waits on one.
+export const UPSTREAM_FIX_WATCHES: readonly UpstreamFixWatch[] = [];
 
 // One way the fix reached upstream: the issue closed, or a fix PR merged.
 export type Landing = { what: string; at: string };
@@ -173,13 +165,14 @@ export async function runUpstreamFixWatch(
   reads: UpstreamReads,
   issues: AlertIssues,
   output: Pick<Console, 'log' | 'error'> = console,
+  watches: readonly UpstreamFixWatch[] = UPSTREAM_FIX_WATCHES,
 ): Promise<number> {
+  if (watches.length === 0) {
+    output.log('Upstream fix watch: no workaround waits on a fix.');
+    return 0;
+  }
   try {
-    const synced = await watchUpstreamFixes(
-      UPSTREAM_FIX_WATCHES,
-      reads,
-      issues,
-    );
+    const synced = await watchUpstreamFixes(watches, reads, issues);
     for (const { title, sync } of synced) output.log(`${title}: ${sync}`);
     return 0;
   } catch (error) {
