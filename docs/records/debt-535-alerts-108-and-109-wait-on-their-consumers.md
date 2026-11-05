@@ -1,4 +1,4 @@
-# DEBT-535: The `glob` and `minimatch` Alerts Wait on Sentry's and Stryker's Releases
+# DEBT-535: The `glob` Alert and the `minimatch` Advisory Wait on Sentry's and Stryker's Releases
 
 **Status:** Open — update `@sentry/nextjs` once Sentry's release with getsentry/sentry-javascript#26014 is past the 7-day gate, or re-date the check; due 2026-11-12
 **Priority:** P3
@@ -9,7 +9,7 @@
 ## Summary
 
 Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4)) and #109 (`minimatch`, [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)), both moderate, on 2026-11-01. Each fix ships only in a new major, `glob` 14.0.2 and `minimatch` 11.0.1, published 2026-10-27, and no package here accepts those majors yet. Neither advisory is reachable here. This record decides not to override the consumers onto the new majors.
-- **#108** closes once a repo-owned `@sentry/nextjs` update takes Sentry's release carrying getsentry/sentry-javascript#26014, after that release clears the 7-day gate. On 2026-11-04 Sentry had merged the change but not released it.
+- **#108** closes once a repo-owned `@sentry/nextjs` update takes Sentry's release carrying getsentry/sentry-javascript#26014, after that release clears the 7-day gate. On 2026-11-04 Sentry had merged the change but not released it. A `glob` 13.x backport (isaacs/node-glob#664) would also close #108, but only once the advisory's range is amended to exclude that release.
 - **The `minimatch` advisory** stays reported, and any alert Dependabot raises again for it stays open, until the lockfile takes both the `@sentry/nextjs` update and a Stryker release whose `minimatch` range resolves to 11.0.1 or later. Stryker has not published such a release.
 - **#109 was withdrawn.** GitHub edited the `minimatch` advisory at 2026-11-04T16:50Z and then withdrew alert #109. The edit changed its range to `>= 7.0.0, < 11.0.1`.
   - The advisory still covers the installed 10.2.6, and `pnpm audit` still reports it.
