@@ -15,7 +15,7 @@ Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/
   - The advisory still covers the installed 10.2.6, and `pnpm audit` still reports it.
   - At 17:11Z Dependabot had not raised it again, so this record names it by its advisory.
 
-*Corrected 2026-11-04: the record first tied the `minimatch` alert to DEBT-500's Stryker upgrade, which keeps `minimatch` 10. It also said that a `glob` 13.x backport would close #108 without an amendment to the advisory's range, and that Sentry's change fixed a Windows path that `glob` 14 broke. GitHub has since withdrawn #109 and changed the advisory's range to `>= 7.0.0, < 11.0.1`.*
+*Corrected 2026-11-04: the record first tied the `minimatch` alert to DEBT-500's Stryker upgrade, which keeps `minimatch` 10. It also said that no fix would reach the installed majors, that a `glob` 13.x backport would close #108 without an amendment to the advisory's range, and that Sentry's change fixed a Windows path that `glob` 14 broke. GitHub has since withdrawn #109 and changed the advisory's range to `>= 7.0.0, < 11.0.1`.*
 
 ## Evidence
 
@@ -35,7 +35,7 @@ Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/
   - Its three `minimatch` calls pass `dot`, `flipNegate` and `nocase`, or nothing, so they run at the default level 1.
   - The patterns are the `mutate` and `ignorePatterns` lists in `stryker.config.json`.
   - Stryker runs in the weekly Mutation workflow and on `pnpm test:mutation`, a report that never gates a pull request (ADR-019).
-- **No fix will reach the installed majors.**
+- **No fix has reached the installed majors.**
   - On isaacs/minimatch#333 (2026-11-01), the maintainer says the fix cannot be backported and treats every version before 11 as unsupported.
   - isaacs/node-glob#664 asks for a `glob` 13 backport of the cancellation fix. It has been open since 2026-11-02, with no reply.
     - A 13.x release would fit Sentry's `^13.0.6`.
@@ -56,7 +56,7 @@ Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/
 
 ## Impact
 
-Nothing reaches users or production. #108 stays open beside any real alerts until Sentry moves. The `minimatch` alert, once raised again, can stay open for months.
+Nothing reaches users or production. #108 stays open beside any real alerts until Sentry moves, or until the lockfile takes a `glob` 13.x backport that the advisory's amended range excludes. The `minimatch` alert, once raised again, can stay open for months.
 
 ## Options
 
