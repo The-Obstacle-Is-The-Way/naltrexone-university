@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import {
@@ -151,6 +151,25 @@ describe('runMutationReportIntegrity', () => {
       '2 of 2 mutants survived without running a test',
     );
     expect(lines.join('\n')).toContain('src/a.ts#1');
+  });
+
+  it('names only repository files that exist when it says where to look', () => {
+    const { lines, output } = capture();
+
+    runMutationReportIntegrity(
+      () =>
+        JSON.stringify(
+          report({
+            'src/a.ts': [{ id: '1', status: 'Survived', testsCompleted: 0 }],
+          }),
+        ),
+      output,
+    );
+
+    const named =
+      lines.join('\n').match(/\b(?:patches|scripts|tests)\/[\w@./-]+\.\w+/g) ??
+      [];
+    expect(named.filter((path) => !existsSync(path))).toEqual([]);
   });
 
   it('shows five untested survivors and marks the rest as omitted', () => {

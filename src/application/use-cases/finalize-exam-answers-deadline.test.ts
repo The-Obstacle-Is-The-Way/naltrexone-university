@@ -241,5 +241,36 @@ describe('FinalizeExamAnswersUseCase', () => {
         sessions.findByIdAndUserId('session-1', 'user-1'),
       ).resolves.toMatchObject({ endedAt: graceAnsweredAt });
     });
+
+    it('does not cap below the omitted attempt of a grace-window flush that clears the selection', async () => {
+      vi.useFakeTimers();
+      const graceAnsweredAt = new Date(
+        ONE_QUESTION_DEADLINE.getTime() + FINALIZE_FLUSH_DEADLINE_GRACE_MS,
+      );
+      vi.setSystemTime(graceAnsweredAt);
+      const { attempts, sessions, useCase } = createTimedExamUseCase({
+        now: graceAnsweredAt,
+      });
+
+      const summary = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        finalDraftAnswer: {
+          questionId: 'q1',
+          selectedChoiceId: null,
+          cumulativeMs: 30_000,
+        },
+      });
+      const [attempt] = await attempts.findBySessionId('session-1', 'user-1');
+
+      expect(attempt).toMatchObject({
+        outcome: { kind: 'omitted' },
+        answeredAt: graceAnsweredAt,
+      });
+      expect(summary.endedAt).toBe(graceAnsweredAt.toISOString());
+      await expect(
+        sessions.findByIdAndUserId('session-1', 'user-1'),
+      ).resolves.toMatchObject({ endedAt: graceAnsweredAt });
+    });
   });
 });

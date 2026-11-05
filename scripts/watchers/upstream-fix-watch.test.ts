@@ -8,7 +8,6 @@ import {
   type Landing,
   type Release,
   runUpstreamFixWatch,
-  UPSTREAM_FIX_WATCHES,
   type UpstreamFixWatch,
   type UpstreamReads,
   watchUpstreamFixes,
@@ -231,11 +230,28 @@ describe('runUpstreamFixWatch', () => {
       new MemoryReads([merged], [after]),
       new MemoryIssues(),
       output,
+      [watch],
     );
 
     expect(code).toBe(0);
     expect(lines).toEqual([
       'Upstream fix released: stryker-mutator/stryker-js#6210 (DEBT-500): created',
+    ]);
+  });
+
+  it('says so when no workaround waits on an upstream fix', async () => {
+    const { lines, output } = capture();
+
+    const code = await runUpstreamFixWatch(
+      new MemoryReads([merged], [after]),
+      new MemoryIssues(),
+      output,
+      [],
+    );
+
+    expect(code).toBe(0);
+    expect(lines).toEqual([
+      'Upstream fix watch: no workaround waits on a fix.',
     ]);
   });
 
@@ -248,22 +264,15 @@ describe('runUpstreamFixWatch', () => {
       releases: async () => [],
     };
 
-    const code = await runUpstreamFixWatch(failing, new MemoryIssues(), output);
+    const code = await runUpstreamFixWatch(
+      failing,
+      new MemoryIssues(),
+      output,
+      [watch],
+    );
 
     expect(code).toBe(1);
     expect(lines).toEqual(['Upstream fix watch failed: HTTP 404']);
-  });
-
-  it('watches the Stryker runner fix that DEBT-500’s patch waits for', () => {
-    expect(UPSTREAM_FIX_WATCHES).toContainEqual(
-      expect.objectContaining({
-        record: 'DEBT-500',
-        trackingIssue: 1500,
-        repository: 'stryker-mutator/stryker-js',
-        issue: 6210,
-        npmPackage: '@stryker-mutator/vitest-runner',
-      }),
-    );
   });
 
   it('runs weekly with issue access only for its own job', () => {

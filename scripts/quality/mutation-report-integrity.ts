@@ -97,8 +97,8 @@ export function runMutationReportIntegrity(
   if (untested.length > 0)
     output.error(
       `${untested.length} of ${mutants} mutants survived without running a test, so the score cannot be trusted. ` +
-        `Stryker's runner selected none of their covering tests; on Vitest 5 this was stryker-js#6210 (DEBT-500). ` +
-        `Check the runner patch and tests/stryker-vitest-test-names.test.ts. Examples: ${examples(untested)}`,
+        `Stryker's runner selected none of their covering tests; on Vitest 5 this was stryker-js#6210 (DEBT-500), fixed in runner 10.1.0. ` +
+        `Check that the runner's test-name filter matches the installed Vitest. Examples: ${examples(untested)}`,
     );
   if (unrecorded.length > 0)
     output.error(

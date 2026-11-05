@@ -22,9 +22,6 @@ minimumReleaseAgeIgnoreMissingTime: false
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
 strictDepBuilds: true
-trustPolicyExclude:
-  - semver@6.3.1
-  - tinyexec@1.2.2
 allowBuilds:
   '@clerk/shared': false
   '@stripe/cli': true
@@ -434,23 +431,12 @@ runtime behavior that would break without the script.
 evidence than an earlier-published version of the same package. That can
 be a real supply-chain warning, so do not bypass it automatically.
 
-The only current exception is exact-version scoped:
-
-```yaml
-trustPolicyExclude:
-  - semver@6.3.1 # legacy Babel dependency published in 2023; exact exception for no-downgrade provenance gap.
-  - tinyexec@1.2.2 # already-shipped Vite/Vitest utility; exact exception for no-downgrade provenance gap.
-```
-
-Why this is allowed:
-
-- Babel requires `semver@^6.3.1` through `@babel/core`.
-- `semver@6.3.1` is a 2023 package and not a fresh-publish event.
-- `tinyexec@1.2.2` is already present in the shipped lockfile through the
-  Vite/Vitest toolchain.
-- The exceptions are exact-version scoped, not package-wide.
-- The policy still protects every other package and every future `semver`
-  or `tinyexec` release.
+There is no current exception. The last two, `semver@6.3.1` (a legacy Babel
+dependency) and `tinyexec@1.2.2` (a Vite and Vitest utility), were exact-version
+`trustPolicyExclude` entries. Neither version is in the lockfile any more:
+`tinyexec` had moved to 1.3.1, and the Stryker 10.1.1 upgrade removed
+Stryker's Babel 7 `@babel/core` tree, the only route to `semver@6.3.1`. So
+both entries went with that upgrade.
 
 Workflow for any future trust-policy exception:
 
