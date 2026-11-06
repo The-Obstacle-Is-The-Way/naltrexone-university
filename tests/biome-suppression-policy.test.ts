@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -76,7 +77,7 @@ describe.each(cases)(
   },
 );
 
-// Biome reports an unused line suppression (`biome-ignore`), so lint fails
+// Biome reports an unused line lint suppression (`biome-ignore lint/...`), so lint fails
 // once the code stops triggering the rule. It reports neither an unused range
 // (`biome-ignore-start`/`-end`) nor an unused file suppression
 // (`biome-ignore-all`), so those could outlive their reason unnoticed.
@@ -97,13 +98,15 @@ describe('Biome suppression forms', () => {
     expect(lint('lib/unused-suppression.ts', contents).status).toBe(0);
   });
 
-  it('uses only line suppressions in tracked source files', () => {
+  it('uses only line lint suppressions in tracked source files', () => {
     const offenders = execFileSync('git', ['ls-files', '-z'], {
       encoding: 'utf8',
     })
       .split('\0')
       .filter((path) => /\.(?:[cm]?[jt]sx?|jsonc?|css)$/.test(path))
       .filter((path) => path !== THIS_FILE)
+      // A deleted file stays listed until the deletion is staged.
+      .filter((path) => existsSync(path))
       .filter((path) =>
         NON_EXPIRING_SUPPRESSION.test(readFileSync(path, 'utf8')),
       );

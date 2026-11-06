@@ -157,14 +157,16 @@ describe('React component definition lint policy', () => {
     expect(lint(filePath, HARNESS_INSIDE_TEST).status).toBe(0);
   });
 
-  it.each(['lib/example.test.ts', 'tests/e2e/helpers/example.test.ts'])(
-    'allows a PascalCase constructor stub inside a test in %s',
-    (filePath) => {
-      expect(lint(filePath, CONSTRUCTOR_STUB_INSIDE_TEST).status).toBe(0);
-    },
-  );
+  it.each([
+    'lib/example.test.ts',
+    'tests/e2e/helpers/example.test.ts',
+    'tests/e2e/example.spec.ts',
+  ])('allows a PascalCase constructor stub inside a test in %s', (filePath) => {
+    expect(lint(filePath, CONSTRUCTOR_STUB_INSIDE_TEST).status).toBe(0);
+  });
 
-  // Production code can import test support, so only test files are exempt.
+  // Production code can import test support, so only files a test runner
+  // collects are exempt.
   // Probe, fixture and setup paths are ones the filename rule already allows.
   it.each([
     ['components/example-test-helpers.tsx', COMPONENT_FACTORY],
@@ -187,6 +189,22 @@ describe('React component definition lint policy', () => {
       'lint/correctness/noComponentHookFactories',
     );
   });
+
+  // Exemption follows the runners' patterns, not the spec suffix alone.
+  it.each([
+    ['components/example-panel.spec.tsx', COMPONENT_FACTORY],
+    ['lib/example-panel.spec.ts', CREATE_ELEMENT_FACTORY],
+  ])(
+    'rejects a factory in %s, which no test runner collects',
+    (filePath, contents) => {
+      const result = lint(filePath, contents);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        'lint/correctness/noComponentHookFactories',
+      );
+    },
+  );
 
   // A .ts file can still build components without JSX.
   it('rejects a createElement component factory in a .ts file under app/api', () => {

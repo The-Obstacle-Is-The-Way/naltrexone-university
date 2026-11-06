@@ -261,8 +261,8 @@
       "includes": [
         "**/*.test.ts",
         "**/*.test.tsx",
-        "**/*.spec.ts",
-        "**/*.spec.tsx"
+        "**/*.browser.spec.tsx",
+        "tests/e2e/**/*.spec.ts"
       ],
       "linter": {
         "rules": {
