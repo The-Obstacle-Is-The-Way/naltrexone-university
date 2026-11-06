@@ -76,7 +76,9 @@ async function handleHealthCheck(deps: HealthHandlerDeps, req: Request) {
 
 export function createHealthHandler(deps: HealthHandlerDeps) {
   return {
+    // biome-ignore lint/correctness/noComponentHookFactories: the Next.js GET route handler, not a React component.
     GET: (req: Request) => handleHealthCheck(deps, req),
+    // biome-ignore lint/correctness/noComponentHookFactories: the Next.js POST route handler, not a React component.
     POST: (req: Request) => handleHealthCheck(deps, req),
   };
 }

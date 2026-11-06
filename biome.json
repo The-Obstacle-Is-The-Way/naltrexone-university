@@ -32,7 +32,8 @@
       "preset": "recommended",
       "correctness": {
         "noUnusedVariables": "error",
-        "noUnusedImports": "error"
+        "noUnusedImports": "error",
+        "noNestedComponentDefinitions": "error"
       },
       "style": {
         "noNonNullAssertion": "error",
@@ -252,6 +253,21 @@
                 "maxLines": 800
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.browser.spec.tsx",
+        "tests/e2e/**/*.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
           }
         }
       }
