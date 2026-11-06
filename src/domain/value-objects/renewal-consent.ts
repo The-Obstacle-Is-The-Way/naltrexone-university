@@ -42,8 +42,7 @@ export function computeRenewalConsentRetainUntil(
     subscriptionTerminatedAt,
     POST_TERMINATION_RETENTION_YEARS,
   );
-  // biome-ignore-start lint/complexity/useMathMinMax: both operands are Dates, which the rule's docs exclude but it cannot infer here; Math.max would return a number, not a Date.
-  // Stryker disable next-line EqualityOperator: at equal instants either branch yields the same time
+  // Keep both directives on one line so each applies to the return below.
+  /* Stryker disable next-line EqualityOperator: at equal instants either branch yields the same time */ // biome-ignore lint/complexity/useMathMinMax: both operands are Dates; Math.max would return a number, not a Date.
   return terminationFloor > consentFloor ? terminationFloor : consentFloor;
-  // biome-ignore-end lint/complexity/useMathMinMax: end of the Date comparison above.
 }
