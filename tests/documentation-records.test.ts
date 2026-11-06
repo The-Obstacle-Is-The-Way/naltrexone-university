@@ -18,6 +18,7 @@ import {
   readDocumentationFiles,
   recordLinks,
   runDocumentationCommand,
+  strayRecordsAssets,
 } from '../scripts/records/documentation-archive';
 
 function audit(files: Record<string, string>) {
@@ -608,6 +609,41 @@ describe('records command', () => {
     expect(runDocumentationCommand(root, () => {})).toBe(1);
   });
 
+  // The records folder holds only Markdown, and the Markdown audit never reads
+  // an image or a JSON receipt, so the command lists every other file there.
+  it('exits nonzero for a non-Markdown file under docs/records, such as a restored receipt', () => {
+    const root = fixture();
+    populate(root, {
+      'docs/records/assets/debt-414/f03b-add-card-measurements.json': '{}',
+      'docs/records/notes.txt': 'Stray',
+    });
+    const reports: DocumentationAudit[] = [];
+    expect(
+      runDocumentationCommand(root, (json) => reports.push(JSON.parse(json))),
+    ).toBe(1);
+    expect(reports[0]?.strayRegisterFiles).toEqual([
+      'docs/records/assets/debt-414/f03b-add-card-measurements.json',
+      'docs/records/notes.txt',
+    ]);
+  });
+
+  it('skips a git-ignored file under docs/records, such as Finder metadata', () => {
+    for (const name of Object.keys(process.env)) {
+      if (name.startsWith('GIT_')) vi.stubEnv(name, undefined);
+    }
+    vi.stubEnv('GIT_CONFIG_GLOBAL', '/dev/null');
+    vi.stubEnv('GIT_CONFIG_NOSYSTEM', '1');
+    const root = fixture();
+    execFileSync('git', ['init', '--quiet'], { cwd: root });
+    populate(root, {
+      '.gitignore': '.DS_Store\nscratch.txt\n',
+      'docs/records/.DS_Store': '',
+      'docs/records/scratch.txt': 'Local only',
+      'docs/records/receipt.json': '{}',
+    });
+    expect(strayRecordsAssets(root)).toEqual(['docs/records/receipt.json']);
+  });
+
   it('exits nonzero for an ID listed twice in the ledger, and for a file left in a replaced register folder', () => {
     const root = fixture();
     populate(root, {
@@ -651,6 +687,10 @@ describe('repository records', () => {
 
   it('keeps no Markdown in a register folder docs/records replaced, or in a folder the layout retired', () => {
     expect(result.retiredRegisterFiles).toEqual([]);
+  });
+
+  it('keeps no file but Markdown under docs/records', () => {
+    expect(strayRecordsAssets(process.cwd())).toEqual([]);
   });
 
   it('lists each closed ID once in the ledger', () => {

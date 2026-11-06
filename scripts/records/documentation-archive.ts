@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, globSync, readFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -103,8 +103,8 @@ export const STATUS_MAX_CHARACTERS = 200;
 
 // Beside the records index only open records and the ledger belong: change
 // history lives in git, and a closed record is a ledger line. Records get no
-// asset folders, so a file the audit reads from a subfolder is stray. It reads
-// Markdown; a linked image or receipt is caught as an unpinned destination.
+// asset folders, so Markdown in a subfolder is stray. `strayRecordsAssets`
+// reports every other kind of file there.
 function isStrayRecordsFile(file: string): boolean {
   if (!file.startsWith(`${RECORDS.directory}/`)) return false;
   if (path.posix.dirname(file) !== RECORDS.directory) return true;
@@ -754,10 +754,28 @@ export function readDocumentationFiles(root: string): Map<string, string> {
   );
 }
 
+// The records folder holds only Markdown: open records, the index and the
+// ledger. The Markdown audit never reads an image or a JSON receipt, so this
+// lists every other file there that git does not ignore; each one is stray.
+export function strayRecordsAssets(root: string): string[] {
+  const names = globSync(`${RECORDS.directory}/**/*`, { cwd: root })
+    .map((name) => name.split(path.sep).join('/'))
+    .filter(
+      (name) =>
+        !name.endsWith('.md') && statSync(path.join(root, name)).isFile(),
+    )
+    .sort();
+  const ignored = new Set(gitIgnored(root, names));
+  return names.filter((name) => !ignored.has(name));
+}
+
 export function readDocumentation(root: string): DocumentationAudit {
-  return auditDocumentation(readDocumentationFiles(root), (file) =>
+  const result = auditDocumentation(readDocumentationFiles(root), (file) =>
     existsSync(path.resolve(root, file)),
   );
+  result.strayRegisterFiles.push(...strayRecordsAssets(root));
+  result.strayRegisterFiles.sort();
+  return result;
 }
 
 export function runDocumentationCommand(
