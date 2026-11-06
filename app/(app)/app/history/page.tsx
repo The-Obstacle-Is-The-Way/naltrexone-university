@@ -49,12 +49,6 @@ function isVisibleTagKind(kind: TagRow['kind']): kind is VisibleTagKind {
   return kind === 'topic' || kind === 'substance' || kind === 'treatment';
 }
 
-function getTagKindSortValue(kind: VisibleTagKind): number {
-  if (kind === 'topic') return 0;
-  if (kind === 'substance') return 1;
-  return 2;
-}
-
 export type HistoryPageDeps = {
   getSessionHistoryFn?: typeof getSessionHistory;
   getAttemptedQuestionsFn?: typeof getAttemptedQuestions;
@@ -115,12 +109,6 @@ export default async function HistoryPage({
             isVisibleTagKind(t.kind),
           )
           .map((t) => ({ slug: t.slug, name: t.name, kind: t.kind }))
-          .sort(
-            (a, b) =>
-              getTagKindSortValue(a.kind) - getTagKindSortValue(b.kind) ||
-              a.name.localeCompare(b.name) ||
-              a.slug.localeCompare(b.slug),
-          )
       : [];
 
     return (
