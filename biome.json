@@ -32,7 +32,8 @@
       "preset": "recommended",
       "correctness": {
         "noUnusedVariables": "error",
-        "noUnusedImports": "error"
+        "noUnusedImports": "error",
+        "noNestedComponentDefinitions": "error"
       },
       "style": {
         "noNonNullAssertion": "error",
@@ -252,6 +253,37 @@
                 "maxLines": 800
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/*.fixtures.ts",
+        "**/*.probes.tsx",
+        "**/*.setup.ts",
+        "**/*test-helpers.ts",
+        "**/*test-helpers.tsx",
+        "src/**/test-helpers/**"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/api/**/*.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
           }
         }
       }
