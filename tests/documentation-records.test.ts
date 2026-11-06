@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import os from 'node:os';
@@ -624,6 +625,26 @@ describe('records command', () => {
     expect(reports[0]?.strayRegisterFiles).toEqual([
       'docs/records/assets/debt-414/f03b-add-card-measurements.json',
       'docs/records/notes.txt',
+    ]);
+  });
+
+  // A link is not a record either: it is reported as itself, whether it
+  // dangles or names a folder, and the audit does not stop on it.
+  it('reports a symlink under docs/records, dangling or to a folder', () => {
+    const root = fixture();
+    populate(root, { 'outside/receipts/a.json': '{}' });
+    symlinkSync(
+      '../../missing.json',
+      path.join(root, 'docs/records/gone.json'),
+    );
+    symlinkSync(
+      '../../outside/receipts',
+      path.join(root, 'docs/records/assets'),
+    );
+    expect(strayRecordsAssets(root)).toEqual([
+      'docs/records/assets',
+      'docs/records/assets/a.json',
+      'docs/records/gone.json',
     ]);
   });
 

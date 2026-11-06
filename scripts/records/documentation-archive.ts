@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, globSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, globSync, lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -756,13 +756,16 @@ export function readDocumentationFiles(root: string): Map<string, string> {
 
 // The records folder holds only Markdown: open records, the index and the
 // ledger. The Markdown audit never reads an image or a JSON receipt, so this
-// lists every other file there that git does not ignore; each one is stray.
+// lists every other entry there that git does not ignore; each one is stray.
+// `lstat` reports a link as itself, so a dangling link or a link to a folder
+// is listed rather than followed or failed on.
 export function strayRecordsAssets(root: string): string[] {
   const names = globSync(`${RECORDS.directory}/**/*`, { cwd: root })
     .map((name) => name.split(path.sep).join('/'))
     .filter(
       (name) =>
-        !name.endsWith('.md') && statSync(path.join(root, name)).isFile(),
+        !name.endsWith('.md') &&
+        !lstatSync(path.join(root, name)).isDirectory(),
     )
     .sort();
   const ignored = new Set(gitIgnored(root, names));
