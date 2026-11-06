@@ -758,7 +758,7 @@ export function readDocumentationFiles(root: string): Map<string, string> {
 // ledger. The Markdown audit never reads an image or a JSON receipt, so this
 // lists every other entry there that git does not ignore; each one is stray.
 // `lstat` reports a link as itself, so a dangling link or a link to a folder
-// is listed rather than followed or failed on.
+// is listed rather than failed on.
 export function strayRecordsAssets(root: string): string[] {
   const names = globSync(`${RECORDS.directory}/**/*`, { cwd: root })
     .map((name) => name.split(path.sep).join('/'))
