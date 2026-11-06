@@ -103,7 +103,8 @@ export const STATUS_MAX_CHARACTERS = 200;
 
 // Beside the records index only open records and the ledger belong: change
 // history lives in git, and a closed record is a ledger line. Records get no
-// asset folders, so any file in a subfolder is stray.
+// asset folders, so a file the audit reads from a subfolder is stray. It reads
+// Markdown; a linked image or receipt is caught as an unpinned destination.
 function isStrayRecordsFile(file: string): boolean {
   if (!file.startsWith(`${RECORDS.directory}/`)) return false;
   if (path.posix.dirname(file) !== RECORDS.directory) return true;
