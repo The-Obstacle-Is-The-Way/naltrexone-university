@@ -107,10 +107,10 @@ Unscheduled product ideas are in [the ideas list](../product/ideas.md).
 - **Links.** Only this index links records. Elsewhere, cite a record by its ID: look up an open ID in this index and a closed ID in the ledger. The guard rejects a link into the deleted archive unless it pins a commit, as the ledger's header does. A path link would break when the record closes. A code comment keeps the lasting reason beside the code; an ID alone is not the explanation. Never invent a replacement for a deleted link target just to turn the guard green: find where the content went, or cite the ID. Owner-adopted legal and security text keeps its links until the owner revises it; arrange that revision before closing a record it links, rather than leaving a broken policy link.
 - **Closing.** Once the last check is recorded, the next pull request that touches this folder:
   1. moves lasting knowledge home: a rule to `AGENTS.md` or `.claude/rules/`, a decision to an ADR, a reason to a code comment, and an unfinished tail to a Waiting row with its trigger;
-  2. verifies each unfinished item is complete, explicitly declined by its decision maker, or preserved with a trigger and acceptance criteria in Waiting; then deletes the record and any asset folder;
+  2. verifies each unfinished item is complete, explicitly declined by its decision maker, or preserved with a trigger and acceptance criteria in Waiting; then deletes the record;
   3. adds its ledger line in ID order: `ID · title · disposition · date · path · #PR · commit`, the full 40-character commit being a reachable commit that held the final record. Before deletion, verify `git show <commit>:<path>` retrieves its final evidence and that the commit will remain reachable after the merge. Verify the closing PR is real. The guard checks receipt shape, not GitHub existence or the meaning of the evidence. The disposition is Resolved, Won't Fix, Invalidated, Superseded, Reclassified, Accepted or Decomposed, as the record shows; never relabel an invalidated record as fixed;
   4. removes its row, and updates Now.
-- **Assets.** Records get no asset folders: screenshots and receipts go on the pull request. DEBT-414's folder, `assets/debt-414/`, predates this rule and goes when it closes.
+- **Assets.** Records get no asset folders: screenshots and receipts go on the pull request. The guard reports any file in a subfolder here, and any link into `assets/` that does not pin a commit.
 
 **Template.** A bug record's heading is `# BUG-NNN: Short Title`; a debt record's is `# DEBT-NNN: Short Title`.
 

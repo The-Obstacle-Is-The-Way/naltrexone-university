@@ -103,13 +103,10 @@ export const STATUS_MAX_CHARACTERS = 200;
 
 // Beside the records index only open records and the ledger belong: change
 // history lives in git, and a closed record is a ledger line. Records get no
-// asset folders; DEBT-414's folder predates that rule and goes when it closes.
-const LEGACY_RECORD_ASSETS = /^docs\/records\/assets\/debt-414\//;
-
+// asset folders, so any file in a subfolder is stray.
 function isStrayRecordsFile(file: string): boolean {
   if (!file.startsWith(`${RECORDS.directory}/`)) return false;
-  if (path.posix.dirname(file) !== RECORDS.directory)
-    return !LEGACY_RECORD_ASSETS.test(file);
+  if (path.posix.dirname(file) !== RECORDS.directory) return true;
   return (
     file !== RECORDS.index &&
     file !== RECORDS.ledger &&
@@ -625,18 +622,18 @@ function recordLinksIn(
   ].sort((a, b) => a.start - b.start);
 }
 
-// The archive purge deleted these folders (DEBT-518). A live document reaches
-// that history through the ledger's IDs or a URL pinned to a commit, never a
-// path that a branch or a recreated file could answer. Only destinations are
+// The archive purge deleted these folders (DEBT-518), and the records' last
+// asset folder, DEBT-414's, went on 2026-11-05. A live document reaches that
+// history through the ledger's IDs or a URL pinned to a commit, never a path
+// that a branch or a recreated file could answer. Only destinations are
 // checked: a link, or a file path in a code span. Prose may name the folders.
-const DELETED_FOLDERS =
-  '(?:_archive|(?:bugs|debt|audits)/assets|records/assets/(?:inventory|active-audit)-2026-09-21)';
+const DELETED_FOLDERS = '(?:_archive|(?:bugs|debt|audits|records)/assets)';
 const DELETED_FOLDER = new RegExp(`^docs/${DELETED_FOLDERS}/`);
 const DELETED_FOLDER_IN_URL = new RegExp(`/docs/${DELETED_FOLDERS}/`);
 // A path below a deleted folder. The folder's bare name, and a glob over it
 // such as `docs/_archive/**`, are not destinations.
 const DELETED_FILE =
-  /(?<![\w-])docs\/(?:_archive\/|(?:bugs|debt|audits)\/assets\/|records\/assets\/(?:inventory|active-audit)-2026-09-21\/)[\w.-]/g;
+  /(?<![\w-])docs\/(?:_archive\/|(?:bugs|debt|audits|records)\/assets\/)[\w.-]/g;
 // What pins a path in a code span: a commit URL's revision, or `<commit>:` as
 // `git show` takes it.
 const PINNED_BEFORE =

@@ -250,7 +250,6 @@ describe('records folder and ledger', () => {
         'docs/records/closed.md': '# Closed',
         'docs/records/debt-001-example.md': '**Status:** Open',
         'docs/records/notes.md': '# Stray',
-        'docs/records/assets/debt-414/receipt.md': '# Legacy asset',
       }).strayRegisterFiles,
     ).toEqual(['docs/records/notes.md']);
   });
@@ -296,19 +295,40 @@ describe('records folder and ledger', () => {
     ]);
   });
 
-  it("reports Markdown in a records subfolder, other than DEBT-414's assets", () => {
+  // Records get no asset folders. The last one, DEBT-414's, was deleted on
+  // 2026-11-05, so a file recreated there is reported like any other.
+  it('reports Markdown in any records subfolder', () => {
     expect(
       audit({
         'docs/records/old/bug-950-x.md': '**Status:** Resolved',
         'docs/records/assets/bug-337/receipt.md': '# New asset folder',
         'docs/records/assets/inventory-2026-09-21/verification.md':
           '# Deleted with the archive',
-        'docs/records/assets/debt-414/note.md': '# Legacy asset',
+        'docs/records/assets/debt-414/note.md': '# Deleted asset folder',
       }).strayRegisterFiles,
     ).toEqual([
       'docs/records/assets/bug-337/receipt.md',
+      'docs/records/assets/debt-414/note.md',
       'docs/records/assets/inventory-2026-09-21/verification.md',
       'docs/records/old/bug-950-x.md',
+    ]);
+  });
+
+  it("reports an unpinned link into DEBT-414's deleted asset folder", () => {
+    const sha = 'c'.repeat(40);
+    const contents = [
+      '[Receipt](./assets/debt-414/f15b-trial-measurements.json)',
+      `[Pinned](https://github.com/o/r/blob/${sha}/docs/records/assets/debt-414/f15b-trial-measurements.json)`,
+      'Read `docs/records/assets/debt-414/f03b-add-card-measurements.json`.',
+      `Offline: \`git show ${'d'.repeat(12)}:docs/records/assets/debt-414/f03b-add-card-measurements.json\`.`,
+    ].join('\n\n');
+    expect(
+      archiveDestinations('docs/records/debt-414-example.md', contents).map(
+        ({ line, reference }) => `${line}:${reference}`,
+      ),
+    ).toEqual([
+      '1:./assets/debt-414/f15b-trial-measurements.json',
+      '5:docs/records/assets/debt-414/f03b-add-card-measurements.json',
     ]);
   });
 
