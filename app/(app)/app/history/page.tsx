@@ -86,12 +86,13 @@ export default async function HistoryPage({
   const offset = parseNonNegativeInt(params.offset, 0);
 
   if (activeTab === 'questions') {
+    const sort = parseQuestionsSort(params.sort);
     const questionsFilters: QuestionsFilters = {
       difficulty: parseDifficultyFilter(params.difficulty),
       tagSlug: parseTagSlugFilter(params.tag),
       result: parseResultFilter(params.result),
       source: parseSourceFilter(params.source),
-      sort: parseQuestionsSort(params.sort),
+      sort,
     };
 
     const [result, tagsResult] = await Promise.all([
@@ -102,7 +103,7 @@ export default async function HistoryPage({
         source: questionsFilters.source ?? undefined,
         difficulty: questionsFilters.difficulty ?? undefined,
         tagSlug: questionsFilters.tagSlug ?? undefined,
-        sort: questionsFilters.sort ?? undefined,
+        sort,
       }),
       getTagsFn({}),
     ]);
