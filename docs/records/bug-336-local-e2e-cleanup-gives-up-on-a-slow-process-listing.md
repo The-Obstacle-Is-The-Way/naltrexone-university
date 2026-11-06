@@ -1,6 +1,6 @@
 # BUG-336: Local E2E Cleanup Gives Up on a Slow Process Listing and Leaves Playwright's Web Server Running
 
-**Status:** Verifying — two weeks of CI after the merge without `spawnSync ps ETIMEDOUT`; due 2026-10-26
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-11
 **Resolved:** —
@@ -54,7 +54,7 @@ On a developer machine the same cut-off has a real consequence. The orchestrator
 - [x] Under the old limit, the detached descendant survives the interrupt (2026-10-11).
 - [x] Under the new limit the test passes, and the whole cleanup test file passed 8 of 8 runs beside 20 busy loops (2026-10-11).
 - [x] Promoted to `main` (2026-10-12).
-- [ ] No CI run fails with `spawnSync ps ETIMEDOUT` in the two weeks after the merge (due 2026-10-26).
+- [x] No CI run fails with `spawnSync ps ETIMEDOUT` in the two weeks after the merge (checked 2026-11-05, through that day). No failed run's failed steps, and no failed first attempt of a re-run, contain it; the only match is the 2026-10-11 failure that filed this record, before the merge.
 
 ## Related
 
