@@ -249,49 +249,49 @@ export function renderBookmarks(result: ActionResult<GetBookmarksOutput>) {
   return <BookmarksView rows={result.data.rows} />;
 }
 
-export function createBookmarksPage(deps?: {
+export type BookmarksPageDeps = {
   getBookmarksFn?: typeof getBookmarks;
-}) {
-  const getBookmarksFn = deps?.getBookmarksFn ?? getBookmarks;
+};
 
-  return async function BookmarksPage(props?: {
-    searchParams?: Promise<{
-      error?: string | string[];
-      toast?: string | string[];
-      [key: string]: string | string[] | undefined;
-    }>;
-  }) {
-    const searchParamsPromise = Promise.resolve(props?.searchParams);
-    await awaitRequestBoundary();
-    const bookmarksPromise = getBookmarksFn({});
+export type BookmarksPageProps = {
+  deps?: BookmarksPageDeps;
+  searchParams?: Promise<{
+    error?: string | string[];
+    toast?: string | string[];
+    [key: string]: string | string[] | undefined;
+  }>;
+};
 
-    const [searchParams, result] = await Promise.all([
-      searchParamsPromise,
-      bookmarksPromise,
-    ]);
-    const errorMessage = getRemoveBookmarkErrorMessage(
-      parseRemoveBookmarkErrorCode(searchParams?.error),
-    );
-    const toast = searchParams?.toast;
-    if (!result.ok) return renderBookmarks(result);
+export default async function BookmarksPage(props?: BookmarksPageProps) {
+  const getBookmarksFn = props?.deps?.getBookmarksFn ?? getBookmarks;
+  const searchParamsPromise = Promise.resolve(props?.searchParams);
+  await awaitRequestBoundary();
+  const bookmarksPromise = getBookmarksFn({});
 
-    if (!errorMessage) {
-      return (
-        <>
-          <BookmarksToast code={toast} />
-          <BookmarksView rows={result.data.rows} />
-        </>
-      );
-    }
+  const [searchParams, result] = await Promise.all([
+    searchParamsPromise,
+    bookmarksPromise,
+  ]);
+  const errorMessage = getRemoveBookmarkErrorMessage(
+    parseRemoveBookmarkErrorCode(searchParams?.error),
+  );
+  const toast = searchParams?.toast;
+  if (!result.ok) return renderBookmarks(result);
 
+  if (!errorMessage) {
     return (
-      <div className="space-y-6">
+      <>
         <BookmarksToast code={toast} />
-        <ErrorCard>{errorMessage}</ErrorCard>
         <BookmarksView rows={result.data.rows} />
-      </div>
+      </>
     );
-  };
-}
+  }
 
-export default createBookmarksPage();
+  return (
+    <div className="space-y-6">
+      <BookmarksToast code={toast} />
+      <ErrorCard>{errorMessage}</ErrorCard>
+      <BookmarksView rows={result.data.rows} />
+    </div>
+  );
+}

@@ -55,95 +55,97 @@ function getTagKindSortValue(kind: VisibleTagKind): number {
   return 2;
 }
 
-export function createHistoryPage(deps?: {
+export type HistoryPageDeps = {
   getSessionHistoryFn?: typeof getSessionHistory;
   getAttemptedQuestionsFn?: typeof getAttemptedQuestions;
   getTagsFn?: typeof getTags;
-}) {
+};
+
+export type HistoryPageProps = {
+  deps?: HistoryPageDeps;
+  searchParams: Promise<HistorySearchParams>;
+};
+
+export default async function HistoryPage({
+  deps,
+  searchParams,
+}: HistoryPageProps) {
   const getSessionHistoryFn = deps?.getSessionHistoryFn ?? getSessionHistory;
   const getAttemptedQuestionsFn =
     deps?.getAttemptedQuestionsFn ?? getAttemptedQuestions;
   const getTagsFn = deps?.getTagsFn ?? getTags;
 
-  return async function HistoryPage({
-    searchParams,
-  }: {
-    searchParams: Promise<HistorySearchParams>;
-  }) {
-    const requestBoundary = awaitRequestBoundary();
-    const searchParamsPromise = Promise.resolve(searchParams);
+  const requestBoundary = awaitRequestBoundary();
+  const searchParamsPromise = Promise.resolve(searchParams);
 
-    await requestBoundary;
+  await requestBoundary;
 
-    const params = await searchParamsPromise;
-    const activeTab = parseHistoryTab(params.tab);
-    const limit = parseLimit(params.limit);
-    const offset = parseNonNegativeInt(params.offset, 0);
+  const params = await searchParamsPromise;
+  const activeTab = parseHistoryTab(params.tab);
+  const limit = parseLimit(params.limit);
+  const offset = parseNonNegativeInt(params.offset, 0);
 
-    if (activeTab === 'questions') {
-      const questionsFilters: QuestionsFilters = {
-        difficulty: parseDifficultyFilter(params.difficulty),
-        tagSlug: parseTagSlugFilter(params.tag),
-        result: parseResultFilter(params.result),
-        source: parseSourceFilter(params.source),
-        sort: parseQuestionsSort(params.sort),
-      };
+  if (activeTab === 'questions') {
+    const questionsFilters: QuestionsFilters = {
+      difficulty: parseDifficultyFilter(params.difficulty),
+      tagSlug: parseTagSlugFilter(params.tag),
+      result: parseResultFilter(params.result),
+      source: parseSourceFilter(params.source),
+      sort: parseQuestionsSort(params.sort),
+    };
 
-      const [result, tagsResult] = await Promise.all([
-        getAttemptedQuestionsFn({
-          limit,
-          offset,
-          result: questionsFilters.result ?? undefined,
-          source: questionsFilters.source ?? undefined,
-          difficulty: questionsFilters.difficulty ?? undefined,
-          tagSlug: questionsFilters.tagSlug ?? undefined,
-          sort: questionsFilters.sort ?? undefined,
-        }),
-        getTagsFn({}),
-      ]);
-      redirectIfUnsubscribed([result, tagsResult]);
-
-      const tagOptions = tagsResult.ok
-        ? tagsResult.data.rows
-            .filter((t): t is TagRow & { kind: VisibleTagKind } =>
-              isVisibleTagKind(t.kind),
-            )
-            .map((t) => ({ slug: t.slug, name: t.name, kind: t.kind }))
-            .sort(
-              (a, b) =>
-                getTagKindSortValue(a.kind) - getTagKindSortValue(b.kind) ||
-                a.name.localeCompare(b.name) ||
-                a.slug.localeCompare(b.slug),
-            )
-        : [];
-
-      return (
-        <HistoryPageClient
-          activeTab="questions"
-          questionsResult={result}
-          questionsFilters={questionsFilters}
-          questionsTagOptions={tagOptions}
-        />
-      );
-    }
-
-    const modeFilter = parseSessionModeFilter(params.mode);
-    const result: ActionResult<GetSessionHistoryOutput> =
-      await getSessionHistoryFn({
+    const [result, tagsResult] = await Promise.all([
+      getAttemptedQuestionsFn({
         limit,
         offset,
-        mode: modeFilter === 'all' ? undefined : modeFilter,
-      });
-    redirectIfUnsubscribed([result]);
+        result: questionsFilters.result ?? undefined,
+        source: questionsFilters.source ?? undefined,
+        difficulty: questionsFilters.difficulty ?? undefined,
+        tagSlug: questionsFilters.tagSlug ?? undefined,
+        sort: questionsFilters.sort ?? undefined,
+      }),
+      getTagsFn({}),
+    ]);
+    redirectIfUnsubscribed([result, tagsResult]);
+
+    const tagOptions = tagsResult.ok
+      ? tagsResult.data.rows
+          .filter((t): t is TagRow & { kind: VisibleTagKind } =>
+            isVisibleTagKind(t.kind),
+          )
+          .map((t) => ({ slug: t.slug, name: t.name, kind: t.kind }))
+          .sort(
+            (a, b) =>
+              getTagKindSortValue(a.kind) - getTagKindSortValue(b.kind) ||
+              a.name.localeCompare(b.name) ||
+              a.slug.localeCompare(b.slug),
+          )
+      : [];
 
     return (
       <HistoryPageClient
-        activeTab="sessions"
-        sessionsResult={result}
-        sessionsModeFilter={modeFilter}
+        activeTab="questions"
+        questionsResult={result}
+        questionsFilters={questionsFilters}
+        questionsTagOptions={tagOptions}
       />
     );
-  };
-}
+  }
 
-export default createHistoryPage();
+  const modeFilter = parseSessionModeFilter(params.mode);
+  const result: ActionResult<GetSessionHistoryOutput> =
+    await getSessionHistoryFn({
+      limit,
+      offset,
+      mode: modeFilter === 'all' ? undefined : modeFilter,
+    });
+  redirectIfUnsubscribed([result]);
+
+  return (
+    <HistoryPageClient
+      activeTab="sessions"
+      sessionsResult={result}
+      sessionsModeFilter={modeFilter}
+    />
+  );
+}
