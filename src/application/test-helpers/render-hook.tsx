@@ -12,6 +12,7 @@ export function renderHook<T>(useHook: () => T): T {
   let captured: T | undefined;
   let didCapture = false;
 
+  // biome-ignore lint/correctness/noComponentHookFactories: renderHook renders this probe once per call to capture the hook; no other component renders it.
   function Probe() {
     captured = useHook();
     didCapture = true;

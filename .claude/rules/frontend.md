@@ -135,6 +135,7 @@ A test may assert a public path as a literal: production reads `ROUTES`, so a te
 - Extract custom hooks into `hooks/` subdirectories
 - Use `components/ui/` shadcn primitives, don't reinvent
 - Server Components by default; add `'use client'` only when needed
+- Define components and hooks at module level. A page takes its injected dependencies through an optional `deps` prop (`BillingPage`, `BookmarksPage`, `HistoryPage`), not a factory that returns the page. Biome's `noNestedComponentDefinitions` rejects a component defined inside another component everywhere; `noComponentHookFactories` rejects component and hook factories everywhere except the files a test runner collects (`*.test.ts(x)`, `*.browser.spec.tsx`, `tests/e2e/**/*.spec.ts`). Test helpers and route handlers stay covered, because production code can import a helper and a `.ts` file can build components with `createElement`. Where the rule flags code that is not the hazard it guards, such as a route handler factory returning `POST` (not a component) or `renderHook`'s probe (rendered once per call, never inside another component), add a line `biome-ignore lint/...` with the reason. Use only line lint suppressions, which lint rejects once unused; `tests/biome-suppression-policy.test.ts` enforces that, and `tests/react-component-lint-policy.test.ts` pins the rule scope.
 
 ## Key files
 

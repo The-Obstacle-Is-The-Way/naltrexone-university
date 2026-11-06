@@ -34,6 +34,7 @@ export function createWebhookHandler(
     input: StripeWebhookInput,
   ) => Promise<void>,
 ) {
+  // biome-ignore lint/correctness/noComponentHookFactories: the Next.js POST route handler, not a React component.
   return async function POST(req: Request) {
     const signature = req.headers.get('stripe-signature');
     if (!signature) {
