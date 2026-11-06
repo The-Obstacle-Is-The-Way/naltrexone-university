@@ -26,7 +26,9 @@ export async function readDisplayedPlanConsent(
       ),
     );
   // DEBT-414 F03: the renewal opt-in's label is part of the consent text.
+  // biome-ignore lint/performance/useDomNodeTextContent: Playwright's Locator.innerText(), not the DOM property; the snapshot must be the rendered text the learner saw.
   const optIn = await dialog.locator('form > label').innerText();
+  // biome-ignore lint/performance/useDomNodeTextContent: Playwright's Locator.innerText(), not the DOM property; the snapshot must be the rendered text the learner saw.
   const sentence = await dialog.locator('form > p').innerText();
   return {
     disclosureSnapshot: [...rows, optIn, sentence].join('\n'),
