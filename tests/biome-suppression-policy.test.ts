@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   mkdirSync,
   mkdtempSync,
@@ -75,3 +75,39 @@ describe.each(cases)(
     });
   },
 );
+
+// Biome reports an unused line suppression (`biome-ignore`), so lint fails
+// once the code stops triggering the rule. It reports neither an unused range
+// (`biome-ignore-start`/`-end`) nor an unused file suppression
+// (`biome-ignore-all`), so those could outlive their reason unnoticed.
+const NON_EXPIRING_SUPPRESSION = /biome-ignore-(?:start|end|all)\b/;
+const THIS_FILE = 'tests/biome-suppression-policy.test.ts';
+
+describe('Biome suppression forms', () => {
+  it.each([
+    [
+      'a range suppression',
+      '// biome-ignore-start lint/suspicious/noDebugger: probe\nexport const value = 1;\n// biome-ignore-end lint/suspicious/noDebugger: probe\n',
+    ],
+    [
+      'a file suppression',
+      '// biome-ignore-all lint/suspicious/noDebugger: probe\nexport const value = 1;\n',
+    ],
+  ])('does not report %s once it is unused', (_form, contents) => {
+    expect(lint('lib/unused-suppression.ts', contents).status).toBe(0);
+  });
+
+  it('uses only line suppressions in tracked source files', () => {
+    const offenders = execFileSync('git', ['ls-files', '-z'], {
+      encoding: 'utf8',
+    })
+      .split('\0')
+      .filter((path) => /\.(?:[cm]?[jt]sx?|jsonc?|css)$/.test(path))
+      .filter((path) => path !== THIS_FILE)
+      .filter((path) =>
+        NON_EXPIRING_SUPPRESSION.test(readFileSync(path, 'utf8')),
+      );
+
+    expect(offenders).toEqual([]);
+  });
+});

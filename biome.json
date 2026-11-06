@@ -262,24 +262,8 @@
         "**/*.test.ts",
         "**/*.test.tsx",
         "**/*.spec.ts",
-        "**/*.spec.tsx",
-        "**/*.fixtures.ts",
-        "**/*.probes.tsx",
-        "**/*.setup.ts",
-        "**/*test-helpers.ts",
-        "**/*test-helpers.tsx",
-        "src/**/test-helpers/**"
+        "**/*.spec.tsx"
       ],
-      "linter": {
-        "rules": {
-          "correctness": {
-            "noComponentHookFactories": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["app/api/**/*.ts"],
       "linter": {
         "rules": {
           "correctness": {

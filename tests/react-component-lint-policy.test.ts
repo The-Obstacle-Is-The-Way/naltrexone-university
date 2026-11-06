@@ -89,6 +89,15 @@ it('constructs the client', () => {
 });
 `;
 
+const CREATE_ELEMENT_FACTORY = `import { createElement } from 'react';
+
+export function createPanel(label: string) {
+  return function Panel() {
+    return createElement('p', null, label);
+  };
+}
+`;
+
 const ROUTE_HANDLER_FACTORY = `export function createExampleHandler(run: () => Promise<void>) {
   return async function POST(_request: Request) {
     await run();
@@ -155,22 +164,46 @@ describe('React component definition lint policy', () => {
     },
   );
 
+  // Production code can import test support, so only test files are exempt.
+  // Probe, fixture and setup paths are ones the filename rule already allows.
   it.each([
-    'components/example-test-helpers.tsx',
-    'src/application/test-helpers/example-harness.tsx',
-  ])('allows a component factory in the test helper %s', (filePath) => {
-    expect(lint(filePath, COMPONENT_FACTORY).status).toBe(0);
+    ['components/example-test-helpers.tsx', COMPONENT_FACTORY],
+    ['src/application/test-helpers/example-harness.tsx', COMPONENT_FACTORY],
+    [
+      'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx',
+      COMPONENT_FACTORY,
+    ],
+    ['app/example/example-test-helpers.ts', HOOK_FACTORY],
+    [
+      'app/(app)/app/practice/[sessionId]/components/post-exam-review-view.fixtures.ts',
+      HOOK_FACTORY,
+    ],
+    ['tests/e2e/global.setup.ts', HOOK_FACTORY],
+  ])('rejects a factory in the test support file %s', (filePath, contents) => {
+    const result = lint(filePath, contents);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'lint/correctness/noComponentHookFactories',
+    );
   });
 
+  // A .ts file can still build components without JSX.
+  it('rejects a createElement component factory in a .ts file under app/api', () => {
+    const result = lint('app/api/example/panel.ts', CREATE_ELEMENT_FACTORY);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'lint/correctness/noComponentHookFactories',
+    );
+  });
+
+  // Each route handler factory carries its own line suppression and reason.
   it.each([
     'app/api/example/handler.ts',
     'app/api/webhooks/example/handler.ts',
-  ])('allows a route handler factory at %s', (filePath) => {
-    expect(lint(filePath, ROUTE_HANDLER_FACTORY).status).toBe(0);
-  });
-
-  it('still rejects a component factory in a .tsx file under app/api', () => {
-    const result = lint('app/api/example/handler.tsx', COMPONENT_FACTORY);
+  ])('rejects an unsuppressed route handler factory at %s', (filePath) => {
+    const result = lint(filePath, ROUTE_HANDLER_FACTORY);
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
