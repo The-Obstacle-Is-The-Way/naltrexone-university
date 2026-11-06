@@ -135,6 +135,7 @@ A test may assert a public path as a literal: production reads `ROUTES`, so a te
 - Extract custom hooks into `hooks/` subdirectories
 - Use `components/ui/` shadcn primitives, don't reinvent
 - Server Components by default; add `'use client'` only when needed
+- Define components and hooks at module level. A page takes its injected dependencies through an optional `deps` prop (`BillingPage`, `BookmarksPage`, `HistoryPage`), not a factory that returns the page. Biome's `noNestedComponentDefinitions` rejects a component defined inside another component everywhere; `noComponentHookFactories` rejects component and hook factories everywhere except test files, test helpers and `app/api/**/*.ts` route handlers, which contain no components. `tests/react-component-lint-policy.test.ts` pins that scope.
 
 ## Key files
 
