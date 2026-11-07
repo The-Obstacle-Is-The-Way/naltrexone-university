@@ -4,10 +4,12 @@ import { parse } from 'yaml';
 import { withRecordedCli } from '../../tests/shared/recorded-cli';
 import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
 import {
+  checkPrivateReporting,
   checkSecurityTxtRenewal,
   createGithubRenewalIssues,
   type RenewalIssue,
   type RenewalIssues,
+  readPrivateReporting,
   runSecurityTxtRenewal,
 } from './security-txt-renewal.mjs';
 
@@ -170,8 +172,65 @@ describe('security.txt renewal reminder', () => {
   });
 });
 
+// security.txt and SECURITY.md send a researcher to GitHub's private report
+// form, which works only while the repository setting is on (BUG-338).
+describe('private vulnerability reporting check', () => {
+  const REPORTING_TITLE = 'Turn private vulnerability reporting back on';
+
+  it('writes no issue while reporting is on', async () => {
+    const issues = new MemoryIssues();
+    expect(await checkPrivateReporting(true, issues)).toBe('enabled');
+    expect(issues.issues).toEqual([]);
+  });
+
+  it('opens one issue when reporting is off, reuses it, and reopens it once closed', async () => {
+    const issues = new MemoryIssues();
+    expect(await checkPrivateReporting(false, issues)).toBe('created');
+    expect(await checkPrivateReporting(false, issues)).toBe('unchanged');
+    const issue = issues.issues[0];
+    if (!issue) throw new Error('Missing reporting issue');
+    expect(issue.title).toBe(REPORTING_TITLE);
+    expect(issue.body).toContain('private-vulnerability-reporting');
+    issue.state = 'CLOSED';
+    expect(await checkPrivateReporting(false, issues)).toBe('updated');
+    expect(issues.issues).toEqual([{ ...issue, state: 'OPEN' }]);
+  });
+
+  it('keeps its issue apart from the renewal reminder', async () => {
+    const issues = new MemoryIssues();
+    await checkSecurityTxtRenewal(document(89), now, issues);
+    expect(await checkPrivateReporting(false, issues)).toBe('created');
+    expect(issues.issues.map((issue) => issue.title)).toEqual([
+      'Renew security.txt contact metadata',
+      REPORTING_TITLE,
+    ]);
+  });
+
+  it('reads the setting from the repository API', () => {
+    const commands: string[][] = [];
+    expect(
+      readPrivateReporting((args) => {
+        commands.push(args);
+        return '{"enabled":false}';
+      }),
+    ).toBe(false);
+    expect(commands).toEqual([
+      ['api', 'repos/{owner}/{repo}/private-vulnerability-reporting'],
+    ]);
+  });
+
+  it.each(['{}', '{"enabled":"true"}', 'null', 'not json'])(
+    'rejects the response %s instead of guessing the setting',
+    (response) => {
+      expect(() => readPrivateReporting(() => response)).toThrow(
+        'Invalid GitHub private vulnerability reporting response',
+      );
+    },
+  );
+});
+
 describe('renewal command outcome', () => {
-  it('reads the repository file without using GitHub when renewal is not due', async () => {
+  it('reads the repository file, and from GitHub only the reporting setting, when renewal is not due', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2000-01-01T00:00:00Z'));
     const messages: string[] = [];
@@ -181,11 +240,63 @@ describe('renewal command outcome', () => {
         throw new Error('Unexpected error output');
       },
     };
-    await withRecordedCli('gh', '', async (calls) => {
+    await withRecordedCli('gh', '{"enabled":true}', async (calls) => {
       expect(await runSecurityTxtRenewal(undefined, output)).toBe(0);
-      expect(messages).toEqual(['security.txt renewal: not-due']);
-      expect(calls()).toEqual([]);
+      expect(messages).toEqual([
+        'security.txt renewal: not-due',
+        'private vulnerability reporting: enabled',
+      ]);
+      expect(calls()).toEqual([
+        ['api', 'repos/{owner}/{repo}/private-vulnerability-reporting'],
+      ]);
     });
+  });
+
+  it('checks the reporting setting even when the renewal check fails, and reports each failure', async () => {
+    const messages: string[] = [];
+    const errors: string[] = [];
+    const output = {
+      log: (message: string) => messages.push(message),
+      error: (message: string) => errors.push(message),
+    };
+    expect(
+      await runSecurityTxtRenewal(
+        async () => {
+          throw new Error('private fixture detail');
+        },
+        output,
+        async () => {
+          throw new Error('private fixture detail');
+        },
+      ),
+    ).toBe(1);
+    expect(messages).toEqual([]);
+    expect(errors).toEqual([
+      'security.txt renewal check failed; inspect the file and GitHub issue access.',
+      'private vulnerability reporting check failed; inspect GitHub API and issue access.',
+    ]);
+  });
+
+  it('returns nonzero when only the reporting check fails', async () => {
+    const messages: string[] = [];
+    const errors: string[] = [];
+    const output = {
+      log: (message: string) => messages.push(message),
+      error: (message: string) => errors.push(message),
+    };
+    expect(
+      await runSecurityTxtRenewal(
+        async () => 'not-due',
+        output,
+        async () => {
+          throw new Error('private fixture detail');
+        },
+      ),
+    ).toBe(1);
+    expect(messages).toEqual(['security.txt renewal: not-due']);
+    expect(errors).toEqual([
+      'private vulnerability reporting check failed; inspect GitHub API and issue access.',
+    ]);
   });
 
   it('reports the completed outcome and returns zero', async () => {
@@ -201,44 +312,32 @@ describe('renewal command outcome', () => {
       await runSecurityTxtRenewal(
         () => checkSecurityTxtRenewal(document(89), now, issues),
         output,
+        () => checkPrivateReporting(true, issues),
       ),
     ).toBe(0);
-    expect(messages).toEqual(['security.txt renewal: created']);
-  });
-
-  it('returns nonzero with value-free diagnostics when the check fails', async () => {
-    const errors: string[] = [];
-    const output = {
-      log: () => {
-        throw new Error('Unexpected success output');
-      },
-      error: (message: string) => errors.push(message),
-    };
-    expect(
-      await runSecurityTxtRenewal(async () => {
-        throw new Error('private fixture detail');
-      }, output),
-    ).toBe(1);
-    expect(errors).toEqual([
-      'security.txt renewal check failed; inspect the file and GitHub issue access.',
+    expect(messages).toEqual([
+      'security.txt renewal: created',
+      'private vulnerability reporting: enabled',
     ]);
   });
 
   it('adds gh’s own line when a gh call fails', async () => {
     const errors: string[] = [];
     const output = {
-      log: () => {
-        throw new Error('Unexpected success output');
-      },
+      log: () => {},
       error: (message: string) => errors.push(message),
     };
     const failure = await ghRunnerFailure(
       'GraphQL: Resource not accessible by integration (createIssue)\n',
     );
     expect(
-      await runSecurityTxtRenewal(async () => {
-        throw failure;
-      }, output),
+      await runSecurityTxtRenewal(
+        async () => {
+          throw failure;
+        },
+        output,
+        async () => 'enabled',
+      ),
     ).toBe(1);
     expect(errors).toEqual([
       'security.txt renewal check failed; inspect the file and GitHub issue access. Cause: GraphQL: Resource not accessible by integration (createIssue)',
