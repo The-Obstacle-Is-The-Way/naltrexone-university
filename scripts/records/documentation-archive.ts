@@ -754,6 +754,20 @@ export function readDocumentationFiles(root: string): Map<string, string> {
   );
 }
 
+// macOS's glob also lists the files behind a linked folder, which Linux's does
+// not, and Git refuses those paths ("beyond a symbolic link"). The link itself
+// is reported, so a path under a linked folder in the records folder is skipped.
+function behindRecordsLink(root: string, name: string): boolean {
+  for (
+    let folder = path.posix.dirname(name);
+    folder.startsWith(`${RECORDS.directory}/`);
+    folder = path.posix.dirname(folder)
+  ) {
+    if (lstatSync(path.join(root, folder)).isSymbolicLink()) return true;
+  }
+  return false;
+}
+
 // The records folder holds only Markdown: open records, the index and the
 // ledger. The Markdown audit never reads an image or a JSON receipt, so this
 // lists every other entry there that git does not ignore; each one is stray.
@@ -765,6 +779,7 @@ export function strayRecordsAssets(root: string): string[] {
     .filter(
       (name) =>
         !name.endsWith('.md') &&
+        !behindRecordsLink(root, name) &&
         !lstatSync(path.join(root, name)).isDirectory(),
     )
     .sort();
