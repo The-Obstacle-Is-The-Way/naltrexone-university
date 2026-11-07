@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import os from 'node:os';
@@ -18,6 +19,7 @@ import {
   readDocumentationFiles,
   recordLinks,
   runDocumentationCommand,
+  strayRecordsAssets,
 } from '../scripts/records/documentation-archive';
 
 function audit(files: Record<string, string>) {
@@ -250,7 +252,6 @@ describe('records folder and ledger', () => {
         'docs/records/closed.md': '# Closed',
         'docs/records/debt-001-example.md': '**Status:** Open',
         'docs/records/notes.md': '# Stray',
-        'docs/records/assets/debt-414/receipt.md': '# Legacy asset',
       }).strayRegisterFiles,
     ).toEqual(['docs/records/notes.md']);
   });
@@ -296,19 +297,40 @@ describe('records folder and ledger', () => {
     ]);
   });
 
-  it("reports Markdown in a records subfolder, other than DEBT-414's assets", () => {
+  // Records get no asset folders. The last one, DEBT-414's, was deleted on
+  // 2026-11-05, so a file recreated there is reported like any other.
+  it('reports Markdown in any records subfolder', () => {
     expect(
       audit({
         'docs/records/old/bug-950-x.md': '**Status:** Resolved',
         'docs/records/assets/bug-337/receipt.md': '# New asset folder',
         'docs/records/assets/inventory-2026-09-21/verification.md':
           '# Deleted with the archive',
-        'docs/records/assets/debt-414/note.md': '# Legacy asset',
+        'docs/records/assets/debt-414/note.md': '# Deleted asset folder',
       }).strayRegisterFiles,
     ).toEqual([
       'docs/records/assets/bug-337/receipt.md',
+      'docs/records/assets/debt-414/note.md',
       'docs/records/assets/inventory-2026-09-21/verification.md',
       'docs/records/old/bug-950-x.md',
+    ]);
+  });
+
+  it("reports an unpinned link into DEBT-414's deleted asset folder", () => {
+    const sha = 'c'.repeat(40);
+    const contents = [
+      '[Receipt](./assets/debt-414/f15b-trial-measurements.json)',
+      `[Pinned](https://github.com/o/r/blob/${sha}/docs/records/assets/debt-414/f15b-trial-measurements.json)`,
+      'Read `docs/records/assets/debt-414/f03b-add-card-measurements.json`.',
+      `Offline: \`git show ${'d'.repeat(12)}:docs/records/assets/debt-414/f03b-add-card-measurements.json\`.`,
+    ].join('\n\n');
+    expect(
+      archiveDestinations('docs/records/debt-414-example.md', contents).map(
+        ({ line, reference }) => `${line}:${reference}`,
+      ),
+    ).toEqual([
+      '1:./assets/debt-414/f15b-trial-measurements.json',
+      '5:docs/records/assets/debt-414/f03b-add-card-measurements.json',
     ]);
   });
 
@@ -588,6 +610,92 @@ describe('records command', () => {
     expect(runDocumentationCommand(root, () => {})).toBe(1);
   });
 
+  // The records folder holds only Markdown, and the Markdown audit never reads
+  // an image or a JSON receipt, so the command lists every other file there.
+  it('exits nonzero for a non-Markdown file under docs/records, such as a restored receipt', () => {
+    const root = fixture();
+    populate(root, {
+      'docs/records/assets/debt-414/f03b-add-card-measurements.json': '{}',
+      'docs/records/notes.txt': 'Stray',
+    });
+    const reports: DocumentationAudit[] = [];
+    expect(
+      runDocumentationCommand(root, (json) => reports.push(JSON.parse(json))),
+    ).toBe(1);
+    expect(reports[0]?.strayRegisterFiles).toEqual([
+      'docs/records/assets/debt-414/f03b-add-card-measurements.json',
+      'docs/records/notes.txt',
+    ]);
+  });
+
+  // A fixture repository, with every inherited GIT_* variable removed so a
+  // hook's GIT_DIR cannot point it at this clone, and no user or system Git
+  // configuration (.claude/rules/test-isolation.md, Git in tests).
+  function gitFixture(): string {
+    for (const name of Object.keys(process.env)) {
+      if (name.startsWith('GIT_')) vi.stubEnv(name, undefined);
+    }
+    vi.stubEnv('GIT_CONFIG_GLOBAL', '/dev/null');
+    vi.stubEnv('GIT_CONFIG_NOSYSTEM', '1');
+    const root = fixture();
+    execFileSync('git', ['init', '--quiet'], { cwd: root });
+    return root;
+  }
+
+  // A link is not a record either: it is reported as itself, whether it
+  // dangles or names a folder, and the audit does not stop on it. The files
+  // behind a linked folder are not listed separately, on any platform.
+  it('reports a symlink under docs/records, dangling or to a folder', () => {
+    const root = fixture();
+    populate(root, { 'outside/receipts/a.json': '{}' });
+    symlinkSync(
+      '../../missing.json',
+      path.join(root, 'docs/records/gone.json'),
+    );
+    symlinkSync(
+      '../../outside/receipts',
+      path.join(root, 'docs/records/assets'),
+    );
+    expect(strayRecordsAssets(root)).toEqual([
+      'docs/records/assets',
+      'docs/records/gone.json',
+    ]);
+  });
+
+  // In a work tree Git decides which links are ignored. It refuses a path
+  // behind a link ("beyond a symbolic link"), which macOS's glob lists, so
+  // only the links themselves may reach it.
+  it('reports a symlink in a git work tree unless git ignores it', () => {
+    const root = gitFixture();
+    populate(root, {
+      '.gitignore': 'ignored.json\ncache\n',
+      'outside/receipts/a.json': '{}',
+    });
+    for (const [link, target] of Object.entries({
+      'gone.json': '../../missing.json',
+      'ignored.json': '../../missing.json',
+      assets: '../../outside/receipts',
+      cache: '../../outside/receipts',
+    })) {
+      symlinkSync(target, path.join(root, 'docs/records', link));
+    }
+    expect(strayRecordsAssets(root)).toEqual([
+      'docs/records/assets',
+      'docs/records/gone.json',
+    ]);
+  });
+
+  it('skips a git-ignored file under docs/records, such as Finder metadata', () => {
+    const root = gitFixture();
+    populate(root, {
+      '.gitignore': '.DS_Store\nscratch.txt\n',
+      'docs/records/.DS_Store': '',
+      'docs/records/scratch.txt': 'Local only',
+      'docs/records/receipt.json': '{}',
+    });
+    expect(strayRecordsAssets(root)).toEqual(['docs/records/receipt.json']);
+  });
+
   it('exits nonzero for an ID listed twice in the ledger, and for a file left in a replaced register folder', () => {
     const root = fixture();
     populate(root, {
@@ -631,6 +739,10 @@ describe('repository records', () => {
 
   it('keeps no Markdown in a register folder docs/records replaced, or in a folder the layout retired', () => {
     expect(result.retiredRegisterFiles).toEqual([]);
+  });
+
+  it('keeps no file but Markdown under docs/records', () => {
+    expect(strayRecordsAssets(process.cwd())).toEqual([]);
   });
 
   it('lists each closed ID once in the ledger', () => {

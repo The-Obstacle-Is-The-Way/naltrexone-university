@@ -1,6 +1,6 @@
 # BUG-338: The Published Security Contact Leads Nowhere
 
-**Status:** Verifying — private reporting is on; SECURITY.md must reach `main`, where GitHub reads it; due 2026-10-26
+**Status:** Verifying — a second account reaches a working report form, and the renewal job's check of the setting is decided; due 2026-10-26
 **Priority:** P2
 **Date:** 2026-10-12
 **Resolved:** —
@@ -45,7 +45,7 @@ Option 1, with email as a second channel inside the policy:
 
 ## Verification
 
-- [ ] The Policy URL shows this repository's `SECURITY.md`, once a promotion carries it to `main`.
+- [x] The Policy URL shows this repository's `SECURITY.md`, once a promotion carries it to `main` (2026-11-05: GitHub reports the policy enabled, and the page shows its "Reporting a Vulnerability" section).
 - [x] `gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/private-vulnerability-reporting` answers `{"enabled":true}` (2026-10-12, 02:00 UTC).
 - [ ] A signed-in account other than the owner's reaches a working report form.
 
