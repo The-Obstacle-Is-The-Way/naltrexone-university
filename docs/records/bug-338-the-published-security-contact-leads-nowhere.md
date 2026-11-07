@@ -1,6 +1,6 @@
 # BUG-338: The Published Security Contact Leads Nowhere
 
-**Status:** Verifying — a second account reaches a working report form, and the renewal job's check of the setting is decided; due 2026-10-26
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-26
 **Priority:** P2
 **Date:** 2026-10-12
 **Resolved:** —
@@ -41,13 +41,20 @@ A good-faith report has nowhere private to go, so it may be dropped or posted pu
 Option 1, with email as a second channel inside the policy:
 - `SECURITY.md` names both the reporting form and the support address, and says what to include and what not to do. `tests/security-txt.test.ts` now fails without it.
 - The owner approved turning on private vulnerability reporting, and it was turned on through the API on 2026-10-12 at 02:00 UTC.
-- After that, the monthly `security-txt-renewal` job should also read the setting and open an issue if it is ever off. That needs a token allowed to read repository security settings. Decide by 2026-10-26, with this record's Verifying check: add the check if the renewal job's read token can read the setting, or record why not.
+- After that, the monthly `security-txt-renewal` job should also read the setting and open an issue if it is ever off. Decide by 2026-10-26, with this record's Verifying check: add the check if the renewal job's read token can read the setting, or record why not.
+- **Decided 2026-11-07: added.** The setting is public for a public repository: the API answered `{"enabled":true}` to a request with no token at all. So the job's issue token reads it, and no administration permission is needed. The job opens or reopens one issue, "Turn private vulnerability reporting back on", while the setting is off.
 
 ## Verification
 
 - [x] The Policy URL shows this repository's `SECURITY.md`, once a promotion carries it to `main` (2026-11-05: GitHub reports the policy enabled, and the page shows its "Reporting a Vulnerability" section).
 - [x] `gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/private-vulnerability-reporting` answers `{"enabled":true}` (2026-10-12, 02:00 UTC).
-- [ ] A signed-in account other than the owner's reaches a working report form.
+- [x] ~~A signed-in account other than the owner's reaches a working report form.~~ Declined by the owner on 2026-11-07: a second GitHub account would exist only for this check. Logged-out evidence stands in for it, checked that day:
+  - the API, with no token, answers `{"enabled":true}`;
+  - the repository's public Security page offers "Report a vulnerability", linking to `security/advisories/new`;
+  - that link sends a logged-out visitor to GitHub's sign-in and back to the form.
+
+  Only the form's own page, after sign-in, went unseen; GitHub serves it.
+- [x] The monthly `security-txt-renewal` job reads the setting and opens an issue while it is off (`b7796a6d`). A local run against the repository on 2026-11-07 printed `private vulnerability reporting: enabled`.
 
 ## Related
 
