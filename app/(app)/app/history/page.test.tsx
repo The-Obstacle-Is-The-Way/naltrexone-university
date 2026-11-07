@@ -18,7 +18,7 @@ import {
   isNodeBefore,
   parseHtml,
 } from '@/tests/shared/dom-helpers';
-import { createHistoryPage } from './page';
+import HistoryPage from './page';
 
 const {
   fixtureQuestion1Id,
@@ -79,9 +79,10 @@ describe('app/(app)/app/history/page', () => {
 
     const getSessionHistoryFn = vi.fn(async (_input: unknown) => ok(output));
 
-    const HistoryPage = createHistoryPage({ getSessionHistoryFn });
-
-    const element = await HistoryPage({ searchParams: Promise.resolve({}) });
+    const element = await HistoryPage({
+      deps: { getSessionHistoryFn },
+      searchParams: Promise.resolve({}),
+    });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('History');
@@ -99,13 +100,14 @@ describe('app/(app)/app/history/page', () => {
           ok: false,
           error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
         }) as const;
-      const HistoryPage = createHistoryPage({
-        getSessionHistoryFn: unsubscribed,
-        getAttemptedQuestionsFn: unsubscribed,
-        getTagsFn: unsubscribed,
+      await HistoryPage({
+        deps: {
+          getSessionHistoryFn: unsubscribed,
+          getAttemptedQuestionsFn: unsubscribed,
+          getTagsFn: unsubscribed,
+        },
+        searchParams: Promise.resolve({ tab }),
       });
-
-      await HistoryPage({ searchParams: Promise.resolve({ tab }) });
 
       expect(vi.mocked(redirect)).toHaveBeenCalledWith(
         '/pricing?reason=subscription_required',
@@ -121,21 +123,20 @@ describe('app/(app)/app/history/page', () => {
         ok: false,
         error: { code: 'UNSUBSCRIBED', message: 'Subscription required' },
       } as const;
-      const HistoryPage = createHistoryPage({
-        getAttemptedQuestionsFn: async (_input: unknown) =>
-          refused === 'attempted questions'
-            ? unsubscribed
-            : ok<GetAttemptedQuestionsOutput>({
-                rows: [],
-                totalCount: 0,
-                limit: 20,
-                offset: 0,
-              }),
-        getTagsFn: async (_input: unknown) =>
-          refused === 'tags' ? unsubscribed : ok({ rows: [] }),
-      });
-
       await HistoryPage({
+        deps: {
+          getAttemptedQuestionsFn: async (_input: unknown) =>
+            refused === 'attempted questions'
+              ? unsubscribed
+              : ok<GetAttemptedQuestionsOutput>({
+                  rows: [],
+                  totalCount: 0,
+                  limit: 20,
+                  offset: 0,
+                }),
+          getTagsFn: async (_input: unknown) =>
+            refused === 'tags' ? unsubscribed : ok({ rows: [] }),
+        },
         searchParams: Promise.resolve({ tab: 'questions' }),
       });
 
@@ -154,9 +155,8 @@ describe('app/(app)/app/history/page', () => {
     };
     const getSessionHistoryFn = vi.fn(async (_input: unknown) => ok(output));
 
-    const HistoryPage = createHistoryPage({ getSessionHistoryFn });
-
     await HistoryPage({
+      deps: { getSessionHistoryFn },
       searchParams: Promise.resolve({
         tab: 'sessions',
         mode: 'exam',
@@ -183,12 +183,11 @@ describe('app/(app)/app/history/page', () => {
     );
     const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
 
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     const element = await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({ tab: 'questions' }),
     });
     const html = renderToStaticMarkup(element);
@@ -221,12 +220,11 @@ describe('app/(app)/app/history/page', () => {
     );
     const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
 
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({
         tab: 'questions',
         source: 'tutor',
@@ -253,12 +251,11 @@ describe('app/(app)/app/history/page', () => {
     );
     const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
 
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({
         tab: 'questions',
       }),
@@ -281,9 +278,8 @@ describe('app/(app)/app/history/page', () => {
 
     const getSessionHistoryFn = vi.fn(async (_input: unknown) => ok(output));
 
-    const HistoryPage = createHistoryPage({ getSessionHistoryFn });
-
     const element = await HistoryPage({
+      deps: { getSessionHistoryFn },
       searchParams: Promise.resolve({ tab: 'sessions' }),
     });
     const html = renderToStaticMarkup(element);
@@ -318,12 +314,11 @@ describe('app/(app)/app/history/page', () => {
       } satisfies GetTagsOutput),
     );
 
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     const element = await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({ tab: 'questions' }),
     });
     const html = renderToStaticMarkup(element);
@@ -392,12 +387,11 @@ describe('app/(app)/app/history/page', () => {
       } satisfies GetTagsOutput),
     );
 
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     const element = await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({ tab: 'questions' }),
     });
     const html = renderToStaticMarkup(element);
@@ -419,12 +413,11 @@ describe('app/(app)/app/history/page', () => {
     );
     const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
 
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({
         tab: 'questions',
         difficulty: 'hard',
@@ -472,12 +465,11 @@ describe('app/(app)/app/history/page', () => {
       ok(output),
     );
     const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     const element = await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({
         tab: 'questions',
         sort: 'incorrect-first',
@@ -543,12 +535,11 @@ describe('app/(app)/app/history/page', () => {
       ok(output),
     );
     const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     const element = await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({
         tab: 'questions',
         sort: 'difficulty',
@@ -583,9 +574,8 @@ describe('app/(app)/app/history/page', () => {
       }),
     );
 
-    const HistoryPage = createHistoryPage({ getSessionHistoryFn });
-
     const element = await HistoryPage({
+      deps: { getSessionHistoryFn },
       searchParams: Promise.resolve({ tab: 'sessions' }),
     });
     const html = renderToStaticMarkup(element);
@@ -608,12 +598,11 @@ describe('app/(app)/app/history/page', () => {
     );
     const getTagsFn = vi.fn(async (_input: unknown) => ok({ rows: [] }));
 
-    const HistoryPage = createHistoryPage({
-      getAttemptedQuestionsFn,
-      getTagsFn,
-    });
-
     const element = await HistoryPage({
+      deps: {
+        getAttemptedQuestionsFn,
+        getTagsFn,
+      },
       searchParams: Promise.resolve({ tab: 'questions' }),
     });
     const html = renderToStaticMarkup(element);

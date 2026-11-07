@@ -110,6 +110,7 @@ Open bug and debt records are in `docs/records/`, with one index. Its ["How Reco
 - Read **Now** and the Waiting triggers relevant to your work at session start, and triage any overdue dated action, in any live status, before new work. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
 - A new ID comes from `pnpm record:next bug` (or `debt`).
 - Write the record first and have a second agent challenge it. Before any push involving an exploitable security finding, apply the index’s private-review and disclosure exception; a public draft PR is not private.
+- Close a record once its last check is recorded: delete the file and add its ledger line, by the index's closing steps. Git keeps its history; only open records stay in the tree.
 - Ship it with its fix. Specify new features in [`docs/product/`](docs/product/README.md); multi-PR duration alone is not debt.
 - Only the index links records; elsewhere, cite the ID.
 

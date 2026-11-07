@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, globSync, readFileSync } from 'node:fs';
+import { existsSync, globSync, lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -103,13 +103,11 @@ export const STATUS_MAX_CHARACTERS = 200;
 
 // Beside the records index only open records and the ledger belong: change
 // history lives in git, and a closed record is a ledger line. Records get no
-// asset folders; DEBT-414's folder predates that rule and goes when it closes.
-const LEGACY_RECORD_ASSETS = /^docs\/records\/assets\/debt-414\//;
-
+// asset folders, so Markdown in a subfolder is stray. `strayRecordsAssets`
+// reports every other kind of file there.
 function isStrayRecordsFile(file: string): boolean {
   if (!file.startsWith(`${RECORDS.directory}/`)) return false;
-  if (path.posix.dirname(file) !== RECORDS.directory)
-    return !LEGACY_RECORD_ASSETS.test(file);
+  if (path.posix.dirname(file) !== RECORDS.directory) return true;
   return (
     file !== RECORDS.index &&
     file !== RECORDS.ledger &&
@@ -625,18 +623,18 @@ function recordLinksIn(
   ].sort((a, b) => a.start - b.start);
 }
 
-// The archive purge deleted these folders (DEBT-518). A live document reaches
-// that history through the ledger's IDs or a URL pinned to a commit, never a
-// path that a branch or a recreated file could answer. Only destinations are
+// The archive purge deleted these folders (DEBT-518), and the records' last
+// asset folder, DEBT-414's, went on 2026-11-05. A live document reaches that
+// history through the ledger's IDs or a URL pinned to a commit, never a path
+// that a branch or a recreated file could answer. Only destinations are
 // checked: a link, or a file path in a code span. Prose may name the folders.
-const DELETED_FOLDERS =
-  '(?:_archive|(?:bugs|debt|audits)/assets|records/assets/(?:inventory|active-audit)-2026-09-21)';
+const DELETED_FOLDERS = '(?:_archive|(?:bugs|debt|audits|records)/assets)';
 const DELETED_FOLDER = new RegExp(`^docs/${DELETED_FOLDERS}/`);
 const DELETED_FOLDER_IN_URL = new RegExp(`/docs/${DELETED_FOLDERS}/`);
 // A path below a deleted folder. The folder's bare name, and a glob over it
 // such as `docs/_archive/**`, are not destinations.
 const DELETED_FILE =
-  /(?<![\w-])docs\/(?:_archive\/|(?:bugs|debt|audits)\/assets\/|records\/assets\/(?:inventory|active-audit)-2026-09-21\/)[\w.-]/g;
+  /(?<![\w-])docs\/(?:_archive\/|(?:bugs|debt|audits|records)\/assets\/)[\w.-]/g;
 // What pins a path in a code span: a commit URL's revision, or `<commit>:` as
 // `git show` takes it.
 const PINNED_BEFORE =
@@ -756,10 +754,46 @@ export function readDocumentationFiles(root: string): Map<string, string> {
   );
 }
 
+// macOS's glob also lists the files behind a linked folder, which Linux's does
+// not, and Git refuses those paths ("beyond a symbolic link"). The link itself
+// is reported, so a path under a linked folder in the records folder is skipped.
+function behindRecordsLink(root: string, name: string): boolean {
+  for (
+    let folder = path.posix.dirname(name);
+    folder.startsWith(`${RECORDS.directory}/`);
+    folder = path.posix.dirname(folder)
+  ) {
+    if (lstatSync(path.join(root, folder)).isSymbolicLink()) return true;
+  }
+  return false;
+}
+
+// The records folder holds only Markdown: open records, the index and the
+// ledger. The Markdown audit never reads an image or a JSON receipt, so this
+// lists every other entry there that git does not ignore; each one is stray.
+// `lstat` reports a link as itself, so a dangling link or a link to a folder
+// is listed rather than failed on.
+export function strayRecordsAssets(root: string): string[] {
+  const names = globSync(`${RECORDS.directory}/**/*`, { cwd: root })
+    .map((name) => name.split(path.sep).join('/'))
+    .filter(
+      (name) =>
+        !name.endsWith('.md') &&
+        !behindRecordsLink(root, name) &&
+        !lstatSync(path.join(root, name)).isDirectory(),
+    )
+    .sort();
+  const ignored = new Set(gitIgnored(root, names));
+  return names.filter((name) => !ignored.has(name));
+}
+
 export function readDocumentation(root: string): DocumentationAudit {
-  return auditDocumentation(readDocumentationFiles(root), (file) =>
+  const result = auditDocumentation(readDocumentationFiles(root), (file) =>
     existsSync(path.resolve(root, file)),
   );
+  result.strayRegisterFiles.push(...strayRecordsAssets(root));
+  result.strayRegisterFiles.sort();
+  return result;
 }
 
 export function runDocumentationCommand(

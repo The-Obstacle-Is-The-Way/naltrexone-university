@@ -53,6 +53,7 @@ export function createWebhookHandler(
   ) => Promise<void>,
   deleteStripeCustomer: DeleteStripeCustomerFn,
 ) {
+  // biome-ignore lint/correctness/noComponentHookFactories: the Next.js POST route handler, not a React component.
   return async function POST(req: Request) {
     const container = createContainer();
 

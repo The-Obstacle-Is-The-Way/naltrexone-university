@@ -133,7 +133,7 @@ function createBookmarkActionControllerDeps(overrides?: {
 }
 
 let BookmarksView: typeof import('./page').BookmarksView;
-let createBookmarksPage: typeof import('./page').createBookmarksPage;
+let BookmarksPage: typeof import('./page').default;
 let renderBookmarks: typeof import('./page').renderBookmarks;
 let removeBookmark: typeof import('./remove-bookmark').removeBookmark;
 let setBookmark: typeof import('@/src/adapters/controllers/bookmark-controller').setBookmark;
@@ -147,7 +147,7 @@ beforeAll(async () => {
     ]);
 
   BookmarksView = pageModule.BookmarksView;
-  createBookmarksPage = pageModule.createBookmarksPage;
+  BookmarksPage = pageModule.default;
   renderBookmarks = pageModule.renderBookmarks;
   removeBookmark = actionsModule.removeBookmark;
   setBookmark = bookmarkControllerModule.setBookmark;
@@ -162,9 +162,8 @@ describe('app/(app)/app/bookmarks', () => {
         }) => void)
       | undefined;
     const getBookmarksFn = createGetBookmarksFn();
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
-
     const pagePromise = BookmarksPage({
+      deps: { getBookmarksFn },
       searchParams: new Promise((resolve) => {
         releaseSearchParams = resolve;
       }),
@@ -598,11 +597,10 @@ describe('app/(app)/app/bookmarks', () => {
     });
   });
 
-  it('loads bookmarks via createBookmarksPage', async () => {
+  it('loads bookmarks through the injected loader', async () => {
     const getBookmarksFn = createGetBookmarksFn();
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
-    const element = await BookmarksPage();
+    const element = await BookmarksPage({ deps: { getBookmarksFn } });
     const html = renderToStaticMarkup(element);
 
     expect(getBookmarksFn).toHaveBeenCalledWith({});
@@ -612,8 +610,8 @@ describe('app/(app)/app/bookmarks', () => {
   it('renders a banner when redirected back with an error code', async () => {
     const getBookmarksFn = createGetBookmarksFn();
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
+      deps: { getBookmarksFn },
       searchParams: Promise.resolve({ error: 'remove_failed' }),
     });
     const html = renderToStaticMarkup(element);
@@ -625,8 +623,8 @@ describe('app/(app)/app/bookmarks', () => {
   it('renders a banner when redirected back with missing_question_id', async () => {
     const getBookmarksFn = createGetBookmarksFn();
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
+      deps: { getBookmarksFn },
       searchParams: Promise.resolve({ error: 'missing_question_id' }),
     });
     const html = renderToStaticMarkup(element);
@@ -638,8 +636,8 @@ describe('app/(app)/app/bookmarks', () => {
   it('renders error banner when error searchParam is an array', async () => {
     const getBookmarksFn = createGetBookmarksFn();
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
+      deps: { getBookmarksFn },
       searchParams: Promise.resolve({ error: ['remove_failed'] }),
     });
     const html = renderToStaticMarkup(element);
@@ -651,8 +649,8 @@ describe('app/(app)/app/bookmarks', () => {
   it('renders the first matching error when error searchParam has multiple values', async () => {
     const getBookmarksFn = createGetBookmarksFn();
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
+      deps: { getBookmarksFn },
       searchParams: Promise.resolve({
         error: ['remove_failed', 'missing_question_id'],
       }),
@@ -668,8 +666,8 @@ describe('app/(app)/app/bookmarks', () => {
   it('renders error banner when error searchParam is an array with missing_question_id', async () => {
     const getBookmarksFn = createGetBookmarksFn();
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
+      deps: { getBookmarksFn },
       searchParams: Promise.resolve({ error: ['missing_question_id'] }),
     });
     const html = renderToStaticMarkup(element);
@@ -681,8 +679,8 @@ describe('app/(app)/app/bookmarks', () => {
   it('does not render an error when first error value is invalid even if a later value is valid', async () => {
     const getBookmarksFn = createGetBookmarksFn();
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
+      deps: { getBookmarksFn },
       searchParams: Promise.resolve({
         error: ['unknown_code', 'remove_failed'],
       }),
@@ -696,8 +694,8 @@ describe('app/(app)/app/bookmarks', () => {
   it('renders page without error when toast searchParam is a multi-value array', async () => {
     const getBookmarksFn = createGetBookmarksFn();
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
+      deps: { getBookmarksFn },
       searchParams: Promise.resolve({
         toast: ['bookmark_removed', 'ignored'],
       }),
@@ -708,11 +706,10 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).not.toContain('Unable to remove bookmark');
   });
 
-  it('renders an error view when createBookmarksPage fails to load bookmarks', async () => {
+  it('renders an error view when the injected loader fails to load bookmarks', async () => {
     const getBookmarksFn = createGetBookmarksFn(err('INTERNAL_ERROR', 'Boom'));
 
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
-    const element = await BookmarksPage();
+    const element = await BookmarksPage({ deps: { getBookmarksFn } });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Unable to load bookmarks.');

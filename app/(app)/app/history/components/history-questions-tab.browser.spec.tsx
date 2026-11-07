@@ -82,4 +82,62 @@ describe('HistoryQuestionsTab (browser)', () => {
       }),
     );
   });
+
+  it('lists tags grouped by kind, each group ordered by name', async () => {
+    const screen = await render(
+      <HistoryQuestionsTab
+        result={createAttemptedQuestionsResult()}
+        tagOptions={[
+          { slug: 'buprenorphine', name: 'Buprenorphine', kind: 'treatment' },
+          { slug: 'a-screening', name: 'Screening', kind: 'topic' },
+          { slug: 'alcohol', name: 'Alcohol', kind: 'substance' },
+          { slug: 'z-epidemiology', name: 'Epidemiology', kind: 'topic' },
+        ]}
+      />,
+    );
+
+    await screen.getByLabelText('Tag').click();
+    await expect
+      .element(screen.getByRole('option', { name: 'Buprenorphine' }))
+      .toBeVisible();
+
+    expect(
+      screen
+        .getByRole('option')
+        .elements()
+        .map((option) => option.textContent),
+    ).toEqual([
+      'All tags',
+      'Epidemiology',
+      'Screening',
+      'Alcohol',
+      'Buprenorphine',
+    ]);
+  });
+
+  it('orders tags with the same name and kind by slug', async () => {
+    const screen = await render(
+      <HistoryQuestionsTab
+        result={createAttemptedQuestionsResult()}
+        tagOptions={[
+          { slug: 'pharmacology-b', name: 'Pharmacology', kind: 'topic' },
+          { slug: 'pharmacology-a', name: 'Pharmacology', kind: 'topic' },
+        ]}
+      />,
+    );
+
+    await screen.getByLabelText('Tag').click();
+    await screen
+      .getByRole('option', { name: 'Pharmacology (Topic)' })
+      .first()
+      .click();
+
+    expect(pushMock).toHaveBeenCalledWith(
+      buildHistoryQuestionsHref({
+        limit: 20,
+        offset: 0,
+        filters: { tagSlug: 'pharmacology-a' },
+      }),
+    );
+  });
 });
