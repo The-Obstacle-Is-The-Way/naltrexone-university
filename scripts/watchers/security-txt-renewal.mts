@@ -51,16 +51,47 @@ export async function checkSecurityTxtRenewal(
     'Then set Expires to less than one year after the verification date, per [RFC 9116 §2.5.5](https://www.rfc-editor.org/rfc/rfc9116.html#section-2.5.5). ' +
     'Record the verification date and close this issue after the updated file is deployed. ' +
     'The hard future-expiry test remains mandatory.\n';
+  return remind(issues, ISSUE_TITLE, body, 'security.txt renewal');
+}
+
+// security.txt's Contact and SECURITY.md send a researcher to GitHub's private
+// report form, which works only while the repository setting is on (BUG-338).
+const REPORTING_ISSUE_TITLE = 'Turn private vulnerability reporting back on';
+
+export async function checkPrivateReporting(
+  enabled: boolean,
+  issues: RenewalIssues,
+): Promise<'enabled' | 'created' | 'updated' | 'unchanged'> {
+  if (enabled) return 'enabled';
+  const body =
+    'GitHub reports private vulnerability reporting as turned off for this repository. ' +
+    "security.txt's Contact and SECURITY.md send researchers to its report form, which does not work while the setting is off.\n\n" +
+    "Turn it back on in the repository's settings, under Private vulnerability reporting. " +
+    'Then confirm that `gh api repos/{owner}/{repo}/private-vulnerability-reporting` answers `{"enabled":true}`, and close this issue.\n';
+  return remind(
+    issues,
+    REPORTING_ISSUE_TITLE,
+    body,
+    'private vulnerability reporting',
+  );
+}
+
+// Opens the issue with this title, or brings the one already opened up to date
+// and open. Several of them need a person to consolidate.
+async function remind(
+  issues: RenewalIssues,
+  title: string,
+  body: string,
+  subject: string,
+): Promise<'created' | 'updated' | 'unchanged'> {
   const matching = (await issues.list()).filter(
-    (issue) => issue.title === ISSUE_TITLE,
+    (issue) => issue.title === title,
   );
   if (matching.length > 1)
-    throw new Error(
-      'Multiple security.txt renewal issues require consolidation',
-    );
+    throw new Error(`Multiple ${subject} issues require consolidation`);
   const existing = matching[0];
   if (!existing) {
-    await issues.create(ISSUE_TITLE, body);
+    await issues.create(title, body);
     return 'created';
   }
   if (existing.body === body && existing.state === 'OPEN') return 'unchanged';
@@ -149,27 +180,74 @@ export function createGithubRenewalIssues(run: typeof gh = gh): RenewalIssues {
   };
 }
 
+// The setting is public for a public repository, so the job's issue token
+// reads it; no administration permission is needed.
+export function readPrivateReporting(run: typeof gh = gh): boolean {
+  const response = run([
+    'api',
+    'repos/{owner}/{repo}/private-vulnerability-reporting',
+  ]);
+  let setting: unknown;
+  try {
+    setting = JSON.parse(response);
+  } catch {
+    // The parse error carries nothing the message below does not say.
+    setting = undefined;
+  }
+  if (
+    !setting ||
+    typeof setting !== 'object' ||
+    !('enabled' in setting) ||
+    typeof setting.enabled !== 'boolean'
+  ) {
+    throw new Error('Invalid GitHub private vulnerability reporting response');
+  }
+  return setting.enabled;
+}
+
+type Output = Pick<Console, 'log' | 'error'>;
+
+async function report(
+  output: Output,
+  subject: string,
+  failure: string,
+  check: () => Promise<string>,
+): Promise<boolean> {
+  try {
+    output.log(`${subject}: ${await check()}`);
+    return true;
+  } catch (error) {
+    output.error(withGhFailureReason(failure, error));
+    return false;
+  }
+}
+
+// Each check runs even when the other fails, so a broken security.txt cannot
+// hide a reporting setting that was turned off.
 export async function runSecurityTxtRenewal(
-  check = () =>
+  check: () => Promise<string> = () =>
     checkSecurityTxtRenewal(
       readFileSync('public/.well-known/security.txt', 'utf8'),
       new Date(),
       createGithubRenewalIssues(),
     ),
-  output: Pick<Console, 'log' | 'error'> = console,
+  output: Output = console,
+  checkReporting: () => Promise<string> = async () =>
+    checkPrivateReporting(readPrivateReporting(), createGithubRenewalIssues()),
 ): Promise<number> {
-  try {
-    output.log(`security.txt renewal: ${await check()}`);
-    return 0;
-  } catch (error) {
-    output.error(
-      withGhFailureReason(
-        'security.txt renewal check failed; inspect the file and GitHub issue access.',
-        error,
-      ),
-    );
-    return 1;
-  }
+  const renewal = await report(
+    output,
+    'security.txt renewal',
+    'security.txt renewal check failed; inspect the file and GitHub issue access.',
+    check,
+  );
+  const reporting = await report(
+    output,
+    'private vulnerability reporting',
+    'private vulnerability reporting check failed; inspect GitHub API and issue access.',
+    checkReporting,
+  );
+  return renewal && reporting ? 0 : 1;
 }
 
 if (isMain(import.meta.url)) {
