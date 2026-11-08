@@ -189,7 +189,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | `watchers/operational-alert-watcher.ts` | Checks that Sentry's alert path still works, and keeps an issue open while it does not. | `operational-alert-watcher.yml` |
 | `watchers/upstream-advisory-watch.mts` | Scans upstream repository advisories from its configured start date; ignores medium/low advisories from indirect-only repositories, raises other eligible issues unless reviewed ranges prove locked versions unaffected, and closes existing issues on that evidence. | `upstream-advisory-watch.yml`, with plain `node` |
 | `watchers/upstream-fix-watch.ts` | Raises an issue when a non-prerelease npm release follows a tracked fix's landing; the owner still verifies that the release contains the fix. | `upstream-fix-watch.yml` |
-| `watchers/security-txt-renewal.mts` | Opens or updates one GitHub Actions-authored issue when `security.txt`'s `Expires` date is less than 90 days away, and fails on a missing, invalid or duplicate `Expires`; it never closes the issue. | `security-txt-renewal.yml`, with plain `node` |
+| `watchers/security-txt-renewal.mts` | Opens or updates one GitHub Actions-authored issue when `security.txt`'s `Expires` date is less than 90 days away, and another when private vulnerability reporting is off. It fails on a missing, invalid or duplicate `Expires` or an unreadable setting, and never closes either issue. | `security-txt-renewal.yml`, with plain `node` |
 
 ### Quality Reports
 
