@@ -341,14 +341,20 @@ export async function startClerkAuthTrace(
       status?: unknown;
       version?: unknown;
     };
+    // Playwright's clock (exam-timing.spec.ts) replaces the timer functions
+    // after this script runs on a new document, and its clearInterval ignores
+    // a native timer. Stop the poll with the pair that started it, or it adds
+    // a listener on every tick and floods the trace.
+    const startPoll = window.setInterval.bind(window);
+    const stopPoll = window.clearInterval.bind(window);
     const started = Date.now();
-    const timer = setInterval(() => {
+    const timer = startPoll(() => {
       const clerk = (window as { Clerk?: ClerkLike }).Clerk;
       if (typeof clerk?.addListener !== 'function') {
-        if (Date.now() - started > 30_000) clearInterval(timer);
+        if (Date.now() - started > 30_000) stopPoll(timer);
         return;
       }
-      clearInterval(timer);
+      stopPoll(timer);
       clerk.addListener(({ session }) =>
         window.__e2eClerkAuthEvent?.(
           Boolean(session),
