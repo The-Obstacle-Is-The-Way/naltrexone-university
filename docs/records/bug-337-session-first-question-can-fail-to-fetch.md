@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Verifying — E2E keeps a signed-in `__client_uat` (a mitigation); no page error in 178 consecutive required CI E2E runs over 7+ days after merge; due 2026-12-01
+**Status:** Open — E2E keeps a signed-in `__client_uat` (a mitigation); close after no page error in 178 consecutive required CI E2E runs over 7+ days; due 2026-12-01
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -163,7 +163,9 @@ This census stops at 2026-10-19 15:10:20Z. The 2026-11-08 census in Evidence cov
 
 *Corrected 2026-10-19: 10:38 was the bundle commit's Eastern time, not its main promotion in UTC. The bundle was committed at 14:38:36Z, merged in #1522 at 15:30:45Z, and promoted in #1523 at 15:44:17Z. Both requested and corrected windows are shown.*
 
-These are calendar-window rates across different PR heads, not randomized browser-version comparisons. They do not prove that 1.64.0 caused the recurrences. Use the more conservative unconfounded requested-window rate, `p = 2/98`, for a clean-run threshold: `ceil(3/p) = 147` consecutive required CI E2E runs over at least seven days. The corrected promotion window would require 143; including the confounded failure would require only 99 or 96. Keep 147: the later evidence has no recounted denominator, so it does not change this historical rate or the threshold. The clean-run count starts only after this diagnostics PR merges; a later recurrence of the page error resets it, while an aborted read without that symptom does not. This is the approximate 95% rule-of-three criterion, assuming comparable independent runs, not proof that an unknown cause is gone.
+These are calendar-window rates across different PR heads, not randomized browser-version comparisons. They do not prove that 1.64.0 caused the recurrences. This census set a threshold of `ceil(3/p) = 147` consecutive runs, from its unconfounded `p = 2/98`. The thirty-day census has the recounted denominator this one lacked, and Verification's threshold of 178 runs, counted after the keeper merges, replaces it. The method is the approximate 95% rule of three, assuming comparable independent runs, not proof that an unknown cause is gone.
+
+*Corrected 2026-11-08: this paragraph kept 147 runs, counted from the diagnostics PR's merge.*
 
 *Corrected 2026-10-21: keep the census at its stated cutoff, distinguish later page-error recurrences from successful starts with aborted reads, and retain the 147-run threshold. The merged exam-timing spec now uses the diagnostic fixture without changing its clock or request matching.*
 
@@ -207,11 +209,11 @@ For the recurrences after option 9, the 2026-10-22 trace establishes option 1 fo
 
 Reporting the behavior to Clerk stays the owner's call, as for BUG-333.
 
-*Corrected 2026-11-08: the next step below was a local reproduction before any fix. The reproduction failed, so the keeper ships as a mitigation that CI measures.*
+*Corrected 2026-11-08: the next step below was a local reproduction before any fix. The reproduction failed, so the keeper ships as a mitigation that CI measures. The writer's development-only gate is established (Evidence), so the step no longer asks for it.*
 
-**Next, from the 2026-10-22 trace (option 1, reason `session-token-but-no-client-uat`):** reproduce it locally by delaying Clerk's `/v1/client` answer during a page load while a server action runs, and record `__client_uat` across that window. If the signed-out value appears and the action draws the same 307, fix that window test-first in its own PR. Confirming the development-only gate in the release Clerk serves settles whether production shares the trigger, which sets that fix's priority.
+**Next, from the 2026-10-22 trace (option 1, reason `session-token-but-no-client-uat`):** reproduce it locally by delaying Clerk's `/v1/client` answer during a page load while a server action runs, and record `__client_uat` across that window. If the signed-out value appears and the action draws the same 307, fix that window test-first in its own PR. The 2026-11-08 probes did not reproduce it.
 
-Trace the recurrence before choosing another fix. The diagnostics PR (#1591) left BUG-337 Open, because no fix had landed; the keeper above moves it to Verifying. The Playwright 1.64.1 upgrade restored visibility and is not a BUG-337 fix. The existing Clerk trace now records failed requests, action/RSC redirects and event times. Sign-in and "Failed to fetch" alerts each report once, so an alert cannot suppress a later sign-in. A failed test reports before teardown only if neither already reported. The buffer holds 100 entries, preserving the leading Clerk answer and action failure through a 60-answer burst. Diagnostic reads share BUG-330's five-second limit and report when it expires.
+Trace the recurrence before choosing another fix. The diagnostics PR (#1591) left BUG-337 Open, because no fix had landed. It stays Open with the keeper: its remaining check is a CI run count, which neither promotion nor production settles. The Playwright 1.64.1 upgrade restored visibility and is not a BUG-337 fix. The existing Clerk trace now records failed requests, action/RSC redirects and event times. Sign-in and "Failed to fetch" alerts each report once, so an alert cannot suppress a later sign-in. A failed test reports before teardown only if neither already reported. The buffer holds 100 entries, preserving the leading Clerk answer and action failure through a 60-answer burst. Diagnostic reads share BUG-330's five-second limit and report when it expires.
 
 Keep method, the path's route words (the app's and Clerk's; a Clerk ID shows its kind and any other segment `…`), resource type, action-header presence, status/reason, redirect host and cookie names/lengths. Strict allowlists retain Clerk's own decision names (those `@clerk/backend` defines; any other value shows only its length), numeric `__client_uat`, on requests too, and redirect counts, and the session JWT's numeric `iat`/`exp`. Arbitrary values are reduced to lengths. Credential values, action IDs, other query values and bodies never enter the output. CI's Playwright trace remains off. `tests/clerk-auth-fixture-policy.test.ts` rejects signed-in specs that use Playwright's base test instead of `./helpers/clerk-auth-test`. It recognizes either the password helper or shared auth-state marker. The merged exam-timing spec uses that fixture; its clock correction, named action matching and visibilitychange signal are unchanged.
 
@@ -240,6 +242,7 @@ A temporary server diagnostic, if needed to compare the browser's provisional he
 - [ ] **No page error in 178 consecutive required CI E2E runs over at least seven days after the keeper merges** (`N ≥ 3/p`, with the 2026-11-08 census's `p = 10/593`). At the recent rate of about eight executions a day, that is about 2026-12-01.
   - **Closing:** close as Resolved, and say that **the cause was never found**. The count cannot separate the keeper from Clerk JS 6.41.0, which CI has loaded since 2026-10-26, so the closure cites both.
   - A recurrence resets the count, and its trace is the next action.
+  - Count only executions whose tested revision contains the keeper. Others neither advance the count nor reset it.
   - Canceled, skipped and local runs do not count as clean CI runs, and neither does an execution whose signed-in tests did not run.
   - An aborted read without the page error does not reset it.
 
