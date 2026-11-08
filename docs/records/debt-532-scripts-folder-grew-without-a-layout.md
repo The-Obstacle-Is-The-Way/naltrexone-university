@@ -39,14 +39,14 @@ Counts, line references and descriptions in this evidence section describe audit
 - **GitHub.**
   - Eight files run `gh` through their own `execFileSync` wrapper (`verify-promotion.ts` through a generic `run`), and three modules adapt GitHub issues:
     - `github-alert-issues.ts` uses GitHub's search;
-    - `security-txt-renewal.mts:114-119` reads the repository's whole issue and pull-request list only inside its renewal window (`:46`) or while private vulnerability reporting is off (`:65`); the list is read at `:87`. The advisory watch's adapter (`upstream-advisory-watch.mts:636-672`) reads that list afresh on each call: once per run to close reviewed issues (`:793`), and again when new advisories need checking (`:280`); its workflow runs every three hours. `github-alert-issues.ts:118-131` instead searches by title.
+    - `security-txt-renewal.mts:83-88` reads the repository's whole issue and pull-request list only inside its renewal window (`:45`, list at `:53`). The advisory watch's adapter (`upstream-advisory-watch.mts:636-672`) reads that list afresh on each call: once per run to close reviewed issues (`:793`), and again when new advisories need checking (`:280`); its workflow runs every three hours. `github-alert-issues.ts:118-131` instead searches by title.
   - Three test fakes are each named `MemoryIssues`.
   - The two `.mts` jobs run under plain `node` with no install. They could import a `.ts` helper only by its full `.ts` name, which `tsconfig.json` does not allow today, and only one that uses nothing from `node_modules`. So each carries its own copy.
 - **Alert assignees.**
   - Three jobs open issues with no assignee:
     - the operational watcher (`operational-alert-watcher.ts:341`);
     - the records due check (`documentation-due-checks.ts:121`);
-    - the security.txt job (`security-txt-renewal.mts:165-166`).
+    - the security.txt job (`security-txt-renewal.mts:133-134`).
   - The advisory watch assigns only urgent issues. Other alert jobs pass the owner to `createGithubAlertIssues`; assignment adds a notification reason, but does not guarantee email delivery. GitHub also notifies for subscriptions, mentions and participation ([notification rules](https://docs.github.com/en/subscriptions-and-notifications/concepts/about-notifications)).
   - Owner watch settings and mail delivery were not rechecked here. A shared transport should preserve each job's assignment policy unless the owner changes it.
 - **The npm registry path.** `upstream-fix-watch.ts:149` assumes a scoped package. Its sole configured watch is scoped, so no configured watch is broken. Adding an unscoped watch requires correcting and testing this path first.
