@@ -345,13 +345,15 @@ export async function startClerkAuthTrace(
     // after this script runs on a new document, and its clearInterval ignores
     // a native timer. Stop the poll with the pair that started it, or it adds
     // a listener on every tick and floods the trace.
+    // Its Date.now is faked too, so time the poll's limit by the native one.
     const startPoll = window.setInterval.bind(window);
     const stopPoll = window.clearInterval.bind(window);
-    const started = Date.now();
+    const now = Date.now.bind(Date);
+    const started = now();
     const timer = startPoll(() => {
       const clerk = (window as { Clerk?: ClerkLike }).Clerk;
       if (typeof clerk?.addListener !== 'function') {
-        if (Date.now() - started > 30_000) stopPoll(timer);
+        if (now() - started > 30_000) stopPoll(timer);
         return;
       }
       stopPoll(timer);
