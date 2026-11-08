@@ -3,18 +3,20 @@ import type { BrowserContext } from '@playwright/test';
 /**
  * BUG-337: on a development instance, Clerk JS writes both `__client_uat`
  * cookies from the browser after every environment fetch and token update
- * (`setClientUatCookieForDevelopmentInstances` in 6.41). It removes them, then
- * writes the client's update time, or the signed-out "0" when its client has
- * no signed-in session. Before the client has loaded that is "0", even though
- * the session token is live. Clerk's middleware then answers the next request
- * `session-token-but-no-client-uat` with a handshake redirect that a server
- * action or RSC fetch cannot follow, and the page reports "Failed to fetch".
- * Production instances skip that writer, so this page script is for E2E only.
+ * (`setClientUatCookieForDevelopmentInstances`, unchanged from 6.40.0 to
+ * 6.41.0). It removes them, then writes the client's update time, or the
+ * signed-out "0" when its client has no signed-in session. In CI that "0" has
+ * gone out beside a live session token. Clerk's middleware then answers the
+ * request `session-token-but-no-client-uat` with a handshake redirect that a
+ * server action or RSC fetch cannot follow, and the page reports "Failed to
+ * fetch". Production instances skip that writer, so this script is E2E only.
  *
  * While a session cookie is present, the script ignores each removal and each
  * "0" written to a `__client_uat` cookie, so the signed-in value stays in place
- * until a new one replaces it. Every sign-out path in Clerk JS removes the
- * session cookie before it writes "0", so a sign-out still goes through.
+ * until a new one replaces it. `signOut()` removes the session cookie before
+ * it writes "0", so a sign-out still goes through. A session that ends some
+ * other way keeps its old value until the token expires, and the server then
+ * answers `session-token-expired-*` instead.
  *
  * Playwright sends this function's source text to the page, so it must not use
  * anything from this module. It also binds no function to a name (no function

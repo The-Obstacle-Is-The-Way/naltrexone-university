@@ -214,7 +214,8 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
   await dropDevBrowserEchoes(page.context());
   await keepDevBrowserCookiesInPlace(page.context());
   // BUG-337: the same rewrite writes a signed-out `__client_uat` beside a live
-  // session until Clerk JS loads its client. Keep the signed-in value.
+  // session whenever Clerk JS's client has no signed-in session. Keep the
+  // signed-in value.
   await keepSignedInClientUat(page.context());
   // BUG-333: kept for the whole test, so a mid-run loss names its cause.
   await startClerkAuthTrace(page);

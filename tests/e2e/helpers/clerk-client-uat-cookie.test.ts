@@ -3,11 +3,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { signedInClientUatKeeper } from './clerk-client-uat-cookie';
 
 // BUG-337: on Clerk's development instance, Clerk JS rewrites both
-// `__client_uat` cookies after every environment fetch. Before its client has
-// loaded, it writes the signed-out "0" beside a live session token, and
-// Clerk's middleware answers the next request with a handshake that a fetch
-// cannot follow. The page script keeps the signed-in value in place while a
-// session cookie is present.
+// `__client_uat` cookies after every environment fetch. When its client has no
+// signed-in session it writes the signed-out "0", which in CI has gone out
+// beside a live session token, and Clerk's middleware answers that request with
+// a handshake that a fetch cannot follow. The page script keeps the signed-in
+// value in place while a session cookie is present.
 function writeCookie(value: string): void {
   // biome-ignore lint/suspicious/noDocumentCookie: Clerk JS writes its cookies this way, and the keeper wraps exactly this setter.
   document.cookie = value;
@@ -107,7 +107,7 @@ describe('signedInClientUatKeeper', () => {
     });
   });
 
-  // Clerk JS removes the session cookie before it writes "0" on sign-out.
+  // Clerk JS's signOut() removes the session cookie before it writes "0".
   it('lets a sign-out through once the session cookie is gone', () => {
     signIn();
     writeCookie('__session_Ab1-Cd_2=token; path=/');
