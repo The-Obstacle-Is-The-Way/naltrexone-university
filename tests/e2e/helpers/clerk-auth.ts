@@ -15,6 +15,7 @@ import {
   describeFrontendApiAnswer,
   startClerkAuthTrace,
 } from './clerk-auth-trace';
+import { keepSignedInClientUat } from './clerk-client-uat-cookie';
 import { keepDevBrowserCookiesInPlace } from './clerk-dev-browser-cookies';
 import { dropDevBrowserEchoes } from './clerk-dev-browser-echo';
 import {
@@ -212,6 +213,9 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
   // rewrite is signed out. Drop the echo, and make each rewrite an overwrite.
   await dropDevBrowserEchoes(page.context());
   await keepDevBrowserCookiesInPlace(page.context());
+  // BUG-337: the same rewrite writes a signed-out `__client_uat` beside a live
+  // session until Clerk JS loads its client. Keep the signed-in value.
+  await keepSignedInClientUat(page.context());
   // BUG-333: kept for the whole test, so a mid-run loss names its cause.
   await startClerkAuthTrace(page);
   const frontendApi = watchFrontendApi(page);
@@ -295,6 +299,7 @@ export async function createClerkE2EAuthState(page: Page): Promise<void> {
   await rm(E2E_CLERK_RESTORE_FAILURE_PATH, { force: true });
   await dropDevBrowserEchoes(page.context());
   await keepDevBrowserCookiesInPlace(page.context());
+  await keepSignedInClientUat(page.context());
   await createClerkE2ESession({
     clerkDriver: playwrightClerkDriver,
     page,
