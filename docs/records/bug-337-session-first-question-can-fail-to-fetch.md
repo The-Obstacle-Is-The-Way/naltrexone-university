@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — traced in CI 2026-10-22: a session token sent with a one-character `__client_uat` (fits "0") drew Clerk's handshake; find what writes it, then fix it; due 2026-11-05
+**Status:** Verifying — E2E keeps a signed-in `__client_uat` (a mitigation); no page error in 178 consecutive required CI E2E runs over 7+ days after merge; due 2026-11-20
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -8,9 +8,35 @@
 
 ## Summary
 
-In required E2E on CI, a practice session's page loaded, then its first question and the bookmarks panel both failed at once. The page showed its own error state, "Failed to fetch", with Try again. The 2026-10-11 local trace identified a server-action redirect blocked by the browser. The same alert recurred on a standalone question page on 2026-10-18 and in two practice-session tests on 2026-10-19. Those alerts alone do not identify the failed requests or their causes. Playwright 1.64.0 hides a redirected action when interception is enabled; upgrading restores diagnostic visibility, not authentication. The server logged nothing at that moment. The UI offers Try again. Whether the untraced recurrence can affect production is unknown. The first traced recurrence, on 2026-10-22, shows a different trigger from BUG-333's: the browser sent a session token with a one-character `__client_uat`, consistent with Clerk's signed-out "0", and Clerk's middleware answered with a handshake redirect that those fetches could not complete.
+In required E2E on CI, a practice session's page loaded, then its first question and the bookmarks panel both failed at once. The page showed its own error state, "Failed to fetch", with Try again. The 2026-10-11 local trace identified a server-action redirect blocked by the browser. The same alert recurred on a standalone question page on 2026-10-18 and in two practice-session tests on 2026-10-19. Those alerts alone do not identify the failed requests or their causes. Playwright 1.64.0 hides a redirected action when interception is enabled; upgrading restores diagnostic visibility, not authentication. The server logged nothing at that moment. The UI offers Try again. Whether the untraced recurrence can affect production is unknown. The first traced recurrence, on 2026-10-22, shows a different trigger from BUG-333's: the browser sent a session token with a one-character `__client_uat`, consistent with Clerk's signed-out "0", and Clerk's middleware answered with a handshake redirect that those fetches could not complete. Three later traces record the value, "0" in both cookies. In Clerk JS 6.41.0 the only code that writes those cookies from the page runs on development instances alone, so production instances do not take this path. Two local probes did not reproduce the write. E2E now keeps the signed-in value while a session cookie is present, a mitigation that the CI clean-run count judges.
 
 ## Evidence
+
+- **CI census, 2026-11-08: thirty days of required E2E.** From 2026-10-09 to 2026-11-08, 593 completed required E2E executions, counted by run and attempt, failed 26 times:
+  - **This record's page error: 10 (1.69%).** A question's choices never loaded in 7, and `startSession`'s first question failed with "Failed to fetch" in 3.
+  - **exam-timing's aborted timing reads: 9.** Seven of them came on 2026-10-20 and 21, before the test waited for a quiet page.
+  - **The rest:** two real test defects since fixed, a Clerk Frontend API 429/502 burst on 2026-11-03, and one unclassified failure.
+
+  Since the last page error (2026-10-24), 121 executions have passed.
+- **Three more traced recurrences record the value (2026-10-23 twice, 2026-10-24).** Each failed request carried a live session token with both `__client_uat` cookies "0", while the jar held a numeric value before and after.
+  - In three of the four traced page errors, the test's navigation left a page after its Clerk JS received `/v1/environment` and before `/v1/client` answered.
+  - About 320 ms after the new document, its first server action and four RSC prefetches drew the 307.
+  - None of the 12 navigations made after both answers drew one.
+- **Clerk JS 6.41.0, the release CI served, read 2026-11-08.** `setClientUatCookieForDevelopmentInstances()` is the only code in Clerk JS that writes these cookies from the page.
+  - **When it runs:** after every environment fetch (`environment:update`), every token update and sign-out, and only when the instance is not production and the page's host is outside Clerk's domain.
+  - **What it writes:** it removes both cookies, then writes the client's update time, or "0" when the client has no signed-in session. It writes nothing before a client exists.
+
+  This confirms the writer the 2026-10-22 entry suspected, and production instances never run it.
+- **Two local probes, 2026-11-08, did not reproduce the "0".**
+  - **A held client answer.** Holding `/v1/client` for 2.5 s after `/v1/environment`, on a fresh signed-in load of `/app/practice`, left both cookies numeric: Clerk JS had no client yet, so it wrote nothing.
+  - **A failed client answer.** Failing the held request instead, as a navigation would abort it, made Clerk JS retry 250 ms later, and the cookies stayed numeric.
+
+  What gives Clerk JS a client with no signed-in session while the session is live is not established. Both probes also showed the page's first read actions ending `net::ERR_ABORTED` around a navigation, so a read abort alone is still no evidence of this failure.
+- **exam-timing, 2026-11-08, #1653's CI.** Both timing reads ended `net::ERR_ABORTED`, as in one of the 36 local runs of 2026-10-20 and 21. The trace held 100 identical "Clerk JS: signed in" entries 25 ms apart, and no request:
+  - The trace's poll for Clerk JS started on the page's native timer, but was stopped with Playwright's fake `clearInterval`, which ignores native timers.
+  - So the poll added a listener every 25 ms.
+
+  The poll now stops with the native pair, so the next failure shows its requests.
 
 - **First traced CI recurrence, 2026-10-22 01:00Z, #1591's CI (run 39701806739).** `history.spec.ts`, "shows missed questions and removes them after correct reattempt", the test that failed on 2026-10-18, waited 30 s for radio B (`question.ts:42`, from `question.ts:114` and `history.spec.ts:51`) after a "Failed to fetch" alert. The other 65 tests passed. The trace, on Playwright 1.64.1, reads (times from the trace's start):
   - **+5225 ms:** a server action posted to the question page answered 200. Its request carried both `__client_uat` cookies at length 10, a Unix time.
@@ -110,13 +136,15 @@ The echo filter uses `route.fetch()` and then fulfills the browser request (`cle
 
 ## Impact
 
-**Users: the traced cause is specific to Clerk development instances.** The backend guards `dev-browser-missing` by instance type; it does not apply to a Clerk production instance. The recurrences after option 9 lack a capture establishing that cause, so whether users can meet them is not yet known. The 2026-10-22 trigger, a signed-out `__client_uat` beside a session token (`session-token-but-no-client-uat`), is probably development-only: in Clerk JS's main-branch source the browser writes that cookie only for non-production instances, and comments there say the Frontend API sets it in production. Neither the served release nor Clerk's server behavior was checked, so this is not established.
+**Users: the traced cause is specific to Clerk development instances.** The backend guards `dev-browser-missing` by instance type; it does not apply to a Clerk production instance. The recurrences after option 9 lack a capture establishing that cause, so whether users can meet them is not yet known. The 2026-10-22 trigger, a signed-out `__client_uat` beside a session token (`session-token-but-no-client-uat`), is development-only on the browser side: Clerk JS 6.41.0, the served release, writes that cookie from the page only for non-production instances. Clerk's server behavior was not checked.
+
+*Corrected 2026-11-08: this paragraph called the trigger probably development-only from the main-branch source; the served release now confirms the browser side.*
 
 **Tests:** required E2E can fail without identifying the failed request. The 2026-10-11 captures preceded option 9; the recurrences above followed it.
 
 ### Required CI E2E frequency, counted 2026-10-19
 
-This census stops at 2026-10-19 15:10:20Z; it has not been extended through the 2026-10-20/21 evidence above. Count completed `CI` workflow `E2E smoke` executions by run ID and attempt, assigning each by its step start time. Include earlier failed attempts even when a rerun passed. Exclude skipped steps, workflows that never reached E2E, the separate hosted-Stripe lane and one canceled E2E execution. Every completed non-successful E2E attempt in these windows was inspected: all three had a failed-test `error-context.md` containing "Failed to fetch". Passing step conclusions establish no failed tests, not absence of every background fetch rejection. Run/attempt and head receipts belong in the PR description.
+This census stops at 2026-10-19 15:10:20Z. The 2026-11-08 census in Evidence covers 2026-10-09 to 2026-11-08 by the same method, and sets the threshold in Verification. Count completed `CI` workflow `E2E smoke` executions by run ID and attempt, assigning each by its step start time. Include earlier failed attempts even when a rerun passed. Exclude skipped steps, workflows that never reached E2E, the separate hosted-Stripe lane and one canceled E2E execution. Every completed non-successful E2E attempt in these windows was inspected: all three had a failed-test `error-context.md` containing "Failed to fetch". Passing step conclusions establish no failed tests, not absence of every background fetch rejection. Run/attempt and head receipts belong in the PR description.
 
 | UTC window | Completed required E2E attempts | Failed tests showing "Failed to fetch" |
 | --- | --- | --- |
@@ -163,6 +191,16 @@ For the recurrences after option 9, the 2026-10-22 trace establishes option 1 fo
 
 ## Resolution (decided)
 
+**2026-11-08: mitigate in E2E, and let CI judge it.** The decided local reproduction did not produce the signed-out value (Evidence). Its writer, though, is known and runs on development instances only.
+- **The keeper.** E2E now installs a page script beside BUG-333's cookie keeper (`tests/e2e/helpers/clerk-client-uat-cookie.ts`). While a session cookie is present, it ignores each removal and each "0" written to a `__client_uat` cookie. Its unit test failed first.
+- **Sign-out still works.** Every sign-out path in Clerk JS removes the session cookie before it writes "0".
+- **How it is judged:** by the clean-run count in Verification, not by a reproduction.
+- **Reading a recurrence:** one with a numeric `__client_uat` means another trigger; one with "0" means another writer.
+
+Reporting the behavior to Clerk stays the owner's call, as for BUG-333.
+
+*Corrected 2026-11-08: the next step below was a local reproduction before any fix. The reproduction failed, so the keeper ships as a mitigation that CI measures.*
+
 **Next, from the 2026-10-22 trace (option 1, reason `session-token-but-no-client-uat`):** reproduce it locally by delaying Clerk's `/v1/client` answer during a page load while a server action runs, and record `__client_uat` across that window. If the signed-out value appears and the action draws the same 307, fix that window test-first in its own PR. Confirming the development-only gate in the release Clerk serves settles whether production shares the trigger, which sets that fix's priority.
 
 Trace the recurrence before choosing another fix. After this diagnostics PR merges, keep BUG-337 Open, not Verifying: no new fix has landed. The separate dependency commit upgrades to Playwright 1.64.1 after its release-age gate opened. That restores visibility and is not a BUG-337 fix. The status deadline is provisionally 2026-11-05 for a 2026-10-22 UTC merge; update it to the actual merge date plus 14 days before merging. The existing Clerk trace now records failed requests, action/RSC redirects and event times. Sign-in and "Failed to fetch" alerts each report once, so an alert cannot suppress a later sign-in. A failed test reports before teardown only if neither already reported. The buffer holds 100 entries, preserving the leading Clerk answer and action failure through a 60-answer burst. Diagnostic reads share BUG-330's five-second limit and report when it expires.
@@ -190,8 +228,13 @@ A temporary server diagnostic, if needed to compare the browser's provisional he
 - [x] Signed-in fixture coverage is executable, test-first (2026-10-19): unsafe synthetic imports and nested-spec discovery failed before the guard; this branch's specs pass.
 - [x] Diagnostic wiring proven on Playwright 1.64.1 (2026-10-21): the isolated two-server spec passed 2/2 with interception enabled, then the full required local E2E suite passed 66/66, including both diagnostic contracts and exam timing, with no retries or skips.
 - [x] The next CI recurrence supplies the failing request and Clerk's reason (2026-10-22, #1591's CI): a server action and four RSC fetches answered 307 with `session-token-but-no-client-uat` while sending a one-character `__client_uat`. Its trace is the next action, above. A `requestfailed ... action=yes failure=net::ERR_ABORTED` line alone is not evidence of this recurrence: read actions also abort during successful session starts, so read the trace together with the failed-action names in `startSession`'s error. Keep local Playwright traces private; publish only sanitized text. Focused local repeats can capture evidence but add nothing to the CI clean-run count.
-- [ ] Close as Resolved only after a traced failure names Clerk's reason and a fix for that cause lands with a failing test first, is promoted where applicable, and passes its stated verification. This diagnostics PR leaves the record Open.
-- [ ] Without a recurrence, consider closure only after **147 consecutive required CI E2E runs over at least seven days after this PR merges** (`N ≥ 3/p`, with `p = 2/98`). A recurrence resets the count and makes its trace the next action; canceled, skipped and local runs do not count as clean CI runs. Any closure on this basis must explicitly say **the cause was never found**.
+- [x] A mitigation for the traced reason lands with a failing test first (2026-11-08): the `__client_uat` keeper's unit test failed before the keeper. What leaves Clerk JS's client without a signed-in session is not reproduced.
+- [ ] **No page error in 178 consecutive required CI E2E runs over at least seven days after the keeper merges** (`N ≥ 3/p`, with the 2026-11-08 census's `p = 10/593`). Then close as Resolved, and say that the trigger was never reproduced.
+  - A recurrence resets the count, and its trace is the next action.
+  - Canceled, skipped and local runs do not count as clean CI runs.
+  - An aborted read without the page error does not reset it.
+
+*Corrected 2026-11-08: the 147-run threshold used the 2026-10-19 census's `p = 2/98`; the thirty-day census replaces it.*
 
 ## Related
 
