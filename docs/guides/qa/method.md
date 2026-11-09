@@ -63,8 +63,8 @@ Rules of engagement (restating the standing mandates):
 
 | Target | Use for | Cautions |
 |---|---|---|
-| Local dev (`pnpm dev`, `NEXT_PUBLIC_APP_URL`) | Default for per-PR runs | Host exactness for Clerk cookies (`localhost` ≠ `127.0.0.1`) |
-| Vercel preview (`*.vercel.app`, any non-`main` branch) | Gated runs; anything involving Stripe test mode + webhooks | Clerk dev-mode quirk: the redirect back from Stripe Checkout can land on sign-in — environment behavior, not a bug (`docs/architecture/environments.md`) |
+| Local dev (`pnpm dev`, `NEXT_PUBLIC_APP_URL`) | Default for per-PR runs | Host exactness for Clerk cookies (`localhost` ≠ `127.0.0.1`); the preview's "Failed to fetch" rule applies too |
+| Vercel preview (`*.vercel.app`, any non-`main` branch) | Gated runs; anything involving Stripe test mode + webhooks | Clerk dev-mode quirk: the redirect back from Stripe Checkout can land on sign-in — environment behavior, not a bug (`docs/architecture/environments.md`). A "Failed to fetch" is BUG-337, also a dev-instance quirk, only if the failing request answered 307 with `x-clerk-auth-reason: session-token-but-no-client-uat`; record that request's reason and its `__client_uat` value in BUG-337, then reload. Any other reason is a finding |
 | Production (`https://addictionboards.com`) | Post-deploy smoke only | **Signed-out/read-only checks by default.** Mutating flows use live Stripe and the real user base — production mutation is owner-initiated only |
 
 ## When procedures run
