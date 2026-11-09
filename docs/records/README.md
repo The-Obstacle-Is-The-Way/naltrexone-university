@@ -52,7 +52,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-533](./debt-533-the-queue-review-cannot-read-some-production-triggers.md)|The weekly queue review cannot read some production triggers|P3|Blocked — the owner reads the sources below, or chooses a read path for the review; follow-up due 2026-10-30|
 |[DEBT-534](./debt-534-neon-free-plan-can-suspend-production.md)|Neon's Free plan can suspend production's database until the month ends|P2|Open — the owner moves it to Neon Launch before the first live sale|
 |[DEBT-535](./debt-535-alerts-108-and-109-wait-on-their-consumers.md)|The `glob` alert and the `minimatch` advisory wait on Sentry's and Stryker's releases|P3|Open — update `@sentry/nextjs` once Sentry's release with getsentry/sentry-javascript#26014 is past the 7-day gate, or re-date the check; due 2026-11-12|
-|[DEBT-536](./debt-536-stryker-10-replaces-the-vitest-5-runner-patch.md)|Stryker 10.1.1 replaces the Vitest 5 runner patch|P3|Verifying — the first scheduled Mutation run on `main` after the upgrade scores at least 99%, with no survivor that ran no test; due 2026-11-09|
+|[DEBT-536](./debt-536-stryker-10-replaces-the-vitest-5-runner-patch.md)|Stryker 10.1.1 replaces the Vitest 5 runner patch|P3|Verifying — every check is recorded, and the record closes; due 2026-11-09|
 
 ## Waiting
 
