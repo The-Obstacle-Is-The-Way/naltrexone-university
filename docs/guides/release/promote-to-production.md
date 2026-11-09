@@ -73,7 +73,7 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # every trigger; no provider secret required
    └─ pnpm build
-   └─ pnpm test:e2e             # main pushes + non-Dependabot same-repo PRs
+   └─ pnpm test:e2e             # main pushes + non-Dependabot same-repo PRs, except a PR that changes only docs/, AGENTS.md or CLAUDE.md
    └─ Must pass before merge
 
 2. After merge to main (in parallel)

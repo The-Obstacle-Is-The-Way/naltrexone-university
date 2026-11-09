@@ -45,7 +45,7 @@ Per-Preview branches are not on yet; DEBT-445 tracks them. Until then every Prev
 
 ### Production Release Gate
 
-Promotion-PR E2E precedes the merge to `main`. Vercel builds the main commit in parallel with main's GitHub Actions `test` job; the required production Deployment Check consumes that exact check before assigning production domains. The Vercel setting, not an echo-only CI `deploy` job, owns this hold. Build Ready alone is not proof of promotion. See [Deployment Procedure](../guides/release/promote-to-production.md#production-deployment-check) for required configuration and the separate CI/domain-assignment receipt.
+Promotion-PR E2E precedes the merge to `main`, except for a promotion that changes only `docs/`, `AGENTS.md` or `CLAUDE.md`; main's own run always includes E2E. Vercel builds the main commit in parallel with main's GitHub Actions `test` job; the required production Deployment Check consumes that exact check before assigning production domains. The Vercel setting, not an echo-only CI `deploy` job, owns this hold. Build Ready alone is not proof of promotion. See [Deployment Procedure](../guides/release/promote-to-production.md#production-deployment-check) for required configuration and the separate CI/domain-assignment receipt.
 
 Production database migrations run during the build, **before** the release gate. They must remain compatible with the live application under the existing [expand/contract authoring contract](../guides/database/migrations.md#deployed-code-compatibility), even if the check fails and the old release keeps serving.
 

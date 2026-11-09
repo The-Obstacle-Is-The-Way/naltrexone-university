@@ -71,6 +71,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Decide whether E2E runs compares a pull request's merge commit
+          # with its base, the first parent.
+          fetch-depth: 2
 
       # DEBT-516: the first of Docker Hub, ECR Public and Google's mirror that
       # serves this digest. Refresh it with docker-compose.yml's, per
@@ -191,13 +194,24 @@ jobs:
           NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || 'price_dummy_monthly' }}
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || 'price_dummy_annual' }}
 
+      # E2E tests the running app and holds the shared Clerk test user. A pull
+      # request that changes only docs/, AGENTS.md or CLAUDE.md gives it
+      # nothing new to test: the app and its build never read them. A push to
+      # main always runs it, because production's Deployment Check waits on
+      # that run. Anything else runs E2E, including a failure here, which
+      # leaves no output.
+      - name: Decide whether E2E runs
+        id: e2e_scope
+        continue-on-error: true
+        run: node scripts/ci/e2e-scope.mts
+
       - name: E2E smoke
         id: e2e_smoke
         # Dependabot PRs do not receive repository secrets, even when their branch
         # lives in this repository. Keep E2E on for pushes, manual runs on main
         # (evidence for a production release, as a push run is) and human
-        # same-repo PRs.
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+        # same-repo PRs, unless the diff changes only documentation.
+        if: steps.e2e_scope.outputs.docs_only != 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'))
         run: pnpm test:e2e
         env:
           NEXT_PUBLIC_SKIP_CLERK: 'false'
@@ -257,7 +271,7 @@ jobs:
           BROWSER_OUTCOME: ${{ steps.browser_tests.outcome }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           E2E_OUTCOME: ${{ steps.e2e_smoke.outcome }}
-          E2E_SKIP_REASON: ${{ github.actor == 'dependabot[bot]' && 'shared TEST credentials are withheld from Dependabot; main E2E gates production promotion' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'fork pull requests do not receive E2E credentials' || 'an earlier required step did not succeed') }}
+          E2E_SKIP_REASON: ${{ steps.e2e_scope.outputs.docs_only == 'true' && 'the diff changes only docs/, AGENTS.md or CLAUDE.md, which the app never reads' || github.actor == 'dependabot[bot]' && 'shared TEST credentials are withheld from Dependabot; main E2E gates production promotion' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'fork pull requests do not receive E2E credentials' || 'an earlier required step did not succeed') }}
         run: |
           set -euo pipefail
 
