@@ -3,7 +3,7 @@
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
 **Now** — 2026-11-03.
-- **Verifying, by due date.** BUG-323 10-24; DEBT-505 11-05; BUG-368 11-07; BUG-353, BUG-364 and BUG-365 11-08; DEBT-536 11-09.
+- **Verifying, by due date.** BUG-323 10-24; DEBT-505 11-05; BUG-368 11-07; BUG-353, BUG-364 and BUG-365 11-08.
 - **In progress.** DEBT-518, the documentation revamp: records, agent instructions, layout and archive removal are done; the four splits and the pilot follow.
 - **Next.** Alert kinds for the silent conditions (DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520. BUG-363's investigation, due 11-04. DEBT-525 sets a performance baseline before choosing optimizations.
 - **Before the first live sale.** DEBT-503 item 4's handshake limits, due 11-06; DEBT-501 item 9's reconcile watch, 11-13. Vercel Pro (DEBT-512), Neon Launch (DEBT-534), the live purchase and refund, its receipt checked as Massachusetts' monthly notice (DEBT-501 item 7, DEBT-414 F19c), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription's correction (BUG-343: the re-check, sweep and alerts ship; its option 4 needs the owner's refund decision, follow-up due 10-30). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 39 days before the first live renewal: the identity resolver (DEBT-502), DEBT-511 on it, and Massachusetts' annual notice if it applies (DEBT-414 F19a).
@@ -52,7 +52,6 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-533](./debt-533-the-queue-review-cannot-read-some-production-triggers.md)|The weekly queue review cannot read some production triggers|P3|Blocked — the owner reads the sources below, or chooses a read path for the review; follow-up due 2026-10-30|
 |[DEBT-534](./debt-534-neon-free-plan-can-suspend-production.md)|Neon's Free plan can suspend production's database until the month ends|P2|Open — the owner moves it to Neon Launch before the first live sale|
 |[DEBT-535](./debt-535-alerts-108-and-109-wait-on-their-consumers.md)|The `glob` alert and the `minimatch` advisory wait on Sentry's and Stryker's releases|P3|Open — update `@sentry/nextjs` once Sentry's release with getsentry/sentry-javascript#26014 is past the 7-day gate, or re-date the check; due 2026-11-12|
-|[DEBT-536](./debt-536-stryker-10-replaces-the-vitest-5-runner-patch.md)|Stryker 10.1.1 replaces the Vitest 5 runner patch|P3|Verifying — the first scheduled Mutation run on `main` after the upgrade scores at least 99%, with no survivor that ran no test; due 2026-11-09|
 
 ## Waiting
 
