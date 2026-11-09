@@ -19,9 +19,9 @@ export type E2eScope = {
 };
 
 /**
- * True for a path neither the app nor its build reads: no runtime source
- * names one, and app/globals.css keeps them out of Tailwind's sources
- * (both checked in e2e-scope.test.ts). Other Markdown at the root, such as
+ * True for a path an E2E run never reads: no source it executes (the app,
+ * its build and the E2E harness) names one, and app/globals.css keeps them
+ * out of Tailwind's sources (both checked in e2e-scope.test.ts). Other Markdown at the root, such as
  * README.md, is a Tailwind source, so it is part of the app here.
  */
 export function isOutsideTheApp(file: string): boolean {

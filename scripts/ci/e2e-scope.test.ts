@@ -189,38 +189,45 @@ describe('what the app never reads', () => {
     expect(css).toContain('@source not "../CLAUDE.md";');
   });
 
-  it('has no runtime source that names a path outside the app', () => {
+  // The app's runtime and build, and what an E2E run executes besides them:
+  // the specs, the Playwright config, the local E2E plan and the seed.
+  const RUNTIME = [
+    'app',
+    'components',
+    'lib',
+    'src',
+    'db',
+    'proxy.ts',
+    'next.config.ts',
+  ];
+  const E2E_HARNESS = [
+    'tests/e2e',
+    'playwright.config.ts',
+    'scripts/test-lanes',
+    'scripts/seed',
+  ];
+  const UNIT_ONLY =
+    /\.test\.|\.browser\.spec\.|test-helpers|\.fixtures\.|\.browser\.probes\./;
+  const NAMES_A_PATH_OUTSIDE =
+    /['"`](?:@\/|(?:\.\.?\/)+)?(?:docs\/|AGENTS\.md|CLAUDE\.md)/;
+
+  it('has no source an E2E run executes that names a path outside the app', () => {
     const sources = execFileSync(
       'git',
-      [
-        'ls-files',
-        '-z',
-        '--',
-        'app',
-        'components',
-        'lib',
-        'src',
-        'db',
-        'proxy.ts',
-        'next.config.ts',
-      ],
+      ['ls-files', '-z', '--', ...RUNTIME, ...E2E_HARNESS],
       { encoding: 'utf8' },
     )
       .split('\0')
       .filter(
         (file) =>
-          /\.(?:ts|tsx|mts|js|mjs)$/.test(file) &&
-          !/\.(?:test|spec)\.|test-helpers|\.fixtures\.|\.browser\.probes\./.test(
-            file,
-          ),
+          /\.(?:ts|tsx|mts|js|mjs)$/.test(file) && !UNIT_ONLY.test(file),
       );
 
     const naming = sources.filter((file) =>
-      /['"`](?:@\/|(?:\.\.?\/)+)?(?:docs\/|AGENTS\.md|CLAUDE\.md)/.test(
-        readFileSync(file, 'utf8'),
-      ),
+      NAMES_A_PATH_OUTSIDE.test(readFileSync(file, 'utf8')),
     );
 
+    expect(sources).toContain('tests/e2e/smoke.spec.ts');
     expect(naming).toEqual([]);
   });
 });
