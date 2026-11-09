@@ -8,6 +8,7 @@ import {
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
 import {
+  countClerkBackendCalls,
   limitClerkBackendCalls,
   triggersClerkBackendCall,
   withoutRefreshCookies,
@@ -553,4 +554,144 @@ describe("Clerk's middleware, handed a GET without its refresh cookies", () => {
       ).toBe('signed-in');
     }
   });
+});
+
+// BUG-375: the limiter reads the clock, then Clerk's middleware reads it
+// again, so a token can cross Clerk's expiry boundary in between. The proxy
+// counts, hands Clerk a GET it did not count without its refresh cookies,
+// then runs Clerk. In that order Clerk calls nothing the limiter did not
+// count, however long the gap.
+describe("a session token that expires between the limiter's check and Clerk's", () => {
+  afterEach(() => {
+    restoreProcessEnv(ORIGINAL_ENV);
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  // Clerk, and the limiter with it, reads a token as expired once the clock
+  // reaches its `exp` plus this skew.
+  const CLERK_CLOCK_SKEW_MS = 5_000;
+  // Built while the clock reads a whole second: a token that expires on that
+  // second, and one that expired two minutes before it.
+  const expiringNow = () =>
+    sessionToken(clerkKey.privateKey, {
+      issuedSecondsAgo: 60,
+      validSeconds: 60,
+    });
+  const expiredEarlier = () =>
+    sessionToken(clerkKey.privateKey, {
+      issuedSecondsAgo: 180,
+      validSeconds: 60,
+    });
+  const plain = () => refreshCookies(expiringNow());
+  // BUG-374: a returning visitor's expired plain token beside the suffixed
+  // one Clerk reads.
+  const suffixed = () =>
+    [
+      `__session=${expiredEarlier()}`,
+      `__client_uat=${now() - 600}`,
+      `__session_${SUFFIX}=${expiringNow()}`,
+      `__client_uat_${SUFFIX}=${now() - 600}`,
+      `${REFRESH_COOKIE}=refresh_sdk`,
+    ].join('; ');
+
+  // Runs the proxy's order on a page load: the limiter reads the clock
+  // `gapMs` before Clerk's boundary for the token, and Clerk reads it at the
+  // boundary. Returns the Backend API paths Clerk called and what the
+  // limiter counted.
+  async function acrossTheBoundary(
+    cookieFor: () => string,
+    gapMs: number,
+    { withheld = true } = {},
+  ) {
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = PUBLISHABLE_KEY;
+    process.env.CLERK_SECRET_KEY = 'sk_live_sdk';
+    const exp = now();
+    let clock = exp * 1000;
+    vi.spyOn(Date, 'now').mockImplementation(() => clock);
+    const request = new NextRequest('https://example.com/app/dashboard', {
+      headers: {
+        cookie: cookieFor(),
+        accept: 'text/html',
+        'sec-fetch-dest': 'document',
+        'x-vercel-forwarded-for': '203.0.113.7',
+      },
+    });
+    const paths: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      paths.push(
+        new URL(input instanceof Request ? input.url : String(input)).pathname,
+      );
+      return new Response(JSON.stringify({ errors: [] }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    const boundary = exp * 1000 + CLERK_CLOCK_SKEW_MS;
+    const limiter = new FakeRateLimiter();
+
+    clock = boundary - gapMs;
+    const verdict = triggersClerkBackendCall(request)
+      ? await countClerkBackendCalls(
+          request,
+          async () => limiter,
+          () => {},
+          () => {},
+          CLERK_JWT_KEY,
+          PUBLISHABLE_KEY,
+        )
+      : 'uncounted';
+    const handed =
+      withheld && verdict === 'uncounted'
+        ? withoutRefreshCookies(request)
+        : request;
+    clock = boundary;
+    const { clerkMiddleware } = await import('@clerk/nextjs/server');
+    const response = await clerkMiddleware({ jwtKey: CLERK_JWT_KEY })(
+      handed,
+      new NextFetchEvent({ request: handed, page: '/', context: undefined }),
+    );
+    return {
+      paths,
+      counted: limiter.inputs.map(({ key }) => key),
+      response: response as Response,
+    };
+  }
+
+  it.each([
+    ['a plain token, 1 ms', plain, 1],
+    ['a plain token, 4.9 s', plain, 4_900],
+    ['a plain token, a minute', plain, 60_000],
+    ["a returning visitor's suffixed token, 1 ms", suffixed, 1],
+  ])(
+    'leaves no refresh uncounted for %s before the boundary',
+    async (_case, cookie, gapMs) => {
+      const { paths, counted, response } = await acrossTheBoundary(
+        cookie,
+        gapMs,
+      );
+
+      expect(counted).toEqual([]);
+      expect(paths).toEqual([]);
+      // Clerk found the token expired and wanted the refresh it was not
+      // handed, so the case crossed the boundary.
+      expect(clerkWantedWithheldRefresh(response)).toBe(true);
+    },
+  );
+
+  // The bug itself.
+  it.each([
+    ['a plain token', plain],
+    ["a returning visitor's suffixed token", suffixed],
+  ])(
+    'lets Clerk refresh %s uncounted when handed its refresh cookie',
+    async (_case, cookie) => {
+      const { paths, counted } = await acrossTheBoundary(cookie, 1, {
+        withheld: false,
+      });
+
+      expect(counted).toEqual([]);
+      expect(paths).toEqual(['/v1/sessions/sess_sdk/refresh']);
+    },
+  );
 });
