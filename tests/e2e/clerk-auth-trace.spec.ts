@@ -107,3 +107,63 @@ test('reports a failed test without needing a sign-in navigation or an alert', a
   expect(output).toHaveLength(1);
   expect(output[0]).toContain('[E2E_CLERK_AUTH_TRACE] test failure:');
 });
+
+// exam-timing.spec.ts fakes the page clock, 20 s fast. The trace's poll for
+// Clerk JS must stop once it attaches its listener: a poll that keeps running
+// adds a listener on every tick, and their identical events push the requests
+// out of the bounded trace. And it must not give up early: a clock more than
+// the poll's 30-second limit ahead must not end it before Clerk JS appears.
+for (const skewMs of [20_000, 40_000]) {
+  test(`attaches one Clerk listener on a page whose clock runs ${skewMs / 1_000} s fast`, async ({
+    page,
+  }) => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      // A stand-in for Clerk JS appears after the poll has started. The page then
+      // marks the end of a span in which a running poll would tick about 16 times.
+      response.end(`<html><body><script>
+      window.__clerkListeners = 0;
+      setTimeout(() => {
+        window.Clerk = {
+          status: 'ready',
+          version: 'fixture',
+          addListener(listener) {
+            window.__clerkListeners += 1;
+            listener({ session: {} });
+          },
+        };
+        setTimeout(() => { window.__traceSpanEnded = true; }, 400);
+      }, 100);
+    </script></body></html>`);
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, '127.0.0.1', resolve),
+    );
+    const address = server.address();
+    if (!address || typeof address === 'string')
+      throw new Error('Expected the local HTTP fixture to have a TCP port');
+    try {
+      const output: string[] = [];
+      await startClerkAuthTrace(page, (text) => output.push(text));
+      await page.clock.setSystemTime(Date.now() + skewMs);
+      await page.goto(`http://127.0.0.1:${address.port}/trace-clock`);
+      await page.waitForFunction(
+        () =>
+          (window as { __traceSpanEnded?: boolean }).__traceSpanEnded === true,
+      );
+
+      expect(
+        await page.evaluate(
+          () => (window as { __clerkListeners?: number }).__clerkListeners,
+        ),
+      ).toBe(1);
+      await reportFailedClerkAuthTrace(page);
+      expect(output.join('\n').match(/Clerk JS: signed in/g)).toHaveLength(1);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
+  });
+}
