@@ -193,7 +193,9 @@ pnpm test:e2e:stripe-hosted
 
 # Run a specific test file through the same database-isolated local flow.
 # Clerk and Stripe test-mode calls remain networked external dependencies.
-pnpm test:e2e -- tests/e2e/smoke.spec.ts
+# pnpm passes the path through as is. With a `--` before it, Playwright gets
+# the `--` too, ignores the path and runs the whole suite.
+pnpm test:e2e tests/e2e/smoke.spec.ts
 
 # Run with UI (interactive)
 pnpm test:e2e --ui
