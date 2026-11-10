@@ -96,6 +96,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | `ci/pull-image.sh` | Pulls an image by digest from the first registry that serves it. Sourced, it defines `pull_image`; run directly with `--env NAME_IMAGE_REPOSITORY`, it writes the chosen repository to `$GITHUB_ENV`. | `ci.yml` and `stripe-hosted-checkout-smoke.yml`, before Compose startup |
 | `ci/install-playwright-chromium.sh` | Installs Chromium and its system packages, working around the runner's apt mirrors. | `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
 | `ci/scan-playwright-output.ts` | Checks upload-eligible output for supported UTF-8 text types and known Clerk credential patterns; exits nonzero on any refused file or credential match. Hidden paths and `trace.zip` are excluded, matching the workflow uploads. | `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
+| `ci/e2e-scope.mts` | Decides whether CI's E2E step runs: prints `docs_only=true` to `$GITHUB_OUTPUT` only when every file a pull request changes is under `docs/` or is `AGENTS.md` or `CLAUDE.md`, which the app never reads. A push to `main` and anything it cannot prove run E2E. | `ci.yml` |
 
 ### Question Content: Seeding
 

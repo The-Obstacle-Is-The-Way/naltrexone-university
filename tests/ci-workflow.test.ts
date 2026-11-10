@@ -13,6 +13,7 @@ const MUTATION_WORKFLOW_PATH = '.github/workflows/mutation.yml';
 const HUMAN_SAME_REPO_PR_CONDITION =
   "github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository";
 const DEPENDABOT_ACTOR_GUARD = "github.actor != 'dependabot[bot]'";
+const E2E_SCOPE_DOCS_ONLY = 'steps.e2e_scope.outputs.docs_only';
 const PINNED_SETUP_NODE =
   'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1';
 const PINNED_UPLOAD_ARTIFACT =
@@ -192,7 +193,7 @@ describe('CI workflow', () => {
 
   it('withholds shared E2E credentials from Dependabot PRs while retaining E2E for main pushes and manual runs', () => {
     expect(findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke').if).toBe(
-      `github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD})`,
+      `${E2E_SCOPE_DOCS_ONLY} != 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD}))`,
     );
   });
 
@@ -200,7 +201,7 @@ describe('CI workflow', () => {
     const summary = findParsedStep(CI_WORKFLOW_PATH, 'Evidence summary');
 
     expect(summary.env?.E2E_SKIP_REASON).toBe(
-      `\${{ github.actor == 'dependabot[bot]' && 'shared TEST credentials are withheld from Dependabot; main E2E gates production promotion' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'fork pull requests do not receive E2E credentials' || 'an earlier required step did not succeed') }}`,
+      `\${{ ${E2E_SCOPE_DOCS_ONLY} == 'true' && 'the diff changes only docs/, AGENTS.md or CLAUDE.md, which the app never reads' || github.actor == 'dependabot[bot]' && 'shared TEST credentials are withheld from Dependabot; main E2E gates production promotion' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'fork pull requests do not receive E2E credentials' || 'an earlier required step did not succeed') }}`,
     );
   });
 

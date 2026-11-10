@@ -17,7 +17,7 @@ Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle 
    pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
    ```
 
-   - When the E2E credentials are present (the list is in [the E2E guide](./docs/guides/testing/e2e-tests.md#environment-variables-for-e2e)), also run `pnpm test:e2e`. It runs against a per-clone Docker database while calling Clerk and Stripe in test mode.
+   - When the E2E credentials are present (the list is in [the E2E guide](./docs/guides/testing/e2e-tests.md#environment-variables-for-e2e)), also run `pnpm test:e2e`. It runs against a per-clone Docker database while calling Clerk and Stripe in test mode. Skip it when every file your branch changes against `dev` is under `docs/` or is `AGENTS.md` or `CLAUDE.md`: the app never reads them, CI skips E2E for the same diff, and the push needs no turn on the shared Clerk test user.
    - The pre-push hook runs only `pnpm typecheck && pnpm test --run`; it does not build, and only the build catches prerender errors.
    - If `pnpm test:browser` exits in about a second with `no tests / 1 error`, capture the failing output, retry that lane once and say so; a second failure blocks the push. After the retry, still run the lanes after it.
 3. **Never delete work you did not make.** Leave others' uncommitted files and edits alone. If they are in your way, `git stash -m "<why>"` and ask. Several agents share these clones.
