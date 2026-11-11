@@ -92,7 +92,7 @@ How it behaves:
 - **Only on Clerk's production instance** (a `pk_live_` key). A development instance handshakes every new browser session, which E2E, local work and Preview depend on.
 - **It fails open.** If its database call fails, the request goes through and the proxy raises `clerk_backend_call_limiter_failed` ([observability](../observability.md#operational-alerts)). Failing closed would refuse every genuine refresh while the database is down, and the firewall rule ([Edge Rules](../security.md#edge-rules)) still bounds handshakes.
 - **A refused request** gets a 429 with `Retry-After`: a browser gets a short page asking it to wait a minute, and any other client gets JSON. The response clears the handshake cookies, so the next request does not count again.
-- **A GET the limiter did not count** reaches Clerk without its refresh cookies on the production instance, so Clerk cannot refresh it uncounted (BUG-375). If that copy fails, the proxy raises `clerk_refresh_cookie_strip_failed`.
+- **A GET the limiter did not count** reaches Clerk without its refresh cookies on the production instance, so Clerk cannot refresh it uncounted (BUG-375). If that copy fails, the proxy raises `clerk_refresh_cookie_strip_failed`. A request the limiter failed to count keeps its cookies, so while the limiter fails, Clerk can refresh uncounted; `clerk_backend_call_limiter_failed` reports that.
 - **The site-wide cap is a trade-off.** It cannot tell a real request from a forged one, so filling it makes returning visitors whose token has expired wait up to a minute, and raises `clerk_site_limit_reached`. Without it, an attack would spend Clerk's allowance, and every signed-in page would fail until it stopped. A refusal from an address's signed-in bucket raises `clerk_signed_in_limit_reached`; other per-address and per-session refusals are only logged.
 
 Operations:
@@ -100,7 +100,7 @@ Operations:
 - **Rollback:** Vercel's Instant Rollback to an earlier deployment, then revert the change on `dev`. The firewall rule is separate and stays ([Edge Rules](../security.md#edge-rules)).
 - **Under attack:** Vercel's Attack Mode is available on every plan. Vercel's Hobby plan includes a fixed number of rate-limited requests and does not document what happens beyond it (DEBT-512).
 - **Clerk was told** on 2026-10-05, through its security team, that its SDK spends a customer's allowance on unchecked requests.
-- **Proved in production on 2026-11-11:** after one handshake request, production's `rate_limits` held 2 limiter rows, the two counters such a request writes.
+- **Checked in production on 2026-11-11:** production's `rate_limits` held 2 limiter rows from the previous 24 hours, so the limiter writes its counters there. One handshake request was sent just before the count, and none was taken before it, so the rows are not attributed to that request.
 
 ---
 
