@@ -73,6 +73,35 @@ async function proxy(request: NextRequest, event: NextFetchEvent) {
 
 **Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`), and every route outside them is protected. The public resources in `PUBLIC_RESOURCE_PATHS` (`security.txt`, `robots.txt`, the sitemap and the Open Graph image) skip Clerk entirely, and so do the two cron routes in `CRON_ROUTE_PATHS`, which check `CRON_SECRET` themselves. Only the cron routes take an `Authorization` header: any other request that carries one, public resources included, gets a 401 before Clerk runs, since Clerk's middleware reads a token from that header and can spend its Backend API on it (BUG-369). `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
 
+### The Backend API Allowance Limiter
+
+Clerk limits each production instance's Backend API calls ([system limits](https://clerk.com/docs/guides/how-clerk-works/system-limits)), and the calls we need share that allowance: provisioning a new user's row, checkout and trial card setup refreshing the email, BUG-284's stale-owner check, and Clerk's own refresh of an expired session. Two request shapes make Clerk's SDK spend a call before our code answers, and anyone can send them without an account (BUG-323):
+
+- a request carrying a handshake value;
+- a GET whose session token has expired but can be refreshed.
+
+So the proxy counts those requests in `rate_limits` before Clerk runs (`lib/clerk-backend-call-limit.ts`), with the limits in `src/adapters/shared/rate-limits.ts`, which DEBT-503 retunes:
+
+- **Per address,** 30 a minute. A request with no readable address skips this one, so one sender cannot fill a shared bucket and refuse everyone else.
+- **Per refreshing session,** 6 a minute.
+- **A refresh of a session Clerk signed,** checked with `CLERK_JWT_KEY`, counts per session and in a per-address bucket of its own, 200 a minute, which forged requests cannot fill (DEBT-503 item 4). A handshake always takes the per-address limit.
+- **Site-wide,** 1,000 a minute, whatever the number of addresses.
+
+How it behaves:
+
+- **Only on Clerk's production instance** (a `pk_live_` key). A development instance handshakes every new browser session, which E2E, local work and Preview depend on.
+- **It fails open.** If its database call fails, the request goes through and the proxy raises `clerk_backend_call_limiter_failed` ([observability](../observability.md#operational-alerts)). Failing closed would refuse every genuine refresh while the database is down, and the firewall rule ([Edge Rules](../security.md#edge-rules)) still bounds handshakes.
+- **A refused request** gets a 429 with `Retry-After`: a browser gets a short page asking it to wait a minute, and any other client gets JSON. The response clears the handshake cookies, so the next request does not count again.
+- **A GET the limiter did not count** reaches Clerk without its refresh cookies on the production instance, so Clerk cannot refresh it uncounted (BUG-375). If that copy fails, the proxy raises `clerk_refresh_cookie_strip_failed`.
+- **The site-wide cap is a trade-off.** It cannot tell a real request from a forged one, so filling it makes returning visitors whose token has expired wait up to a minute, and raises `clerk_site_limit_reached`. Without it, an attack would spend Clerk's allowance, and every signed-in page would fail until it stopped. A refusal from an address's signed-in bucket raises `clerk_signed_in_limit_reached`; other per-address and per-session refusals are only logged.
+
+Operations:
+
+- **Rollback:** Vercel's Instant Rollback to an earlier deployment, then revert the change on `dev`. The firewall rule is separate and stays ([Edge Rules](../security.md#edge-rules)).
+- **Under attack:** Vercel's Attack Mode is available on every plan. Vercel's Hobby plan includes a fixed number of rate-limited requests and does not document what happens beyond it (DEBT-512).
+- **Clerk was told** on 2026-10-05, through its security team, that its SDK spends a customer's allowance on unchecked requests.
+- **Proved in production on 2026-11-11:** after one handshake request, production's `rate_limits` held 2 limiter rows, the two counters such a request writes.
+
 ---
 
 ## Content Security Policy (CSP)
