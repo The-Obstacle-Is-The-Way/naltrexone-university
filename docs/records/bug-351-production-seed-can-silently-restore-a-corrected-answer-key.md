@@ -1,6 +1,6 @@
 # BUG-351: The Production Seed Can Silently Restore a Corrected Answer Key, and the Release Builder's Guard Misses Part of the Same Case
 
-**Status:** In Progress — parts 1 and 2 in production; part 3 built, its first release bound to the verified baseline; owner live-key check due 2026-10-24
+**Status:** Verifying — every check is recorded below; its closing pull request closes it; due 2026-11-12
 **Priority:** P2
 **Date:** 2026-10-17
 
@@ -165,20 +165,22 @@ The strict authoring schema has no publication status (`scripts/draft-question-i
 
 ## Verification
 
-- [ ] The owner's pinned-source comparison is recorded here as counts, with the full commit ID it compared, noting that history before 2026-09-30 is incomplete. That ID is the first release's `--baseline` after the bootstrap; the command cannot tell whether a named commit was checked, so use exactly this one.
+- [x] The owner's pinned-source comparison is recorded here as counts, with the full commit ID it compared, noting that history before 2026-09-30 is incomplete. That ID is the first release's `--baseline` after the bootstrap; the command cannot tell whether a named commit was checked, so use exactly this one.
+  - **2026-11-11, run by the owner** against `3281add20756c91648ca036a7fedc74c3d35e543`, the content repository's `main` on GitHub that day: 948 live questions, 948 in the commit, 0 live questions missing from it, 0 commit questions not live, 0 differing keys. Engineering made no database connection. History before 2026-09-30 is incomplete.
 - [x] Part 1: `tests/integration/content-release-revision-matching.integration.test.ts` proves A→B→A→B keeps the live revision, newest-match fallback, canonical comparison, release reuse and v2 activation/rollback. The regression, fallback, canonical-match and release-identity cases failed before their fixes.
 - [x] Parts 1 and 2 reach production: promotion #1573, live 2026-10-19 21:26Z.
-- [ ] Part 3 reaches production.
+- [x] Part 3 reaches production: promotion #1580, deployed to production 2026-10-20 14:08Z.
 - [x] Part 2a: `content-release-key-preview.integration.test.ts` proves both previews name canonical answer-key changes, staging lists each change by kind without publishing it, and a hold lift that changes key advice invalidates the reviewed plan. All six cases failed before the fix.
 - [x] Part 2b prerequisite: `content-release-bootstrap-candidates.integration.test.ts` proves the frozen candidate list is captured under the pointer lock, bound to the reviewed plan, and separate from activation and rollback items. All seven cases failed before the fix. V2/v3 canonical hashes, activation and rollback remain tested.
 - [x] Part 2b: `content-release-key-returns.integration.test.ts` proves named returns and repairs, activation refusal, later draft/stage exclusion, legacy-history limits, stale-plan refusal, and explicit rollback and hold-lift decisions. The first twelve cases failed before the guard. Canonical history and same-key command forwarding have additional negative controls.
 - [x] The owner's comparison command: `content-live-key-comparison.integration.test.ts` proves it on real Postgres with live content written by the seed: a matching commit, a changed key, a live question the commit lacks, one not live, stored key text that differs only in spacing, draft exclusion, counts-only output and no writes. A raw-text comparison failed the spacing case.
 - [x] Part 3: `content-source.test.ts` and `content-release-source.integration.test.ts` prove archived main input, first-parent ordering, watermark serialization, stale staging and activation refusal, rollback without a repository, hold reapplication, source-bound identity and plans, and unchanged bootstrap. The initial unit run failed one manifest assertion and the missing source module; all five initial command cases failed. Disposition tests failed before the publication flags were added. The verified-baseline cases (`starts the first release after the bootstrap only from the verified baseline or later`, and the unit cases under "the first release after the bootstrap") and the hook-variable case (`leaves the repository a hook's GIT_DIR names untouched`) failed before their fixes.
 - [x] `docs/architecture/content-pipeline.md` describes the implemented input, dispositions, source order and bootstrap boundary.
-- [ ] The owner runs the **key-return census** once, as a second check: with an explicit authorized `DATABASE_URL`, `pnpm exec tsx scripts/content-release/census-key-returns.ts`. In one read-only, repeatable-read transaction it counts revisions whose answer key changed from the one before and matches an earlier revision's. The key is ADR-022's, each correct choice's exact label and normalized text, as every score and release comparison reads it, so a difference only in spacing neither hides a return nor makes one. It prints only counts. It does not establish publication order, clinical error or an incident.
+- [x] The owner runs the **key-return census** once, as a second check: with an explicit authorized `DATABASE_URL`, `pnpm exec tsx scripts/content-release/census-key-returns.ts`. In one read-only, repeatable-read transaction it counts revisions whose answer key changed from the one before and matches an earlier revision's. The key is ADR-022's, each correct choice's exact label and normalized text, as every score and release comparison reads it, so a difference only in spacing neither hides a return nor makes one. It prints only counts. It does not establish publication order, clinical error or an incident.
   - Staged revisions and repairs count. Re-activating an old revision creates no revision and can be missed. History predating append-only storage is incomplete. Published-current and answered-attempt counts narrow the candidates; an attempt proves use, not that its key was clinically wrong.
   - `content-key-return-census.integration.test.ts` proves it on real Postgres: a corrected key that returns, one whose stored text differs only in spacing, a correct answer that moves back to its earlier label, a spacing-only change that is not a return, and malformed keys. A raw-text comparison failed both spacing cases.
   - Corrected 2026-10-19: this item gave inline SQL that compared raw text, which can miss a return differing only in spacing; the tested census replaces it.
+  - **2026-11-11, run by the owner** with the comparison: 0 candidate revisions, 0 questions, 0 published-current candidates, 0 bound attempts, 0 answered bound attempts and 0 malformed key revisions.
 
 ## Related
 
