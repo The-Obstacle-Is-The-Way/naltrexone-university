@@ -83,7 +83,7 @@ Clerk limits each production instance's Backend API calls ([system limits](https
 So the proxy counts those requests in `rate_limits` before Clerk runs (`lib/clerk-backend-call-limit.ts`), with the limits in `src/adapters/shared/rate-limits.ts`, which DEBT-503 retunes:
 
 - **Per address,** 30 a minute. A request with no readable address skips this one, so one sender cannot fill a shared bucket and refuse everyone else.
-- **Per refreshing session,** 6 a minute.
+- **Per refreshing session,** 6 a minute. It reads the session claim before Clerk verifies it, so it groups attempts; it does not prove who sent them.
 - **A refresh of a session Clerk signed,** checked with `CLERK_JWT_KEY`, counts per session and in a per-address bucket of its own, 200 a minute, which forged requests cannot fill (DEBT-503 item 4). A handshake always takes the per-address limit.
 - **Site-wide,** 1,000 a minute, whatever the number of addresses.
 
@@ -93,7 +93,9 @@ How it behaves:
 - **It fails open.** If its database call fails, the request goes through and the proxy raises `clerk_backend_call_limiter_failed` ([observability](../observability.md#operational-alerts)). Failing closed would refuse every genuine refresh while the database is down, and the firewall rule ([Edge Rules](../security.md#edge-rules)) still bounds handshakes.
 - **A refused request** gets a 429 with `Retry-After`: a browser gets a short page asking it to wait a minute, and any other client gets JSON. The response clears the handshake cookies, so they do not make the next request count again; an expired session on it can still count.
 - **A GET the limiter did not count** reaches Clerk without its refresh cookies on the production instance, so Clerk cannot refresh it uncounted (BUG-375). If that copy fails, the request keeps its cookies, so Clerk can refresh it uncounted, and the proxy raises `clerk_refresh_cookie_strip_failed`. A request the limiter failed to count keeps its cookies, so while the limiter fails, Clerk can refresh uncounted; `clerk_backend_call_limiter_failed` reports that.
-- **The site-wide cap is a trade-off.** It cannot tell a real request from a forged one, so filling it makes returning visitors whose token has expired wait up to a minute, and raises `clerk_site_limit_reached`. Without it, an attack would spend Clerk's allowance, and every signed-in page would fail until it stopped. A refusal from an address's signed-in bucket raises `clerk_signed_in_limit_reached`; other per-address and per-session refusals are only logged.
+- **The site-wide cap is a trade-off.** It cannot tell a real request from a forged one. Filling it takes about 34 addresses at their own limit, and makes returning visitors whose token has expired wait up to a minute; visitors with a fresh token and signed-out visitors are unaffected. Without it, an attack could spend Clerk's allowance. Pages that read our own user row would keep working for a valid session, but a new user's first visit, checkout, trial card setup and expired-session refreshes would fail until it stopped.
+- **What the cap does not bound.** It counts per minute, while Clerk documents 1,000 calls per 10 seconds, so it reserves no allowance in each of Clerk's windows and does not bound the SDK's retries. Letting only forged requests fill it is DEBT-503 item 2.
+- **Alerts.** The site-wide cap's refusals raise `clerk_site_limit_reached`, and a refusal from an address's signed-in bucket raises `clerk_signed_in_limit_reached`. Other per-address and per-session refusals are only logged. Clerk's own refusals of our calls raise `clerk_backend_calls_refused`.
 
 Operations:
 
