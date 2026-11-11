@@ -75,34 +75,19 @@ async function proxy(request: NextRequest, event: NextFetchEvent) {
 
 ### The Backend API Allowance Limiter
 
-Clerk limits each production instance's Backend API calls ([system limits](https://clerk.com/docs/guides/how-clerk-works/system-limits)), and the calls we need share that allowance: provisioning a new user's row, checkout and trial card setup refreshing the email, BUG-284's stale-owner check, and Clerk's own refresh of an expired session. Two request shapes make Clerk's SDK spend a call before our code answers, and anyone can send them without an account (BUG-323):
+Clerk limits each production instance's Backend API calls ([system limits](https://clerk.com/docs/guides/how-clerk-works/system-limits)), and our calls share that allowance: provisioning a new user's row, checkout and trial card setup refreshing the email, BUG-284's stale-owner check, and Clerk's own refresh of an expired session. Two request shapes make Clerk's SDK spend a call before our code answers, and anyone can send them without an account (BUG-323):
 
 - a request carrying a handshake value;
 - a GET whose session token has expired but can be refreshed.
 
-So the proxy counts those requests in `rate_limits` before Clerk runs (`lib/clerk-backend-call-limit.ts`), with the limits in `src/adapters/shared/rate-limits.ts`, which DEBT-503 retunes:
+So on Clerk's production instance (a `pk_live_` key), the proxy counts those requests in `rate_limits` before Clerk runs, per address, per session and site-wide, and answers one over a limit with a 429 and `Retry-After`. A development instance handshakes every new browser session, which E2E, local work and Preview depend on, so it is not limited.
 
-- **Per address,** 30 a minute. A request with no readable address skips this bucket instead of sharing one with every such request; it still counts site-wide.
-- **Per refreshing session,** 6 a minute. It reads the session claim before Clerk verifies it, so it groups attempts; it does not prove who sent them.
-- **A refresh of a session Clerk signed,** checked with `CLERK_JWT_KEY`, counts per session, in a per-address bucket of its own, 200 a minute, and site-wide (DEBT-503 item 4). Only a token Clerk signed enters that bucket; the refresh cookie beside it is not checked first. A handshake always takes the per-address limit.
-- **Site-wide,** 1,000 a minute, whatever the number of addresses.
-
-How it behaves:
-
-- **Only on Clerk's production instance** (a `pk_live_` key). A development instance handshakes every new browser session, which E2E, local work and Preview depend on.
-- **It fails open.** If its database call fails, the request goes through and the proxy raises `clerk_backend_call_limiter_failed` ([observability](../observability.md#operational-alerts)). Failing closed would refuse every genuine refresh while the database is down, and the firewall rule ([Edge Rules](../security.md#edge-rules)) still limits handshakes per address.
-- **A refused request** gets a 429 with `Retry-After`: a browser gets a short page asking it to wait a minute, and any other client gets JSON. The response clears the handshake cookies, so they do not make the next request count again; an expired session on it can still count.
-- **A GET the limiter did not count** reaches Clerk without its refresh cookies on the production instance, so Clerk cannot refresh it uncounted (BUG-375). If that copy fails, the request keeps its cookies, so Clerk can refresh it uncounted, and the proxy raises `clerk_refresh_cookie_strip_failed`. A request the limiter failed to count keeps its cookies, so while the limiter fails, Clerk can refresh uncounted; `clerk_backend_call_limiter_failed` reports that.
-- **The site-wide cap is a trade-off.** It cannot tell a real request from a forged one, and once it is full, every counted request waits up to a minute, whether it is a returning visitor whose token has expired or anyone carrying a handshake value. A request the limiter does not count, such as one with a fresh token and no handshake value, is unaffected. Without it, an attack could spend Clerk's allowance. Pages that read our own user row would keep working for a valid session, but a new user's first visit, checkout, trial card setup and expired-session refreshes would fail until it stopped.
-- **What the cap does not bound.** It counts per minute, while Clerk documents 1,000 calls per 10 seconds, so it reserves no allowance in each of Clerk's windows and does not bound the SDK's retries. Letting only forged requests fill it is DEBT-503 item 2.
-- **Alerts.** The limiter's alerts are `clerk_site_limit_reached`, `clerk_signed_in_limit_reached`, `clerk_backend_call_limiter_failed` and `clerk_refresh_cookie_strip_failed`, and Clerk's refusals of our calls raise `clerk_backend_calls_refused`. Each one's threshold, and what it cannot see, is in [observability](../observability.md#operational-alerts).
-
-Operations:
-
-- **Rollback:** Vercel's Instant Rollback to an earlier deployment, then revert the faulty change on `dev`. The firewall rule is separate and stays ([Edge Rules](../security.md#edge-rules)).
-- **Under attack:** Vercel's Attack Challenge Mode (Firewall) is available on every plan. Vercel's Hobby plan includes a fixed number of rate-limited requests and does not document what happens beyond it (DEBT-512).
-- **Clerk was told** on 2026-10-05, through its security team, that its SDK spends a customer's allowance on unchecked requests.
-- **Checked in production on 2026-11-11:** production's `rate_limits` held 2 limiter rows from the previous 24 hours, so the limiter writes its counters there. One handshake request was sent just before the count, and none was taken before it, so the rows are not attributed to that request.
+- **Where the detail lives.** The rules are in `lib/clerk-backend-call-limit.ts`, and the limits, with the reasons for their sizes, in `src/adapters/shared/rate-limits.ts`. DEBT-503 holds the open work on them.
+- **The trade-off.** The site-wide cap cannot tell a real request from a forged one, so while attackers keep it full, real counted requests are refused too, such as one from a returning visitor whose token has expired. Without it, an attack could spend the allowance, and sign-up, checkout, trial card setup and expired-session refreshes would fail.
+- **It fails open.** If its database call fails, the limiter lets requests through uncounted, refresh cookies included, and raises `clerk_backend_call_limiter_failed`. The firewall's handshake rule ([Edge Rules](../security.md#edge-rules)) limits only handshake-nonce requests, so nothing of ours limits refreshes then.
+- **Uncounted refreshes.** On the production instance, a GET the limiter did not count reaches Clerk without its refresh cookies, unless that copy fails, which raises `clerk_refresh_cookie_strip_failed` (BUG-375).
+- **Alerts.** Each alert's threshold, what it cannot see and what to do are in [observability](../observability.md#operational-alerts).
+- **Checked in production on 2026-11-11.** Production's `rate_limits` held 2 limiter rows from the previous 24 hours, so the limiter writes its counters there. One handshake request was sent just before the count, and none was taken before it, so the rows are not attributed to that request.
 
 ---
 
