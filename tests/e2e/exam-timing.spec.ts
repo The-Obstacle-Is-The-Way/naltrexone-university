@@ -15,8 +15,8 @@ test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 const EXAM_SECONDS = 72;
 const CLOCK_SKEW_MS = 20_000;
 const TIMING_ACTION = 'getPracticeSessionTiming';
-// Quiet time before the return: CI's bursts of aborted server actions on a new
-// session ended within 600 ms (BUG-337).
+// Quiet time before the return: CI's bursts of reported action aborts on a
+// new session ended within 600 ms (BUG-337); their causes remain unproven.
 const QUIET_MS = 1_000;
 
 test('a fast browser clock preserves the answer until server exam expiry', async ({
@@ -45,10 +45,11 @@ test('a fast browser clock preserves the answer until server exam expiry', async
     request.headers()['next-action'] !== undefined;
   const isTimingRequest = (request: Request) =>
     isServerAction(request) && actionOf(request) === TIMING_ACTION;
-  // The return is signalled only once the page is quiet. In CI, a new
-  // session's server actions are aborted in bursts that last under a second
-  // (BUG-337), and a return read caught in one fails for a reason this test
-  // isn't about. So the test keeps the page's server actions in flight, when
+  // The return is signaled only once the page is quiet. CI reported bursts
+  // of action aborts lasting under a second (BUG-337); BUG-376 can explain
+  // them, but their causes were not captured. Keep the existing readiness
+  // boundary between activation and return while upgrading the browser.
+  // The test tracks the page's server actions in flight, when
   // the last session-page action settled, and how many timing reads settled.
   // Server actions post to the page that calls them. Only the session page's
   // own actions keep it busy: a starter-page action has been seen in flight
@@ -135,23 +136,26 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // the return with visibilitychange, which the timer also handles, not a
   // window focus: on Clerk's development instance a focus also touches the
   // session, and its cookie rewrites can abort a concurrent request (BUG-333,
-  // BUG-337). The return is signalled once an activation read has settled
+  // BUG-337). The return is signaled once an activation read has settled
   // and no server action has been in flight for QUIET_MS. The return's read is
   // a timing read still in flight, which the timer would reuse, or else the
   // next one, followed through any redirect to its last request's
   // requestfinished or requestfailed: a response can arrive before its
   // request is aborted. A read that finishes must succeed.
   // A single failed read, at activation or on the return, doesn't fail the
-  // test: the timer keeps its last server sample, and timing reads are aborted
-  // for a reason not yet known (BUG-337), in 3 of 36 local runs on 2026-10-20
-  // and 21; each is logged above as evidence. A timing action that never
-  // works does fail it: the return must start a timing read, and at least one
-  // timing read in the session must succeed. Both reads failed in one of
-  // those runs, which also failed an unrelated test. The manifest name
-  // identifies the request, so the test does not read its body: Chrome
-  // can discard a server action's body before Playwright asks for it ("No
-  // data found for resource"), and the controller's timing tests cover the
-  // payload.
+  // test: the timer keeps its last server sample. Timing reads were reported
+  // aborted in 3 of 36 local runs on 2026-10-20 and 21 (BUG-337). Chromium
+  // before 157, bundled until Playwright 1.65.0, reports some server-action
+  // responses aborted after the page has read all of them (BUG-376), which
+  // can explain those runs; a Clerk session touch can still abort a request
+  // for real (BUG-333). Each failed read is logged above as evidence. A timing
+  // action that never works does fail the test: the return must start a
+  // timing read, and at least one timing read in the session must succeed.
+  // Both reads failed in one of those runs, which also failed an unrelated
+  // test. The manifest name identifies the request, so the test does not
+  // read its body: this Chromium defect can discard a misreported
+  // response's body ("No data found for resource"), and the controller's
+  // timing tests cover the payload.
   // On a timeout, the poll's last value names what kept the page busy.
   const pageState = () => {
     const inFlight = [...actionsInFlight].filter(onSessionPage).map(actionOf);
