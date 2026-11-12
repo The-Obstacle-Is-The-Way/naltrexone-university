@@ -1,6 +1,6 @@
 # DEBT-535: The `glob` Alert and the `minimatch` Advisory Wait on Sentry's and Stryker's Releases
 
-**Status:** Open — update `@sentry/nextjs` to 11.11.0, Sentry's first release with getsentry/sentry-javascript#26014, past the 7-day gate since 2026-11-12T12:43Z; due 2026-11-12
+**Status:** Verifying — Dependabot marks #108 fixed once the `@sentry/nextjs` 11.11.0 update reaches `main`; then close this record with #110's Waiting row; due 2026-11-16
 **Priority:** P3
 **Date:** 2026-11-04
 
@@ -21,10 +21,10 @@ Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/
 
 ## Evidence
 
-- **Where they come from.**
-  - `glob` 13.0.6 comes only through `@sentry/bundler-plugins` 11.9.0, which declares `^13.0.6`, under `@sentry/nextjs` and `@sentry/node`.
-  - `minimatch` 10.2.6 comes through that `glob` (`^10.2.2`) and through `@stryker-mutator/core` 10.1.1 (`~10.2.4`).
-  - `pnpm audit` reports these two advisories and no others.
+- **Where they came from, until the 11.11.0 update.**
+  - `glob` 13.0.6 came only through `@sentry/bundler-plugins` 11.9.0, which declares `^13.0.6`, under `@sentry/nextjs` and `@sentry/node`.
+  - `minimatch` 10.2.6 came through that `glob` (`^10.2.2`) and through `@stryker-mutator/core` 10.1.1 (`~10.2.4`). After the update only Stryker brings it.
+  - `pnpm audit` reported these two advisories and no others. After the update it reports only the `minimatch` one.
 - **What each advisory needs.**
   - In `glob`, an aborted walk goes on reading directories. That matters only to a caller that bounds a walk with `signal`.
   - In `minimatch`, a crafted pattern multiplies its parts, and the work then grows quadratically. That needs an attacker's pattern and `optimizationLevel` 2 or more. The default is 1, and the fix changes only the level-2 preprocessing.
@@ -58,7 +58,7 @@ Dependabot opened alerts #108 (`glob`, [GHSA-3g3m-2fjr-6pw4](https://github.com/
 
 ## Impact
 
-Nothing reaches users or production. #108 stays open beside any real alerts until Sentry moves, or until the lockfile takes a `glob` 13.x backport that the advisory's amended range excludes. The `minimatch` alert, #110, can stay open for months.
+Nothing reaches users or production. #108 stays open beside any real alerts until the `@sentry/nextjs` 11.11.0 update reaches `main`. The `minimatch` alert, #110, can stay open for months.
 
 ## Options
 
@@ -78,6 +78,7 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
   - If the release is published but has not cleared the gate, re-date the status to its npm publish date plus 7 days.
   - If it is not published, re-date the status by 7 days, to 2026-11-19, and check again then.
   - A `glob` 13.x release with the fix (isaacs/node-glob#664) closes #108 only if the advisory's range is amended to exclude it. Check both on each due date.
+- **Done 2026-11-12: `@sentry/nextjs` 11.11.0.** The update moves Sentry's `@sentry/bundler-plugins` to 11.11.0, which takes `glob` 14.0.3, `minimatch` 11.0.4, `path-scurry` 3.0.0 and the matcher 1.0.3, each past the 7-day gate. The lockfile holds no `glob` 13, and `pnpm audit` reports only GHSA-g3hv-75wg-m249, through Stryker.
 - **The `minimatch` advisory.** Once #108 closes, close this record with a Waiting row for GHSA-g3hv-75wg-m249 and its alert #110.
   - Its trigger is an `@stryker-mutator/core` release whose `minimatch` range resolves to 11.0.1 or later in the lockfile. `npm view @stryker-mutator/core dependencies.minimatch` and stryker-mutator/stryker-js#3515 show it.
   - The Stryker 10.1.1 upgrade (DEBT-536) does not meet it, because 10.1.1 declares `~10.2.4`.

@@ -66,7 +66,7 @@
     "@clerk/nextjs": "^7.9.10",
     "@clerk/ui": "^1.38.1",
     "@noble/hashes": "2.4.0",
-    "@sentry/nextjs": "^11.0.0",
+    "@sentry/nextjs": "^11.11.0",
     "@tailwindcss/postcss": "4.3.3",
     "@typescript/typescript6": "^6.0.2",
     "class-variance-authority": "^0.7.1",
