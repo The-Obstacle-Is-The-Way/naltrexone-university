@@ -49,7 +49,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-532](./debt-532-scripts-folder-grew-without-a-layout.md)|Inconsistent script helpers and layout|P3|Open — the content families' move no longer waits: BUG-351 closed 2026-11-11, DEBT-531 on 2026-10-23|
 |[DEBT-533](./debt-533-the-queue-review-cannot-read-some-production-triggers.md)|The weekly queue review cannot read some production triggers|P3|Blocked — the owner reads the sources below, or chooses a read path for the review; follow-up due 2026-10-30|
 |[DEBT-534](./debt-534-neon-free-plan-can-suspend-production.md)|Neon's Free plan can suspend production's database until the month ends|P2|Open — the owner moves it to Neon Launch before the first live sale|
-|[DEBT-535](./debt-535-alerts-108-and-109-wait-on-their-consumers.md)|The `glob` alert and the `minimatch` advisory wait on Sentry's and Stryker's releases|P3|Open — update `@sentry/nextjs` once Sentry's release with getsentry/sentry-javascript#26014 is past the 7-day gate, or re-date the check; due 2026-11-12|
+|[DEBT-535](./debt-535-alerts-108-and-109-wait-on-their-consumers.md)|The `glob` alert and the `minimatch` advisory wait on Sentry's and Stryker's releases|P3|Open — update `@sentry/nextjs` to 11.11.0, Sentry's first release with getsentry/sentry-javascript#26014, past the 7-day gate since 2026-11-12T12:43Z; due 2026-11-12|
 
 ## Waiting
 
