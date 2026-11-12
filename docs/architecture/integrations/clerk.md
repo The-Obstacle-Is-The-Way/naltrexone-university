@@ -73,6 +73,22 @@ async function proxy(request: NextRequest, event: NextFetchEvent) {
 
 **Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`), and every route outside them is protected. The public resources in `PUBLIC_RESOURCE_PATHS` (`security.txt`, `robots.txt`, the sitemap and the Open Graph image) skip Clerk entirely, and so do the two cron routes in `CRON_ROUTE_PATHS`, which check `CRON_SECRET` themselves. Only the cron routes take an `Authorization` header: any other request that carries one, public resources included, gets a 401 before Clerk runs, since Clerk's middleware reads a token from that header and can spend its Backend API on it (BUG-369). `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
 
+### The Backend API Allowance Limiter
+
+Clerk limits each production instance's Backend API calls ([system limits](https://clerk.com/docs/guides/how-clerk-works/system-limits)), and our calls share that allowance: provisioning a new user's row, checkout and trial card setup refreshing the email, BUG-284's stale-owner check, and Clerk's own refresh of an expired session. Two request shapes make Clerk's SDK spend a call before our code answers, and anyone can send them without an account (BUG-323):
+
+- a request carrying a handshake value;
+- a GET whose session token has expired but can be refreshed.
+
+So on Clerk's production instance (a `pk_live_` key), the proxy counts those requests in `rate_limits` before Clerk runs, per address, per session and site-wide, and answers one over a limit with a 429 and `Retry-After`. A development instance handshakes every new browser session, which E2E, local work and Preview depend on, so it is not limited.
+
+- **Where the detail lives.** The rules are in `lib/clerk-backend-call-limit.ts`, and the limits, with the reasons for their sizes, in `src/adapters/shared/rate-limits.ts`. DEBT-503 holds the open work on them.
+- **The trade-off.** The site-wide cap cannot tell a real request from a forged one, so while attackers keep it full, real counted requests are refused too, such as one from a returning visitor whose token has expired. Without it, an attack could spend the allowance, and sign-up, checkout, trial card setup and expired-session refreshes would fail.
+- **It fails open.** If its database call fails, the limiter lets requests through uncounted, refresh cookies included, and raises `clerk_backend_call_limiter_failed`. The firewall's handshake rule ([Edge Rules](../security.md#edge-rules)) limits only handshake-nonce requests, so nothing of ours limits refreshes then.
+- **Uncounted refreshes.** On the production instance, a GET the limiter did not count reaches Clerk without its refresh cookies, unless that copy fails, which raises `clerk_refresh_cookie_strip_failed` (BUG-375).
+- **Alerts.** Each alert's threshold, what it cannot see and what to do are in [observability](../observability.md#operational-alerts).
+- **Checked in production on 2026-11-11.** Production's `rate_limits` held 2 limiter rows from the previous 24 hours, so the limiter writes its counters there. One handshake request was sent just before the count, and none was taken before it, so the rows are not attributed to that request.
+
 ---
 
 ## Content Security Policy (CSP)
