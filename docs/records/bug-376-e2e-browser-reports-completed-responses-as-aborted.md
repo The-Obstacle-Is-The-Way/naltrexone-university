@@ -1,6 +1,6 @@
 # BUG-376: The E2E Browser Reports Some Completed Responses as Aborted
 
-**Status:** Open — upgrade Playwright to 1.65.0 with a red-first regression contract once the release-age gate admits it (2026-11-12 20:17:41Z); due 2026-11-13
+**Status:** Verifying — after promotion, main's CI passes the regression contract on Playwright 1.65.0; due 2026-11-17
 **Priority:** P3
 **Date:** 2026-11-10
 
@@ -62,6 +62,7 @@ Option 1, test-first, in one pull request with this record:
 1. **Red first.** The contract above fails on Playwright 1.64.1.
 2. **The upgrade.** Upgrade `@playwright/test` to 1.65.0 with its lockfile entries; CI installs the browser the package names. The contract passes.
 3. **exam-timing.** Its comment says timing reads are aborted "for a reason not yet known (BUG-337)"; name this cause instead. Its note that Chrome can discard a server action's body ("No data found for resource") describes the same lost body. Decide, from the upgrade's runs, whether one failed timing read should still be tolerated. Keep the evidence logging.
+   - *Done 2026-11-12:* the comment names this cause, and BUG-333's session touch as one that can still abort a request for real. The tolerance stays: it guards against a genuine abort, which the upgrade does not remove, and the test is about the exam clock, not aborts. The evidence logging stays, so a genuine abort still shows in CI's log.
 4. **If Dependabot's grouped update brings Playwright 1.65.0 first,** re-author it with the contract before it merges.
 5. **If the upgrade cannot merge by 2026-11-17,** because 1.65.0 regresses or review is delayed, revisit Option 2.
 
