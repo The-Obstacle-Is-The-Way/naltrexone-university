@@ -1,6 +1,6 @@
 # DEBT-535: The `glob` Alert and the `minimatch` Advisory Wait on Sentry's and Stryker's Releases
 
-**Status:** Verifying — Dependabot marks #108 fixed once the `@sentry/nextjs` 11.11.0 update reaches `main`; then close this record with #110's Waiting row; due 2026-11-16
+**Status:** Verifying — every check is recorded below; its closing pull request closes it, with #110's Waiting row; due 2026-11-16
 **Priority:** P3
 **Date:** 2026-11-04
 
@@ -89,8 +89,12 @@ Nothing reaches users or production. #108 stays open beside any real alerts unti
 
 ## Verification
 
-- [ ] Dependabot marks #108 fixed on `main`, because the `@sentry/nextjs` update leaves no `glob` 13 in the lockfile, or because the lockfile resolves `glob` to a 13.x release that the advisory's amended range excludes.
-- [ ] `pnpm audit` no longer reports GHSA-g3hv-75wg-m249, because the lockfile holds no `minimatch` below 11.0.1, or the Waiting row carries it with the trigger Resolution sets.
+- [x] Dependabot marks #108 fixed on `main`, because the `@sentry/nextjs` update leaves no `glob` 13 in the lockfile, or because the lockfile resolves `glob` to a 13.x release that the advisory's amended range excludes.
+  - #1673 updated `@sentry/nextjs` to 11.11.0 on `dev`, and promotion #1674 merged it into `main` at 2026-11-12T19:31:38Z (`9a92612a`).
+  - Dependabot marked #108 fixed at 19:31:46Z, and `main`'s lockfile holds no `glob` 13.
+- [x] `pnpm audit` no longer reports GHSA-g3hv-75wg-m249, because the lockfile holds no `minimatch` below 11.0.1, or the Waiting row carries it with the trigger Resolution sets.
+  - On 2026-11-12 `pnpm audit` still reports it, only through `@stryker-mutator/core` 10.1.1. Stryker's latest release is still 10.1.1, which declares `minimatch` `~10.2.4`, and the advisory's range is still `>= 7.0.0, < 11.0.1`.
+  - The pull request that closes this record adds the Waiting row for it and its alert #110, with the trigger Resolution sets.
 
 ## Related
 
