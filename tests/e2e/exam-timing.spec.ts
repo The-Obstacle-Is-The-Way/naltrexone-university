@@ -142,16 +142,19 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // requestfinished or requestfailed: a response can arrive before its
   // request is aborted. A read that finishes must succeed.
   // A single failed read, at activation or on the return, doesn't fail the
-  // test: the timer keeps its last server sample, and timing reads are aborted
-  // for a reason not yet known (BUG-337), in 3 of 36 local runs on 2026-10-20
-  // and 21; each is logged above as evidence. A timing action that never
-  // works does fail it: the return must start a timing read, and at least one
-  // timing read in the session must succeed. Both reads failed in one of
-  // those runs, which also failed an unrelated test. The manifest name
-  // identifies the request, so the test does not read its body: Chrome
-  // can discard a server action's body before Playwright asks for it ("No
-  // data found for resource"), and the controller's timing tests cover the
-  // payload.
+  // test: the timer keeps its last server sample. Timing reads were reported
+  // aborted in 3 of 36 local runs on 2026-10-20 and 21 (BUG-337). Chromium
+  // before 157, bundled until Playwright 1.65.0, reports some server-action
+  // responses aborted after the page has read all of them (BUG-376), which
+  // can explain those runs; a Clerk session touch can still abort a request
+  // for real (BUG-333). Each failed read is logged above as evidence. A timing
+  // action that never works does fail the test: the return must start a
+  // timing read, and at least one timing read in the session must succeed.
+  // Both reads failed in one of those runs, which also failed an unrelated
+  // test. The manifest name identifies the request, so the test does not
+  // read its body: the same Chromium defect discarded a misreported
+  // response's body ("No data found for resource"), and the controller's
+  // timing tests cover the payload.
   // On a timeout, the poll's last value names what kept the page busy.
   const pageState = () => {
     const inFlight = [...actionsInFlight].filter(onSessionPage).map(actionOf);
