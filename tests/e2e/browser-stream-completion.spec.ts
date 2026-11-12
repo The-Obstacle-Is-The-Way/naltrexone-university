@@ -7,7 +7,7 @@ import { expect, type Page, type Request, test } from '@playwright/test';
 // 8508456). Next.js answers server actions and RSC requests with no-store and
 // reads them through a stream reader, so on such a browser E2E sees healthy
 // requests fail. The first contract needs a browser that reports the read as
-// finished. The second keeps a canceled read reported as failed, so the first
+// finished. The second keeps a canceled read reported as failed, so the pair
 // cannot pass on a browser that stops reporting failures. Neither needs the
 // app server or Clerk. The server sends each part only after the page has read
 // the one before it, so the end of the body always arrives on its own.
