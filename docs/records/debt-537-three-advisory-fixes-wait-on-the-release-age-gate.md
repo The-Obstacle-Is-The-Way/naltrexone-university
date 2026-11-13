@@ -71,7 +71,9 @@ Nothing reaches users or production. The three issues stay open, or closed with 
 - **Take the `vite` or `brace-expansion` fix at once, through an exception, if it becomes reachable.** The policy allows one for these critical and high advisories once they match this app:
   - a Vite server started with `--host` or `server.host`;
   - a request path that expands user-supplied glob or brace patterns.
-- **The Clerk advisory is medium, so the policy gives it no exception.** Before the bundle, if code calls `verifyToken()` or sets `acceptsToken`, or the owner enables an OAuth application, DCR or CIMD in Clerk, apply the advisory's workaround at once: set `authorizedParties` in `clerkMiddleware()`, which 3.11.1 and later use to refuse a token with no `azp`, as ID tokens are. Otherwise the owner decides on a policy change.
+- **The Clerk advisory is medium, so the policy gives it no exception.** If a path to it opens before the bundle, apply the advisory's workaround for that path at once. Otherwise the owner decides on a policy change.
+  - **The owner enables an OAuth application, DCR or CIMD, or code sets `acceptsToken`.** Set `authorizedParties` in `clerkMiddleware()`. On 3.11.1 and later, `authenticateRequest()` then refuses a token with no `azp`, which ID tokens lack.
+  - **Code calls `verifyToken()` directly.** `authorizedParties` in `clerkMiddleware()` does not reach that call. Before it, decode the header with `decodeJwt` from `@clerk/backend/jwt`. Refuse a token whose `cat` is `cl_B7d4PD444AAA`, the ID-token category, and treat a decode error as a refusal. `verifyToken()` still checks the signature as before.
 
 ## Verification
 
