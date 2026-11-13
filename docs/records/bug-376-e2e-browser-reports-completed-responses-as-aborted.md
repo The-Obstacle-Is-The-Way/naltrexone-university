@@ -73,7 +73,7 @@ Option 1, test-first, in one pull request with this record:
 - [x] The cause is reproduced against the app and in a minimal page, and matched to Chromium's fix (2026-11-10).
 - [x] The contract fails on Playwright 1.64.1 and passes on Chrome 157 (2026-11-10, locally).
 - [x] The contract passes on Playwright 1.65.0's Chromium 158.0.8127.18: 3 of 3 runs alone, then in a full local E2E run that passed 74 of 74 and logged no aborted request, with the full gate (2026-11-12).
-- [ ] The upgrade is promoted and main's CI passes the contract; then close.
+- [x] The upgrade in #1668 was promoted by #1677. Main's CI passed 74 of 74 E2E tests, including both regression-contract cases, with no `ERR_ABORTED` log lines (2026-11-13 UTC). Vercel held the built deployment until that CI passed, then its production check succeeded and assigned the production domains. The signed-out production smoke passed; the promotion's description holds the release receipts. Close.
 
 ## Related
 
