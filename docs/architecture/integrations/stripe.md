@@ -226,7 +226,7 @@ The [major-release migration](#major-release-migration) for `2026-09-30.endive` 
 
 The same probe confirmed Endive's Checkout change against the API itself. A setup Session sent with `payment_method_types` gets a 400 `invalid_request_error` that names the parameter. One sent as the adapter now sends it opens: `allowed_payment_method_types: ['card']`, `consent_collection`, `customer_email`, and no Customer. Its response still lists `payment_method_types: ['card']`, which the E2E consent helper reads.
 
-**Live side: done 2026-11-13.** The runbook as written, with what happened after it. Every step that changes live state needs the owner's go-ahead.
+**Live side: done 2026-11-13.** The expand ran on 2026-10-13 and the contract on 2026-11-13. #1479 and its pull requests hold the receipts. Every step that changes live state needs the owner's go-ahead.
 
 1. Take the census. On 2026-10-13 there was one live endpoint, `we_1Tejqg…`: enabled, at `2026-05-27.dahlia`, with all 13 handled events. No live event was owed a delivery. The live default payment-method configuration had card available and on, which `allowed_payment_method_types: ['card']` needs, because it filters the enabled methods rather than naming them.
 2. Once the promotion PR is open and its CI has passed, create the live endpoint at `2026-09-30.endive`, with the same URL, description and 13 events, and disable it straight away.
@@ -241,23 +241,14 @@ The same probe confirmed Endive's Checkout change against the API itself. A setu
    2. Disable `we_1Tejqg…`.
    3. Set `STRIPE_WEBHOOK_SECRET` in production to the new endpoint's secret, from the step 2 file or revealed on its Dashboard page, and remove `STRIPE_WEBHOOK_SECRET_NEXT`.
    4. The next promotion deploys this. A probe after it must again end with `pending_webhooks: 0`.
-8. Record the receipts here, update the [census](#census-2026-10-11-read-only-github-883) row, and close #1447 as superseded.
+      - **If the new endpoint's secret is rolled during this step,** Stripe keeps signing with the old one only until the expiry the roll sets. The deployment serving production knows only the old secrets, so redeploy production before that expiry instead of waiting for a promotion.
+8. Update the [census](#census-2026-10-11-read-only-github-883) rows and the rollback floor, record the receipts in the pull request and on #1479, and close #1447 as superseded.
 
-**What happened on the live side:**
+**Rolling back below the floor.** The contract step leaves production verifying only `we_1UQ8O6…`'s rolled secret. Every production deployment built before 2026-11-13 00:46:25Z, when that secret replaced `STRIPE_WEBHOOK_SECRET`, knows only secrets no enabled endpoint signs with once the old Endive secret stops at about 2026-11-14 00:47Z. [Promoting to production](../../guides/release/promote-to-production.md#keyed-action-output-compatibility) records the floor. To roll back below it:
 
-- **Expand, 2026-10-13 (steps 1 to 6).** `we_1UQ8O6…` was created at 16:17:14Z and promotion #1485 shipped PR #1483. Production then verified both endpoints' deliveries, and a probe event was acknowledged by both. #1447 was closed as superseded.
-- **Contract, 2026-11-12 to 2026-11-13 (step 7).** Due on 2026-10-20 and done late, after a month of overlap.
-  1. The owed-events query, run live just before the disable, returned no event.
-  2. `we_1Tejqg…` was disabled at about 00:00Z on 2026-11-13, not deleted.
-  3. The owner rolled `we_1UQ8O6…`'s signing secret on its Dashboard page first, because the original had been pasted into a chat session. Stripe signs with both the old and the new secret for 24 hours after a roll, so the old one stops at about 2026-11-14 00:47Z. The owner set production's `STRIPE_WEBHOOK_SECRET` to the new secret (updated 00:46:25Z), and `STRIPE_WEBHOOK_SECRET_NEXT` was removed.
-  4. **Changed from the runbook:** a redeploy, not the next promotion, carried this to production. The production deployment then serving knew only the Dahlia secret and the old Endive one, which the roll would retire within 24 hours. `vercel redeploy` rebuilt `main` at `1665ae65` (promotion #1677) as `dpl_ERRWg…`, built from 00:47:41Z and assigned to the production domains at 00:49:46Z, and `/api/health` answered 200.
-  5. The probe was a live subscription-mode Checkout Session, `cs_live_acjPZ…`, tagged `purpose: webhook-secret-rotation-probe-1479`. It was created at 00:50:29Z with an `expires_at` 31 minutes out, because the Stripe MCP write tool has no expire operation. It expired at 01:21:25Z, and its `checkout.session.expired` event `evt_1Ub9BB…` ended at `pending_webhooks: 0`. Production logged `POST /api/stripe/webhook` 200.
-     - `dpl_ERRWg…` holds only the new secret, so this delivery proves production verifies with it.
-     - During a roll, Stripe's signature header carries one signature for each secret it signs with, and the SDK accepts any one that matches.
-- **The rollback floor moved.** Once the old Endive secret stops on 2026-11-14, every production deployment built before `dpl_ERRWg…` knows only secrets that no enabled endpoint signs with. [Promoting to production](../../guides/release/promote-to-production.md#keyed-action-output-compatibility) records the floor. To roll back below it:
-  1. **Enable `we_1Tejqg…` first.** Stripe does not hold events for a disabled endpoint. An event created while production is below the floor and `we_1Tejqg…` is still disabled reaches only `we_1UQ8O6…`, and the old deployment rejects it. Its secret was production's from 2026-06-04 to 2026-11-13, so a target built before 2026-06-04 cannot verify it either. Roll forward instead of that far back.
-  2. **Roll back.** Every event still reaches `we_1UQ8O6…` too. In live mode Stripe retries a failed delivery for up to three days, so a deployment above the floor accepts those retries once production rolls forward.
-  3. **After rolling forward,** disable `we_1Tejqg…`, run the [owed-events query](#census-commands), and resend anything still owed with `stripe events resend <event> --webhook-endpoint we_1UQ8O6…`, as in test-side step 6. The `stripe_events` claim processes a duplicate delivery once. A rollback longer than three days needs this, because the retries have stopped by then.
+1. **Enable `we_1Tejqg…` first.** Stripe does not hold events for a disabled endpoint. An event created while production is below the floor and `we_1Tejqg…` is still disabled reaches only `we_1UQ8O6…`, and the old deployment rejects it. Its secret was production's from 2026-06-04 to 2026-11-13, so a target built before 2026-06-04 cannot verify it either. Roll forward instead of that far back.
+2. **Roll back.** Every event still reaches `we_1UQ8O6…` too. In live mode Stripe retries a failed delivery for up to three days, so a deployment above the floor accepts those retries once production rolls forward.
+3. **After rolling forward,** disable `we_1Tejqg…`, run the [owed-events query](#census-commands), and resend anything still owed with `stripe events resend <event> --webhook-endpoint we_1UQ8O6…`, as in test-side step 6. The `stripe_events` claim processes a duplicate delivery once. A rollback longer than three days needs this, because the retries have stopped by then.
 
 ### Census commands
 
