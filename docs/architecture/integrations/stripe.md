@@ -12,7 +12,7 @@
 
 | Date | API Version | Impact | Notes |
 |------|-------------|--------|-------|
-| 2026-09-30 | `2026-09-30.endive` | **BREAKING** | Endive cutover, pinned 2026-10-13 with SDK 23.0.0 (PR #1483, issue #1479). Checkout Session create no longer accepts `payment_method_types` and answers it with a 400, so the add-card session sends `allowed_payment_method_types: ['card']` instead. Every other Endive breaking change was checked against what the app sends and reads, and none applies. The test endpoint moved on 2026-10-13, and the live endpoint moves with the promotion that ships PR #1483, per [Endive migration](#endive-migration-2026-10). |
+| 2026-09-30 | `2026-09-30.endive` | **BREAKING** | Endive cutover, pinned 2026-10-13 with SDK 23.0.0 (PR #1483, issue #1479). Checkout Session create no longer accepts `payment_method_types` and answers it with a 400, so the add-card session sends `allowed_payment_method_types: ['card']` instead. Every other Endive breaking change was checked against what the app sends and reads, and none applies. The test endpoint moved on 2026-10-13. The live endpoints overlapped from that day, and the Dahlia one was retired on 2026-11-13, per [Endive migration](#endive-migration-2026-10). |
 | 2026-08-26 | `2026-08-26.dahlia` | Non-breaking | Pinned 2026-09-16 with SDK 22.6.1. Additive GA release: card funding-type restrictions in Checkout, Customer Session entitlement/portal components, Billie for invoices and subscriptions, standardized payment-method error codes. None of the added fields are read or sent by this app. |
 | 2026-07-29 | `2026-07-29.dahlia` | Non-breaking | Pinned 2026-08-08 (PR #758, SDK 22.4.0). That upgrade introduced the `known \| OtherString` response-enum modelling described below. |
 | 2026-06-24 | `2026-06-24.dahlia` | Non-breaking | Pinned 2026-07-02 (PR #551, SDK 22.3.0) |
@@ -143,7 +143,8 @@ Stripe renders each event payload at the receiving endpoint's API version. An en
 | Surface | API version | Evidence |
 |---------|-------------|----------|
 | Code client pin | `2026-08-26.dahlia`; `2026-09-30.endive` from #1483 | `lib/stripe-api-version.ts`; `stripe@22.6.2` resolved in `pnpm-lock.yaml` (range `^22.6.1`), then `stripe@23.0.0` |
-| Live endpoint `we_1Tejqg…` (`https://addictionboards.com/api/stripe/webhook`) | `2026-05-27.dahlia`, explicit | Enabled; created 2026-06-04 by DEBT-406; the only live endpoint |
+| Live endpoint `we_1Tejqg…` (`https://addictionboards.com/api/stripe/webhook`) | `2026-05-27.dahlia`, explicit | Created 2026-06-04 by DEBT-406, and the only live endpoint at the census. Disabled on 2026-11-13, not deleted, so a rollback below the [rollback floor](../../guides/release/promote-to-production.md#keyed-action-output-compatibility) can enable it again. Delete it at the next major-release migration |
+| Live endpoint `we_1UQ8O6…` (same URL) | `2026-09-30.endive`, explicit | Created 2026-10-13 16:17:14Z, with all 13 handled events. The only enabled live endpoint since 2026-11-13, see [Endive migration](#endive-migration-2026-10) |
 | Test endpoint (the `dev` branch preview alias) | Found `null`, so the account default; `2026-05-27.dahlia`, explicit, from 2026-10-11; now `2026-09-30.endive`, explicit | `we_1T19r…` (created 2026-02-15) had no version. It was replaced on 2026-10-11 by `we_1UPPK…`, see [Test endpoint rotation](#test-endpoint-rotation-2026-10-11), and on 2026-10-13 by `we_1UQ2wp…` at `2026-09-30.endive`, see [Endive migration](#endive-migration-2026-10). The only test endpoint |
 | Account default, live and test | `2026-01-28.clover` | `api_version` on the latest events in both modes |
 
@@ -225,7 +226,7 @@ The [major-release migration](#major-release-migration) for `2026-09-30.endive` 
 
 The same probe confirmed Endive's Checkout change against the API itself. A setup Session sent with `payment_method_types` gets a 400 `invalid_request_error` that names the parameter. One sent as the adapter now sends it opens: `allowed_payment_method_types: ['card']`, `consent_collection`, `customer_email`, and no Customer. Its response still lists `payment_method_types: ['card']`, which the E2E consent helper reads.
 
-**Live side: with the promotion that ships PR #1483.** Every step that changes live state needs the owner's go-ahead.
+**Live side: done 2026-11-13.** The runbook as written, with what happened after it. Every step that changes live state needs the owner's go-ahead.
 
 1. Take the census. On 2026-10-13 there was one live endpoint, `we_1Tejqg…`: enabled, at `2026-05-27.dahlia`, with all 13 handled events. No live event was owed a delivery. The live default payment-method configuration had card available and on, which `allowed_payment_method_types: ['card']` needs, because it filters the enabled methods rather than naming them.
 2. Once the promotion PR is open and its CI has passed, create the live endpoint at `2026-09-30.endive`, with the same URL, description and 13 events, and disable it straight away.
@@ -241,6 +242,19 @@ The same probe confirmed Endive's Checkout change against the API itself. A setu
    3. Set `STRIPE_WEBHOOK_SECRET` in production to the new endpoint's secret, from the step 2 file or revealed on its Dashboard page, and remove `STRIPE_WEBHOOK_SECRET_NEXT`.
    4. The next promotion deploys this. A probe after it must again end with `pending_webhooks: 0`.
 8. Record the receipts here, update the [census](#census-2026-10-11-read-only-github-883) row, and close #1447 as superseded.
+
+**What happened on the live side:**
+
+- **Expand, 2026-10-13 (steps 1 to 6).** `we_1UQ8O6…` was created at 16:17:14Z and promotion #1485 shipped PR #1483. Production then verified both endpoints' deliveries, and a probe event was acknowledged by both. #1447 was closed as superseded.
+- **Contract, 2026-11-12 to 2026-11-13 (step 7).** Due on 2026-10-20 and done late, after a month of overlap.
+  1. The owed-events query, run live just before the disable, returned no event.
+  2. `we_1Tejqg…` was disabled at about 00:00Z on 2026-11-13, not deleted.
+  3. The owner rolled `we_1UQ8O6…`'s signing secret on its Dashboard page first, because the original had been pasted into a chat session. Stripe signs with both the old and the new secret for 24 hours after a roll, so the old one stops at about 2026-11-14 00:47Z. The owner set production's `STRIPE_WEBHOOK_SECRET` to the new secret (updated 00:46:25Z), and `STRIPE_WEBHOOK_SECRET_NEXT` was removed.
+  4. **Changed from the runbook:** a redeploy, not the next promotion, carried this to production. The production deployment then serving knew only the Dahlia secret and the old Endive one, which the roll would retire within 24 hours. `vercel redeploy` rebuilt `main` at `1665ae65` (promotion #1677) as `dpl_ERRWg…`, built from 00:47:41Z and assigned to the production domains at 00:49:46Z, and `/api/health` answered 200.
+  5. The probe was a live subscription-mode Checkout Session, `cs_live_acjPZ…`, tagged `purpose: webhook-secret-rotation-probe-1479`. It was created at 00:50:29Z with an `expires_at` 31 minutes out, because the Stripe MCP write tool has no expire operation. It expired at 01:21:25Z, and its `checkout.session.expired` event `evt_1Ub9BB…` ended at `pending_webhooks: 0`. Production logged `POST /api/stripe/webhook` 200.
+     - `dpl_ERRWg…` holds only the new secret, so this delivery proves production verifies with it.
+     - During a roll, Stripe's signature header carries one signature for each secret it signs with, and the SDK accepts any one that matches.
+- **The rollback floor moved.** Once the old Endive secret stops on 2026-11-14, every production deployment built before `dpl_ERRWg…` knows only secrets that no enabled endpoint signs with. [Promoting to production](../../guides/release/promote-to-production.md#keyed-action-output-compatibility) records the floor and how to roll back below it.
 
 ### Census commands
 

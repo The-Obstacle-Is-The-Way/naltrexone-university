@@ -61,7 +61,7 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 | Floor | Shape no longer read | Deployments below it |
 |-------|----------------------|----------------------|
 | #1360 (2026-10-04) | End and finalize outputs without `totals.scored` (DEBT-493) | Any production deployment assigned before #1350's, at 2026-10-03 20:02:33Z |
-| The promotion that ships #1483, from when the Dahlia live webhook endpoint `we_1Tejqg…` is disabled | Stripe webhooks signed by that endpoint: deployments below it know only its secret (Stripe doc, "Major-release migration") | Any production deployment assigned before that promotion's. Enable `we_1Tejqg…` again before rolling back below it, and disable it once production is back above |
+| `dpl_ERRWg…`, assigned 2026-11-13 00:49:46Z: the first production deployment built with the Endive endpoint's rolled secret | Stripe webhooks. The Dahlia endpoint `we_1Tejqg…` has been disabled since 2026-11-13. The Endive endpoint `we_1UQ8O6…` stops signing with its pre-roll secret at about 2026-11-14 00:47Z. Deployments below this floor know no other webhook secret (Stripe doc, "Endive migration") | Any production deployment assigned before `dpl_ERRWg…`. Enable `we_1Tejqg…` again before rolling back below it, since its secret was production's `STRIPE_WEBHOOK_SECRET` until 2026-11-13. Disable it once production is back above |
 
 ```text
 1. Promotion PR (dev → main): CI (GitHub Actions)
