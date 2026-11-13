@@ -350,6 +350,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-372 · An Unverified Session ID the Key Column Could Not Hold Skipped the Clerk Limiter's Site-Wide Cap · Resolved · 2026-11-02 · docs/records/bug-372-unverified-session-id-skipped-the-site-cap.md · #1621 · 21d8dec87bac0f74dfcd56369d77355fe88d29b9
 - BUG-374 · A Returning Visitor's Page Load Counts as Several Clerk Refreshes · Resolved · 2026-11-03 · docs/records/bug-374-a-returning-visitor-counts-as-several-clerk-refreshes.md · #1632 · 352196d830ace979c43f8b8120bfc8d506ead98e
 - BUG-375 · A Session Token That Expired Between the Limiter's Check and Clerk's Got an Uncounted Refresh · Resolved · 2026-11-09 · docs/records/bug-375-a-token-expiring-between-checks-got-an-uncounted-refresh.md · #1665 · 466e66f547ea1de924232edec1bd6178218391a2
+- BUG-376 · The E2E Browser Reports Some Completed Responses as Aborted · Resolved · 2026-11-13 · docs/records/bug-376-e2e-browser-reports-completed-responses-as-aborted.md · #1680 · 48c1ffb38d795c77888c975cf62ead82f666d7ae
 
 ## Debt
 
@@ -866,6 +867,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-527 · Vendor Calls on Request Paths Have No Time Budget, So a Hung Call Outlives Its Request · Resolved · 2026-10-23 · docs/records/debt-527-vendor-calls-outlive-their-request.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 - DEBT-529 · The Per-Screen Request Protocols Rely on a Contract Nothing Checks, and Their Safe Defaults Are Opt-In · Resolved · 2026-11-01 · docs/records/debt-529-client-request-protocols-rely-on-an-unchecked-contract.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
 - DEBT-531 · Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently · Resolved · 2026-10-23 · docs/records/debt-531-content-changes-have-no-single-planner.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
+- DEBT-535 · The `glob` Alert and the `minimatch` Advisory Wait on Sentry's and Stryker's Releases · Resolved · 2026-11-12 · docs/records/debt-535-alerts-108-and-109-wait-on-their-consumers.md · #1676 · e09bcb730d7542f06d1b9dac69a5412760cf7b71
 - DEBT-536 · Stryker 10.1.1 Replaces the Vitest 5 Runner Patch · Resolved · 2026-11-09 · docs/records/debt-536-stryker-10-replaces-the-vitest-5-runner-patch.md · #1662 · c2ef5f0b8404deccfa3f7a6dad371b0f58a668ec
 
 ## Frontend (FE prefix, retired)
