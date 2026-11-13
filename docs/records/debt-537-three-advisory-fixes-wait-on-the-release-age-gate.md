@@ -35,7 +35,7 @@ Three advisories cover versions installed on `dev`. None is reachable as this ap
   - The fifth, `proxy-clerk-signed-in-refresh.test.ts`, signs tokens for the app's own limiter and replaces `clerkMiddleware` with a stub.
 - **The app's limiter mirrors Clerk.** `lib/clerk-backend-call-limit.ts` predicts which expired session token Clerk will refresh, from `@clerk/backend` 3.26.2's rules. It checks the signature and `alg` but not `cat`. Under 3.28.0, Clerk signs out an untagged token rather than refreshing it.
   - The limiter would then count a refresh Clerk never makes, an over-count.
-  - A real session token carries the session category, or 3.28.0 would sign every visitor out, so a real request is unaffected.
+  - Clerk's 3.28.0 release notes say only tokens without `cat` change: they are signed out, including OIDC ID tokens. Tests that sign their own session tokens must add `cat: 'cl_B7d4PD111AAA'`. So real session tokens are expected to carry it, but nothing here has checked one. If one did not, 3.28.0 would sign every visitor out. Verification below checks this before the bundle reaches `main`.
 - **`postcss` and `nanoid` (no advisory).**
   - `pnpm-workspace.yaml` overrides `postcss` to 8.5.23, for GHSA-r28c-9q8g-f849 and GHSA-fxqj-rqcc-2cmp, both fixed by 8.5.23.
     - Its comment says that version satisfies Vite's `^8.5.23` and that Next.js 16.3.8 pins it exactly.
@@ -68,15 +68,16 @@ Nothing reaches users or production. The three issues stay open, or closed with 
   - the limiter's mirrored refresh rules in `lib/clerk-backend-call-limit.ts` rechecked against 3.28.0. Its comments name 3.26.2, so if it should also skip untagged or non-session tokens, add that with a red test;
   - the `postcss` override removed, or restated with comments that match the installed consumers, decided on the bundle's lockfile. Raise the `nanoid@3` override to 3.3.20 or later, and correct its comment.
 - **If a fix reaches a later version first,** take the newest version past the gate.
-- **Take a fix at once through an exception if it becomes reachable:**
+- **Take the `vite` or `brace-expansion` fix at once, through an exception, if it becomes reachable.** The policy allows one for these critical and high advisories once they match this app:
   - a Vite server started with `--host` or `server.host`;
-  - a request path that expands user-supplied glob or brace patterns;
-  - code that calls `verifyToken()` or sets `acceptsToken`, or an OAuth application, DCR or CIMD enabled in Clerk.
+  - a request path that expands user-supplied glob or brace patterns.
+- **The Clerk advisory is medium, so the policy gives it no exception.** Before the bundle, if code calls `verifyToken()` or sets `acceptsToken`, or the owner enables an OAuth application, DCR or CIMD in Clerk, apply the advisory's workaround at once: set `authorizedParties` in `clerkMiddleware()`, which 3.11.1 and later use to refuse a token with no `azp`, as ID tokens are. Otherwise the owner decides on a policy change.
 
 ## Verification
 
 - [ ] The bundle merges into `dev`. The lockfile holds `vite` 8.3.7 or later, `brace-expansion` 5.0.13 and `@clerk/backend` 3.28.0 or later. No override holds a package below a consumer's declared range.
 - [ ] The four real-SDK Clerk tests fail on 3.28.0 before their tokens carry `cat`, and pass after. The limiter's recheck is recorded in the bundle's description.
+- [ ] Real session tokens carry the session category. The bundle's required E2E signs in through Clerk's development instance on 3.28.0, and passes only if they do. After promotion, production's Vercel runtime logs still show signed-in `/app` requests answering 200, with no new run of redirects to sign-in. No token is copied or shared for either check.
 - [ ] A promotion carries the bundle to `main`, and #1667 and #1669 close with it.
 
 ## Related
