@@ -135,6 +135,13 @@ These changes must ship in a coordinated runtime-alignment PR. The precedent is 
 
 For example, `@types/node` 25 is not acceptable while the repo targets Node 24. Node type packages describe the runtime API surface; they are not a harmless dev-only freshness bump.
 
+**Node.js patch releases.** The major is pinned: `engines` `24.x`, `.nvmrc` `24` and CI `node-version: 24`. The patch is not.
+- **Production:** Vercel manages the patch release of its Node.js 24 runtime ([Vercel's Node.js security bulletin](https://vercel.com/kb/bulletin/node-js-security-advisory)).
+- **CI:** every `actions/setup-node` step sets `check-latest: true`, so a job installs the newest Node.js 24 release.
+  - Without it, setup-node uses whatever Node.js 24 the runner image has cached. On 2026-11-12 that was 24.22.2, two days after the 24.22.3 security release.
+  - `tests/workflow-node-scripts.test.ts` fails on a step without the setting.
+- **Local development:** run `nvm install 24` after each Node.js security release. `nvm alias default 24` then resolves to it. Carry over the global tools, such as the Vercel CLI, at their installed versions.
+
 ## Dev-Tooling Majors
 
 Major updates in dev tooling get their own PR:
