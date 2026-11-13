@@ -867,6 +867,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-527 · Vendor Calls on Request Paths Have No Time Budget, So a Hung Call Outlives Its Request · Resolved · 2026-10-23 · docs/records/debt-527-vendor-calls-outlive-their-request.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 - DEBT-529 · The Per-Screen Request Protocols Rely on a Contract Nothing Checks, and Their Safe Defaults Are Opt-In · Resolved · 2026-11-01 · docs/records/debt-529-client-request-protocols-rely-on-an-unchecked-contract.md · #1614 · 2ac20f8c580769b487654143d7f805e6a85d66c5
 - DEBT-531 · Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently · Resolved · 2026-10-23 · docs/records/debt-531-content-changes-have-no-single-planner.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
+- DEBT-535 · The `glob` Alert and the `minimatch` Advisory Wait on Sentry's and Stryker's Releases · Resolved · 2026-11-12 · docs/records/debt-535-alerts-108-and-109-wait-on-their-consumers.md · #1676 · e09bcb730d7542f06d1b9dac69a5412760cf7b71
 - DEBT-536 · Stryker 10.1.1 Replaces the Vitest 5 Runner Patch · Resolved · 2026-11-09 · docs/records/debt-536-stryker-10-replaces-the-vitest-5-runner-patch.md · #1662 · c2ef5f0b8404deccfa3f7a6dad371b0f58a668ec
 
 ## Frontend (FE prefix, retired)
