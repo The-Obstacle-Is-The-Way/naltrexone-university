@@ -53,7 +53,7 @@ Nothing reaches users or production. The three issues stay open, or closed with 
 
 1. **Same-day `minimumReleaseAgeExclude` exceptions.** The policy reserves them for critical or high advisories whose affected configuration matches this app, or whose exposure the advisory text cannot rule out.
    - The `vite` text rules out a server not exposed to the network.
-   - The `brace-expansion` text names no limiting configuration. Its call rests on the dependency graph: only Stryker and Sentry's build-time bundler plugin reach it, with repository-set patterns.
+   - The `brace-expansion` text names its affected configuration under Impact: "An application passing an untrusted pattern to `expand()`, directly or through `minimatch` / `glob`". This app passes none. Only Stryker and Sentry's build-time bundler plugin reach it, with patterns the repository sets.
    - The `@clerk/backend` advisory is medium.
 2. **One bundle per gate date: 11-16, 11-18 and 11-20.** That is three reviews, three E2E runs and three promotions for three unreachable advisories.
 3. **One bundle after the last fix clears the gate (chosen).** `vite` waits four days past its gate, and `brace-expansion` two. Neither is reachable.
