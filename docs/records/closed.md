@@ -350,6 +350,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-372 · An Unverified Session ID the Key Column Could Not Hold Skipped the Clerk Limiter's Site-Wide Cap · Resolved · 2026-11-02 · docs/records/bug-372-unverified-session-id-skipped-the-site-cap.md · #1621 · 21d8dec87bac0f74dfcd56369d77355fe88d29b9
 - BUG-374 · A Returning Visitor's Page Load Counts as Several Clerk Refreshes · Resolved · 2026-11-03 · docs/records/bug-374-a-returning-visitor-counts-as-several-clerk-refreshes.md · #1632 · 352196d830ace979c43f8b8120bfc8d506ead98e
 - BUG-375 · A Session Token That Expired Between the Limiter's Check and Clerk's Got an Uncounted Refresh · Resolved · 2026-11-09 · docs/records/bug-375-a-token-expiring-between-checks-got-an-uncounted-refresh.md · #1665 · 466e66f547ea1de924232edec1bd6178218391a2
+- BUG-376 · The E2E Browser Reports Some Completed Responses as Aborted · Resolved · 2026-11-13 · docs/records/bug-376-e2e-browser-reports-completed-responses-as-aborted.md · #1680 · 48c1ffb38d795c77888c975cf62ead82f666d7ae
 
 ## Debt
 
