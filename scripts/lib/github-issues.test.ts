@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { listRepositoryIssueEntries } from './github-issues.mts';
+import {
+  listRepositoryIssueEntries,
+  repositoryOwner,
+} from './github-issues.mts';
 
 describe('paginated repository issue transport', () => {
   it('reads all pages on each call and preserves entries for caller-specific validation', () => {
@@ -25,6 +28,21 @@ describe('paginated repository issue transport', () => {
     'refuses malformed pages: %s',
     (response) => {
       expect(() => listRepositoryIssueEntries(() => response)).toThrow();
+    },
+  );
+});
+
+describe('the repository owner, whom alert issues are assigned to', () => {
+  it('is the owner GitHub Actions names', () => {
+    expect(repositoryOwner({ GITHUB_REPOSITORY_OWNER: 'repo-owner' })).toBe(
+      'repo-owner',
+    );
+  });
+
+  it.each([{}, { GITHUB_REPOSITORY_OWNER: '' }])(
+    'is no one outside Actions: %j',
+    (env) => {
+      expect(repositoryOwner(env)).toBeNull();
     },
   );
 });

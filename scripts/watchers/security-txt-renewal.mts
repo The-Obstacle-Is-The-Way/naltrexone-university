@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { isMain } from '../lib/entry-point.mts';
 import { createGhRunner, withGhFailureReason } from '../lib/github-cli.mts';
-import { listRepositoryIssueEntries } from '../lib/github-issues.mts';
+import {
+  listRepositoryIssueEntries,
+  repositoryOwner,
+} from '../lib/github-issues.mts';
 
 const ISSUE_TITLE = 'Renew security.txt contact metadata';
 const RENEWAL_WINDOW_MS = 90 * 24 * 60 * 60 * 1_000;
@@ -108,7 +111,13 @@ const gh = createGhRunner({ timeout: 30000, maxBuffer: 32 * 1024 * 1024 });
 // again, so leave the check to the monthly workflow.
 const REMINDER_AUTHOR = 'github-actions[bot]';
 
-export function createGithubRenewalIssues(run: typeof gh = gh): RenewalIssues {
+// The assignee is required for the reason `createGithubAlertIssues` gives:
+// GitHub emails no one else about an issue Actions opens (BUG-377).
+export function createGithubRenewalIssues(
+  assignee: string | null,
+  run: typeof gh = gh,
+): RenewalIssues {
+  const assign = assignee ? ['--assignee', assignee] : [];
   return {
     async list() {
       const entries = listRepositoryIssueEntries(run);
@@ -163,7 +172,7 @@ export function createGithubRenewalIssues(run: typeof gh = gh): RenewalIssues {
       return issues;
     },
     async create(title, body) {
-      run(['issue', 'create', '--title', title, '--body', body]);
+      run(['issue', 'create', '--title', title, '--body', body, ...assign]);
     },
     async update(number, body) {
       run([
@@ -175,6 +184,7 @@ export function createGithubRenewalIssues(run: typeof gh = gh): RenewalIssues {
         'state=open',
         '-f',
         `body=${body}`,
+        ...(assignee ? ['-f', `assignees[]=${assignee}`] : []),
       ]);
     },
   };
@@ -229,11 +239,14 @@ export async function runSecurityTxtRenewal(
     checkSecurityTxtRenewal(
       readFileSync('public/.well-known/security.txt', 'utf8'),
       new Date(),
-      createGithubRenewalIssues(),
+      createGithubRenewalIssues(repositoryOwner()),
     ),
   output: Output = console,
   checkReporting: () => Promise<string> = async () =>
-    checkPrivateReporting(readPrivateReporting(), createGithubRenewalIssues()),
+    checkPrivateReporting(
+      readPrivateReporting(),
+      createGithubRenewalIssues(repositoryOwner()),
+    ),
 ): Promise<number> {
   const renewal = await report(
     output,

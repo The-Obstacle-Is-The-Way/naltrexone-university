@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { isMain } from '../lib/entry-point.mts';
 import { withGhFailureReason } from '../lib/github-cli.mts';
+import { repositoryOwner } from '../lib/github-issues.mts';
 import {
   type AlertIssueSync,
   type AlertIssues,
@@ -122,7 +123,10 @@ export function runFromCommandLine(
         return `${overdue.length} overdue, ${farFuture.length} far off (dry run; no issue touched)`;
       }
     : () =>
-        reportDueChecks(repositoryDueChecks(root), createGithubAlertIssues());
+        reportDueChecks(
+          repositoryDueChecks(root),
+          createGithubAlertIssues(repositoryOwner()),
+        );
   return runDocumentationDueChecks(check, output);
 }
 
