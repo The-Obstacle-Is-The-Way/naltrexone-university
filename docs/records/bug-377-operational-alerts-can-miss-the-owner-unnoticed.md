@@ -1,6 +1,6 @@
 # BUG-377: Operational Alerts Can Miss the Owner, and Nothing Notices
 
-**Status:** Verifying — the watcher's first run after promotion reads the fire history, the owner widens the Gmail filter, and the next drill reaches the owner from both senders; due 2026-12-04
+**Status:** Verifying — the watcher's first run after promotion reads the fire history, the owner widens the Gmail filter, and the next drill arrives by both routes; due 2026-12-04
 **Priority:** P2
 **Date:** 2026-11-14
 
@@ -52,7 +52,7 @@ Options 1 and 3.
   - The repository is public, so a copy's title names no alert kind. A kind such as `clerk_backend_call_limiter_failed` would tell anyone that a defense has failed. The title is the Sentry issue's ID and "Operational alert". The drill keeps its own title, so its monthly copy reads as a drill. The body links the Sentry issue, which names the alert behind a login.
   - A failed read of the fire history, a copy that could not be written, or a full page of 100 entries, which may have left older alerts out, becomes a finding in the watcher's own issue. The watcher's other findings still reach the owner.
 
-Option 2 is held for evidence: if the next drill's Sentry email goes missing while its copy arrives, retarget the workflow, with the owner's approval. Option 4 is not taken.
+Option 2 is held for evidence: if the alerts' workflow's email for the next drill goes missing while its copy arrives, retarget the workflow, with the owner's approval. Option 4 is not taken.
 
 ## Verification
 
@@ -60,7 +60,7 @@ Option 2 is held for evidence: if the next drill's Sentry email goes missing whi
 - [x] Red first: a fired alert opens one copy, titled without its kind except for a drill. A later run writes nothing, whether the copy is open, closed or duplicated. A longer ID does not take another alert's copy. A failed read, a failed copy or a full page is reported beside the other findings (2026-11-14).
 - [ ] After promotion, the watcher's first run reads the fire history without a finding in #1610. That proves the token can read it.
 - [ ] Owner: the Gmail filter uses the query in `docs/architecture/observability.md`, "Being noticed", so the copies stand out like Sentry's emails; due 2026-12-04.
-- [ ] After promotion, the next drill, in the cycle from 2026-12-03, reaches the owner from both senders, `noreply@md.getsentry.com` and `notifications@github.com`; due 2026-12-04.
+- [ ] After promotion, the next drill, in the cycle from 2026-12-03, reaches the owner by both routes: the alerts' workflow's email, whose link carries `alert_rule_id=6133179`, and its copy from `notifications@github.com`. A Sentry email from the default workflow alone does not pass; due 2026-12-04.
 
 ## Related
 

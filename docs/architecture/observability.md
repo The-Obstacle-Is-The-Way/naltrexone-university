@@ -186,7 +186,8 @@ which would copy the scope's user past `scrubEvent`.
   `operational_alert_drills`, so the inbox keeps proving the path. Its email
   reads "Operational alert drill: no action needed". The default high-priority
   workflow may also match it, so expect one or two emails; one must come from
-  the alerts' workflow. The job's response reports
+  the alerts' workflow, whose issue link carries `alert_rule_id=6133179`. The
+  job's response reports
   `alertDrill`: `raised` means Sentry accepted it, and only the inbox proves
   delivery; `not_sent` means it failed or met a cooldown and gave its cycle
   back, so the next daily run retries. A manual run (`vercel crons run
@@ -236,10 +237,12 @@ which would copy the scope's user past `scrubEvent`.
   issue, which names the alert. Each Sentry issue is copied once, and stays
   open until closed. A copy that cannot be written, or a full page of fire
   history, is a finding in the watcher's issue. Each month's drill therefore
-  arrives by both routes. Check the senders, not the count, since the default
-  workflow can add a second Sentry email: at least one email must come from
-  `noreply@md.getsentry.com`, and at least one from `notifications@github.com`.
-  A drill missing either sender means that route has failed.
+  arrives by both routes: the alerts' workflow's email, told from the default
+  workflow's by the `alert_rule_id` in its link (Drill, above), and the copy
+  from `notifications@github.com`. A Sentry email from the default workflow
+  alone does not count, since the copy comes from the alerts' workflow's fire
+  history whether or not its email arrived. A drill missing either means that
+  route has failed.
 - **Watching the watcher.** GitHub disables a public repository's scheduled
   workflows after 60 days without activity, without notice, and a watcher that
   stops looks like one with nothing to report. So the renewal job checks the
