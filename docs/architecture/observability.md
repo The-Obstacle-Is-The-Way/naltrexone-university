@@ -221,7 +221,10 @@ which would copy the scope's user past `scrubEvent`.
   issue says the watcher is not configured. It assigns the issue to the
   repository owner, as every job whose issue is for the owner does: GitHub
   emails about an issue GitHub Actions opens only the repository's watchers
-  and the issue's assignees (BUG-377).
+  and the issue's assignees (BUG-377). An assignment emails the owner only
+  while their notification settings (github.com/settings/notifications) send
+  participating notifications by email. The release watch's assigned issues
+  showed that they did on 2026-11-14, and each drill's copy checks it again.
 - **Copies.** Sentry's email can go missing: on 2026-11-03 the workflow fired
   for the drill and no email arrived (BUG-377). So the watcher also copies
   each issue the workflow fired for in the last seven days into a GitHub issue

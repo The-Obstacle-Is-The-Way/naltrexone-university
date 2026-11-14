@@ -1,6 +1,6 @@
 # DEBT-505: Failures That Are Only Logged Alert Nobody
 
-**Status:** Verifying — the drill's delivery moved to BUG-377; the other unchecked items below still need their checks; due 2026-11-05
+**Status:** Verifying — the red-first alert tests, the renewal job reporting `scheduledChecks: running`, and no alert left only as a log line; the drill's delivery moved to BUG-377; due 2026-11-05
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
