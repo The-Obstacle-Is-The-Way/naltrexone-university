@@ -1,6 +1,6 @@
 # DEBT-505: Failures That Are Only Logged Alert Nobody
 
-**Status:** Verifying — released 2026-10-09; the first drill and the cron monitor are proven. Still open: the unchecked items below, among them the 2026-11-03 cycle's drill; due 2026-11-05
+**Status:** Verifying — the drill's delivery moved to BUG-377; the unchecked items below are rechecked with its next drill; due 2026-12-04
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -107,6 +107,8 @@ Option 2.
 - [x] Owner: `GITHUB_READ_TOKEN`, a fine-grained token with read-only Actions access to this repository only, is set for Vercel Production as a sensitive variable (2026-10-08). Before it was stored, it read the workflows as an authenticated caller and was refused a write. It expires about a year after its creation (the exact date is in the owner's GitHub token settings); an expired token raises `scheduled_checks_unreadable`, whose runbook row says how to replace it.
 - [x] Owner: the watcher's read-only Sentry token exists as the repository secret `SENTRY_WATCHER_TOKEN` (2026-10-08): an internal integration, "Operational alert watcher", with Read on Project, Organization and Alerts only. Before it was stored, it made the watcher's three reads (the workflow, the monitors, error usage).
 - [ ] Engineering: the next cycle's drill, from 2026-11-03 while the first drill's issue is still open, opens a new issue and emails again.
+
+  *2026-11-14:* it opened ADDICTION-BOARDS-SERVER-4 at 09:54:11Z, and the workflow fired, but no email arrived. BUG-377 adds a second route, and its check of the next drill replaces this one.
 - [x] Owner: alert emails stand out from routine mail. One Gmail filter stars them, marks them important, labels them and never sends them to spam. The filter keys on the server project's issue ID, which starts every subject, plus the watcher's GitHub issue email: `(from:noreply@md.getsentry.com subject:"ADDICTION-BOARDS-SERVER") OR (from:notifications@github.com subject:"Operational alerts may not be reaching the owner")`. *Corrected 2026-10-09: the first query matched "Operational alert" in the subject, so it missed the cron monitor's missed or failed check-in email, which carries the monitor's issue title. Every server-project alert email starts with `ADDICTION-BOARDS-SERVER-`, and against the inbox the new query matched the drill email and none of the browser project's 22 issue emails.* *Added 2026-10-08: the inbox held Sentry's previous alert email unread among about 200 unread GitHub notifications, so a working alert could still go unseen.*
 
   *Done 2026-10-09:* the owner created the filter, and it applied to the drill email: starred, important and labelled.

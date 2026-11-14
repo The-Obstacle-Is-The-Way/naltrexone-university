@@ -15,6 +15,7 @@ import {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   vi.resetAllMocks();
 });
 
@@ -360,7 +361,7 @@ describe('renewal workflow', () => {
     });
     const adapter = (entries: object[]) => {
       const commands: string[][] = [];
-      const issues = createGithubRenewalIssues((args) => {
+      const issues = createGithubRenewalIssues(null, (args) => {
         commands.push(args);
         return args[1] === '--paginate' ? JSON.stringify([entries]) : '';
       });
@@ -414,7 +415,7 @@ describe('renewal workflow', () => {
     { pull_request: true },
   ])('refuses malformed issue fields %j before writing', async (overrides) => {
     const commands: string[][] = [];
-    const issues = createGithubRenewalIssues((args) => {
+    const issues = createGithubRenewalIssues(null, (args) => {
       commands.push(args);
       return JSON.stringify([
         [
@@ -438,7 +439,9 @@ describe('renewal workflow', () => {
   it.each([{}, [null], [{}], [[null]]].map((data) => ({ data })))(
     'refuses malformed page data $data',
     async ({ data }) => {
-      const issues = createGithubRenewalIssues(() => JSON.stringify(data));
+      const issues = createGithubRenewalIssues(null, () =>
+        JSON.stringify(data),
+      );
       await expect(issues.list()).rejects.toThrow(
         'Invalid GitHub issue response',
       );
@@ -446,7 +449,7 @@ describe('renewal workflow', () => {
   );
 
   it('accepts a null issue body without inventing content', async () => {
-    const issues = createGithubRenewalIssues(() =>
+    const issues = createGithubRenewalIssues(null, () =>
       JSON.stringify([
         [
           {
@@ -466,7 +469,10 @@ describe('renewal workflow', () => {
 
   it('executes the default GitHub adapter with the intended arguments', async () => {
     await withRecordedCli('gh', '', async (calls) => {
-      await createGithubRenewalIssues().create('Reminder', 'Renewal guidance');
+      await createGithubRenewalIssues(null).create(
+        'Reminder',
+        'Renewal guidance',
+      );
       expect(calls()).toEqual([
         [
           'issue',
@@ -480,9 +486,60 @@ describe('renewal workflow', () => {
     });
   });
 
+  // BUG-377: GitHub emails nobody else about an issue Actions opens.
+  it('assigns created and reopened reminders to the given assignee, whom GitHub notifies whatever their watch setting', async () => {
+    const commands: string[][] = [];
+    const issues = createGithubRenewalIssues('repo-owner', (args) => {
+      commands.push(args);
+      return '';
+    });
+
+    await issues.create('Reminder', 'Renewal guidance');
+    await issues.update(42, 'Renewal guidance');
+
+    expect(commands).toEqual([
+      [
+        'issue',
+        'create',
+        '--title',
+        'Reminder',
+        '--body',
+        'Renewal guidance',
+        '--assignee',
+        'repo-owner',
+      ],
+      [
+        'api',
+        '--method',
+        'PATCH',
+        'repos/{owner}/{repo}/issues/42',
+        '-f',
+        'state=open',
+        '-f',
+        'body=Renewal guidance',
+        '-f',
+        'assignees[]=repo-owner',
+      ],
+    ]);
+  });
+
+  it('assigns the scheduled run’s reminder to the repository owner that Actions names', async () => {
+    vi.useFakeTimers();
+    // Inside the renewal window of the committed file's Expires.
+    vi.setSystemTime(new Date('2027-04-01T00:00:00Z'));
+    vi.stubEnv('GITHUB_REPOSITORY_OWNER', 'repo-owner');
+    const output = { log: () => {}, error: () => {} };
+
+    await withRecordedCli('gh', '[[]]', async (calls) => {
+      await runSecurityTxtRenewal(undefined, output);
+      const created = calls().find((args) => args[1] === 'create');
+      expect(created?.slice(-2)).toEqual(['--assignee', 'repo-owner']);
+    });
+  });
+
   it('looks up existing issues directly with pagination instead of the eventually consistent search index', async () => {
     const commands: string[][] = [];
-    const issues = createGithubRenewalIssues((args) => {
+    const issues = createGithubRenewalIssues(null, (args) => {
       commands.push(args);
       return JSON.stringify([
         [
@@ -511,7 +568,7 @@ describe('renewal workflow', () => {
 
   it('updates body and open state atomically without reopening an already-open issue', async () => {
     const commands: string[][] = [];
-    const issues = createGithubRenewalIssues((args) => {
+    const issues = createGithubRenewalIssues(null, (args) => {
       commands.push(args);
       return '';
     });

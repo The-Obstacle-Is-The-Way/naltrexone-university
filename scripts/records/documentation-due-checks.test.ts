@@ -8,7 +8,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import { withRecordedCli } from '../../tests/shared/recorded-cli';
 import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
@@ -198,6 +198,7 @@ describe('overdue production checks alert', () => {
 describe('due checks in a repository', () => {
   const roots: string[] = [];
   afterEach(() => {
+    vi.unstubAllEnvs();
     for (const root of roots.splice(0)) rmSync(root, { recursive: true });
   });
 
@@ -320,6 +321,19 @@ describe('due checks in a repository', () => {
         ['issue', 'list'],
         ['issue', 'create'],
       ]);
+    });
+  });
+
+  // BUG-377: GitHub emails nobody else about an issue Actions opens.
+  it('assigns the issue to the repository owner that Actions names', async () => {
+    const root = repository('Verifying — check; due 2000-01-03');
+    vi.stubEnv('GITHUB_REPOSITORY_OWNER', 'repo-owner');
+    await withRecordedCli('gh', '[]', async (calls) => {
+      await runFromCommandLine(['node', 'script'], root, {
+        log: () => {},
+        error: () => {},
+      });
+      expect(calls()[1]?.slice(-2)).toEqual(['--assignee', 'repo-owner']);
     });
   });
 

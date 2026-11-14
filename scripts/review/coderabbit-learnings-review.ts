@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { isMain } from '../lib/entry-point.mts';
 import { createGhRunner, withGhFailureReason } from '../lib/github-cli.mts';
+import { repositoryOwner } from '../lib/github-issues.mts';
 import {
   type AlertIssueSync,
   type AlertIssues,
@@ -240,7 +241,7 @@ export async function runFromCommandLine(
   owner: string | null,
 ): Promise<number> {
   try {
-    const issues = createGithubAlertIssues(run, owner);
+    const issues = createGithubAlertIssues(owner, run);
     const start = await coverageStart(issues, now);
     const replies = readLearningReplies(start, run);
     const flagged = replies.filter((reply) =>
@@ -275,7 +276,7 @@ if (isMain(import.meta.url)) {
     console,
     new Date(),
     gh,
-    process.env.GITHUB_REPOSITORY_OWNER ?? null,
+    repositoryOwner(),
   ).then((code) => {
     process.exitCode = code;
   });
