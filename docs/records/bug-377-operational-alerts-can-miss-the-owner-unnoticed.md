@@ -1,6 +1,6 @@
 # BUG-377: Operational Alerts Can Miss the Owner, and Nothing Notices
 
-**Status:** Verifying — the watcher's first run after promotion reads the fire history, the owner widens the Gmail filter, and the next drill arrives by both routes; due 2026-12-04
+**Status:** Verifying — the watcher's first run after promotion reads the fire history, and the next drill arrives by both routes; due 2026-12-04
 **Priority:** P2
 **Date:** 2026-11-14
 
@@ -15,7 +15,7 @@ The watcher reports through a GitHub issue, and so do the weekly due checks. Git
 ## Evidence
 
 - **The drill fired and its email never arrived.**
-  - On 2026-11-03 at 09:54:11Z, the renewal job's drill opened ADDICTION-BOARDS-SERVER-4 in production.
+  - On 2026-11-03 at 09:54:11Z, the renewal job's drill opened ADDICTION-BOARDS-SERVER-4 in production. SERVER-1, the first drill's issue, was still unresolved, so the new cycle opened its own issue, as designed.
   - The workflow's fire history records it at 09:54:47Z.
   - No email for it is in the owner's inbox, Trash or Spam. The owner checked Spam on 2026-11-14.
   - Emails did arrive for SERVER-1 (the first drill, 2026-10-09), SERVER-2 (2026-10-13) and SERVER-3 (an alert, 2026-11-02, from the same workflow).
@@ -59,8 +59,10 @@ Option 2 is held for evidence: if the alerts' workflow's email for the next dril
 - [x] Red first: each of the three jobs, through its default wiring, assigns its issue to the owner (2026-11-14).
 - [x] Red first: a fired alert opens one copy, titled without its kind except for a drill. A later run writes nothing, whether the copy is open, closed or duplicated. A longer ID does not take another alert's copy. A failed read, a failed copy or a full page is reported beside the other findings (2026-11-14).
 - [ ] After promotion, the watcher's first run reads the fire history without a finding in #1610. That proves the token can read it.
-- [ ] Owner: the Gmail filter uses the query in `docs/architecture/observability.md`, "Being noticed", so the copies stand out like Sentry's emails; due 2026-12-04.
-- [ ] After promotion, the next drill, in the cycle from 2026-12-03, reaches the owner by both routes: the alerts' workflow's email, whose link carries `alert_rule_id=6133179`, and its copy from `notifications@github.com`. A Sentry email from the default workflow alone does not pass; due 2026-12-04.
+- [x] Owner: the Gmail filter uses the query in `docs/architecture/observability.md`, "Being noticed", so the copies stand out like Sentry's emails.
+
+  *Done 2026-11-14:* with the owner's approval, the existing filter was edited in Gmail. Its query is the runbook's, and it keeps its star, label, important and never-spam actions. It now also files alerts under Primary, because the Sentry alert emails had been landing in the Updates tab among unread GitHub mail. It was read back from Gmail's filter list after saving. It is still the only alert filter, and old mail was left as it was.
+- [ ] After promotion, the next drill, in the cycle from 2026-12-03 while the earlier drills' issues, SERVER-1 and SERVER-4, are still open (leave them unresolved until then), opens a new issue and reaches the owner by both routes: the alerts' workflow's email, whose link carries `alert_rule_id=6133179`, and its copy from `notifications@github.com`. A Sentry email from the default workflow alone does not pass; due 2026-12-04.
 
 ## Related
 

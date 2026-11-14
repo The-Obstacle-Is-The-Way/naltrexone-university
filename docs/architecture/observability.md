@@ -168,8 +168,8 @@ which would copy the scope's user past `scrubEvent`.
 - **Diagnosis.** The log line beside each alert carries the IDs, but Vercel keeps
   it for an hour. Start from the database.
 - **Being noticed.** An alert protects nothing if it sits unread. Keep a Gmail
-  filter that stars these emails, marks them important, labels them and never
-  sends them to spam, and keep the Sentry mobile app's push notifications on
+  filter that stars these emails, marks them important, labels them, files
+  them under Primary rather than Updates, and never sends them to spam, and keep the Sentry mobile app's push notifications on
   for issue alerts. The filter keys on what every server-project alert email
   shares, not on an alert's wording. The email comes from
   `noreply@md.getsentry.com` with a subject starting with the issue's ID,
