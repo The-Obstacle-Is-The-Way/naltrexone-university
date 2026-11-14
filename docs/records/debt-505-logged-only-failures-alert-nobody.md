@@ -1,6 +1,6 @@
 # DEBT-505: Failures That Are Only Logged Alert Nobody
 
-**Status:** Verifying — the red-first alert tests, the renewal job reporting `scheduledChecks: running`, and no alert left only as a log line; the drill's delivery moved to BUG-377; due 2026-11-05
+**Status:** Verifying — after release, the renewal job reports `scheduledChecks: running`; the drill's delivery moved to BUG-377; due 2026-11-05
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -91,7 +91,9 @@ Option 2.
 
 ## Verification
 
-- [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
+- [x] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
+
+  *Done 2026-11-14:* the tests came with the port on 2026-10-07, and this box was never ticked. The red-first order cannot be replayed now, but each clause has a test that fails without its behavior: each caller's suite, which was shown to fail with its alert removed; `lib/operational-alert-events-sdk.test.ts` for the fixed fields; `tests/integration/operational-alerts-cooldown.integration.test.ts` for eight concurrent instances and a restart; and `src/adapters/gateways/cooldown-operational-alerts.test.ts` for an unavailable limiter. They pass in BUG-377's gate. Making an unavailable limiter suppress the alert fails two of the last file's tests.
 - [x] Engineering: the first production drill (`operational_alert_drill`), raised by the renewal job on a deployment, reaches the owner's inbox through the alerts' own workflow, as its email or the workflow's history in Sentry shows. The default high-priority workflow also matches, so its email alone does not prove the alerts' workflow.
 
   *Done 2026-10-09:* promotion #1439 went live at 14:20Z, and a manual run of the renewal cron at 14:20:55Z answered 200. The drill's email reached the owner's inbox at 14:27:50Z as the server project's first issue. Its link names alert rule 6133179, the alerts' own workflow. It was the only email: the default workflow did not send one.
@@ -115,7 +117,9 @@ Option 2.
 - [ ] Owner, optional: the Sentry mobile app pushes issue alerts, so an alert reaches the owner away from email.
 - [x] Engineering: the alerts' workflow lives on the server project, whose key no browser receives, and is read back from Sentry's API as enabled (2026-10-08).
 - [x] Engineering: after the first deployment with the new `SENTRY_DSN`, a server span arrives in the server project and none in the web project. Promotion #1424 deployed at 06:03Z on 2026-10-08. By 07:43Z the server project held spans from production and Preview, and the web project held no event or span from any environment (Sentry API counts only).
-- [ ] The alerts listed above no longer exist as log lines alone.
+- [x] The alerts listed above no longer exist as log lines alone.
+
+  *Done 2026-11-14:* the port lists 18 kinds, and each has a call site that raises it and a test that names it. The listed alerts raise through the port: the renewal job's deadline checks, dispatch's cutoff refusal and terminal failures, the refused checkout's failed sync, the Clerk limiter's failure and the proxy's cap trips.
 
 ## Related
 
