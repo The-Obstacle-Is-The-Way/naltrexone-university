@@ -1,6 +1,6 @@
 # BUG-377: Operational Alerts Can Miss the Owner, and Nothing Notices
 
-**Status:** Verifying — the owner widens the Gmail filter, and the next drill reaches the owner from both senders; due 2026-12-04
+**Status:** Verifying — the watcher's first run after promotion reads the fire history, the owner widens the Gmail filter, and the next drill reaches the owner from both senders; due 2026-12-04
 **Priority:** P2
 **Date:** 2026-11-14
 
