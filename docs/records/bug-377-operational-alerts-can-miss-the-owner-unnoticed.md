@@ -25,11 +25,11 @@ The watcher reports through a GitHub issue, and so do the weekly due checks. Git
   - The workflow emails issue owners, falling back to recently active members (`issue_owners`, `ActiveMembers`). One Sentry forum report fixed silently missing alert emails by targeting a team instead. That is not proven here.
 - **The watcher cannot see a lost email.** It reads the workflow's `lastTriggered`, which the drill moved. To the watcher, 2026-11-03 looked healthy.
 - **Unassigned issues notify nobody.**
-  - GitHub emails about an issue that GitHub Actions opens only to the repository's watchers and to its assignees. The owner does not watch this repository: `GET /repos/{owner}/{repo}/subscription` answers 404.
+  - GitHub emails about an issue that GitHub Actions opens only to the repository's watchers and to its assignees. The repository has no watchers: `GET /repos/{owner}/{repo}/subscription` answers 404 for the owner.
   - `operational-alert-watcher.ts` and `documentation-due-checks.ts` call `createGithubAlertIssues()` with no assignee. `security-txt-renewal.mts` opens its reminders unassigned too, though none has opened yet.
   - The owner's mail has no email about #1610 (the watcher's issue, opened 2026-10-27 and reopened 2026-11-13) or #1569 (the due checks).
-  - The release, fix and advisory watches assign the owner, as DEBT-515 established a week after the watcher shipped, and their emails arrive.
-- **What went unseen.** #1569 listed 14 overdue dated actions, some for three weeks. #1610 has reported Sentry's error quota past 80% since 2026-11-13.
+  - The release and fix watches and the learnings review assign the owner, as DEBT-515 established a week after the watcher shipped, and their emails arrive. The advisory watch assigns only critical and high advisories, deliberately; that is unchanged here.
+- **What went unseen.** #1569 has listed 15 overdue records and the weekly queue review, some for three weeks. #1610 has reported Sentry's error quota past 80% since 2026-11-13.
 
 ## Impact
 
@@ -39,25 +39,28 @@ No subscriber is affected before the first live sale. After it, the same gaps co
 
 1. **Assign the owner on every job's issue.** The watcher and the due checks then reach the owner. This does not cover a lost Sentry email.
 2. **Email the owner directly from the workflow,** instead of issue owners falling back to active members. That may make delivery more reliable, but it is unproven and still one route, and the change is the owner's.
-3. **Copy each fired alert into a GitHub issue assigned to the owner.** The daily watcher reads which issues the workflow fired for, from the same history it already trusts, and opens a GitHub issue for each. That is a second route, through another provider. The monthly drill then proves both routes. The copy can arrive up to a day late, since GitHub starts the schedule hours late.
+3. **Copy each fired alert into a GitHub issue assigned to the owner.** The daily watcher reads which issues the workflow fired for, from the same API it already reads with the same token scope, and opens a GitHub issue for each. That is a second route, through another provider, and the monthly drill then proves both routes. A copy can arrive a day or more after the alert, since the watcher runs daily and GitHub starts it hours late.
 4. **Push alerts through Sentry's mobile app.** Push leaves from the same Sentry pipeline as the email, so it would likely fail with it.
 
 ## Resolution (decided)
 
 Options 1 and 3.
-- **Assignment.** `createGithubAlertIssues` and the security.txt reminders' adapter take the assignee as a required argument, so a job cannot open an issue for the owner without deciding who gets it. Every scheduled job passes the repository owner that Actions names in `GITHUB_REPOSITORY_OWNER`. A local run has no owner and assigns no one.
+- **Assignment.** `createGithubAlertIssues` and the security.txt reminders' adapter take the assignee as a required argument, so no job can open an issue without deciding who hears of it. Every job whose issue is for the owner passes the repository owner that Actions names in `GITHUB_REPOSITORY_OWNER`, through `repositoryOwner()`. A local run has no owner and assigns no one.
+  - An open issue whose description does not change is not rewritten, so it is not reassigned either. #1610 and #1569 were assigned by hand on 2026-11-14.
 - **Copies.**
-  - Each issue the alerts' workflow fired for in the last seven days gets one GitHub issue, titled with Sentry's issue ID and title, as Sentry's email subject is. It is assigned to the owner and stays open until closed.
-  - Each copy's description holds the issue's last fire time. A refire therefore changes it, and the watcher reopens the copy and comments. A copy the owner closed stays closed until then.
-  - A failed read of the fire history becomes one of the watcher issue's findings.
+  - Each Sentry issue the alerts' workflow fired for in the last seven days gets one GitHub issue, assigned to the owner. Each episode of an alert is a Sentry issue of its own, so a copy is opened once and never rewritten. Whether the owner closes it or not, it is not copied again.
+  - The repository is public, so a copy's title names no alert kind. A kind such as `clerk_backend_call_limiter_failed` would tell anyone that a defense has failed. The title is the Sentry issue's ID and "Operational alert". The drill keeps its own title, so its monthly copy reads as a drill. The body links the Sentry issue, which names the alert behind a login.
+  - A failed read of the fire history, or a copy that could not be written, becomes a finding in the watcher's own issue. The watcher's other findings still reach the owner.
 
 Option 2 is held for evidence: if the next drill's Sentry email goes missing while its copy arrives, retarget the workflow, with the owner's approval. Option 4 is not taken.
 
 ## Verification
 
-- [x] Red first: each of the three jobs, run as the workflow runs it, assigns its issue to the owner (2026-11-14).
-- [x] Red first: a fired alert opens one copy; a second run changes nothing; a refire reopens it with a comment; a closed copy stays closed; a failed or full history read is reported (2026-11-14).
-- [ ] After promotion, the next drill, in the cycle from 2026-12-03, reaches the owner both as Sentry's email and as the copy's GitHub email; due 2026-12-04.
+- [x] Red first: each of the three jobs, through its default wiring, assigns its issue to the owner (2026-11-14).
+- [x] Red first: a fired alert opens one copy, titled without its kind except for a drill. A later run writes nothing, whether the copy is open, closed or duplicated. A longer ID does not take another alert's copy. A failed read or a failed copy is reported beside the other findings (2026-11-14).
+- [ ] After promotion, the watcher's first run reads the fire history without a finding in #1610. That proves the token can read it.
+- [ ] Owner: the Gmail filter uses the query in `docs/architecture/observability.md`, "Being noticed", so the copies stand out like Sentry's emails; due 2026-12-04.
+- [ ] After promotion, the next drill, in the cycle from 2026-12-03, reaches the owner both as Sentry's email and as its GitHub copy; due 2026-12-04.
 
 ## Related
 

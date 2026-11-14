@@ -524,9 +524,13 @@ describe('renewal workflow', () => {
   });
 
   it('assigns the scheduled run’s reminder to the repository owner that Actions names', async () => {
+    const expires = readFileSync(
+      'public/.well-known/security.txt',
+      'utf8',
+    ).match(/^Expires:\s*(.+)$/m)?.[1];
     vi.useFakeTimers();
-    // Inside the renewal window of the committed file's Expires.
-    vi.setSystemTime(new Date('2027-04-01T00:00:00Z'));
+    // A day before the committed file expires, inside its renewal window.
+    vi.setSystemTime(Date.parse(expires ?? '') - 24 * 60 * 60 * 1_000);
     vi.stubEnv('GITHUB_REPOSITORY_OWNER', 'repo-owner');
     const output = { log: () => {}, error: () => {} };
 

@@ -468,28 +468,34 @@ describe('the watcher issue', () => {
 // One issue the alerts' workflow fired for, as Sentry's fire history lists it.
 function fired(
   shortId = 'ADDICTION-BOARDS-SERVER-4',
-  lastTriggered = '2026-10-20T09:54:47.087438Z',
+  title = 'Operational alert drill: no action needed',
 ) {
   return {
     group: {
       id: '7826559733',
       shortId,
-      title: 'Operational alert drill: no action needed',
+      title,
       permalink: 'https://novamindnyc.sentry.io/issues/7826559733/',
       level: 'error',
     },
     count: 1,
-    lastTriggered,
+    lastTriggered: '2026-10-20T09:54:47.087438Z',
     detector: { id: WATCHED.errorDetectorId },
   };
+}
+
+// Fails each write to a copy, as a GitHub outage would.
+class CopyRefusingIssues extends MemoryIssues {
+  override async create(title: string, body: string) {
+    if (title.startsWith('ADDICTION-BOARDS-SERVER-'))
+      throw new Error('gh: HTTP 502');
+    await super.create(title, body);
+  }
 }
 
 // BUG-377: Sentry's email can go missing, so each alert also reaches the
 // owner as a GitHub issue.
 describe('copies of the alerts the workflow fired', () => {
-  const COPY_TITLE =
-    'ADDICTION-BOARDS-SERVER-4 - Operational alert drill: no action needed';
-
   async function watch(issues: MemoryIssues, history: unknown[]) {
     const { api, reads } = sentry({ history: { status: 200, body: history } });
     const outcome = await watchOperationalAlerts({
@@ -501,7 +507,7 @@ describe('copies of the alerts the workflow fired', () => {
     return { outcome, reads };
   }
 
-  it("opens one copy of each alert fired in the last week, titled as Sentry's email", async () => {
+  it('opens one copy of each alert fired in the last week, linking its Sentry issue', async () => {
     const issues = new MemoryIssues();
 
     const { outcome, reads } = await watch(issues, [fired()]);
@@ -512,40 +518,48 @@ describe('copies of the alerts the workflow fired', () => {
       query: { statsPeriod: '7d', per_page: '100' },
     });
     expect(issues.issues.map(({ title, state }) => ({ title, state }))).toEqual(
-      [{ title: COPY_TITLE, state: 'OPEN' }],
+      [
+        {
+          title:
+            'ADDICTION-BOARDS-SERVER-4 - Operational alert drill: no action needed',
+          state: 'OPEN',
+        },
+      ],
     );
     expect(issues.issues[0]?.body).toContain(
-      'https://novamindnyc.sentry.io/issues/7826559733/',
+      '[ADDICTION-BOARDS-SERVER-4](https://novamindnyc.sentry.io/issues/7826559733/)',
     );
     expect(issues.issues[0]?.body).toContain('2026-10-20T09:54:47.087438Z');
   });
 
-  it('changes nothing while the alert has not fired again, whether its copy is open or closed', async () => {
+  // The repository is public.
+  it('names no alert kind, which could tell anyone a defense has failed', async () => {
+    const issues = new MemoryIssues();
+
+    await watch(issues, [
+      fired(
+        'ADDICTION-BOARDS-SERVER-5',
+        'Operational alert: clerk_backend_call_limiter_failed',
+      ),
+    ]);
+
+    expect(issues.issues[0]?.title).toBe(
+      'ADDICTION-BOARDS-SERVER-5 - Operational alert',
+    );
+    expect(JSON.stringify(issues.issues)).not.toContain('limiter');
+  });
+
+  it('writes nothing more while a copy exists, whether open, closed or duplicated', async () => {
     const issues = new MemoryIssues();
     await watch(issues, [fired()]);
+    await issues.close(1, 'Handled');
+    await issues.create('ADDICTION-BOARDS-SERVER-4 - Operational alert', 'b');
     const writes = issues.writes;
 
     await watch(issues, [fired()]);
+
     expect(issues.writes).toBe(writes);
-
-    await issues.close(1, 'Handled');
-    await watch(issues, [fired()]);
     expect(issues.issues[0]?.state).toBe('CLOSED');
-  });
-
-  it('reopens the copy with a comment when the alert fires again', async () => {
-    const issues = new MemoryIssues();
-    await watch(issues, [fired()]);
-    await issues.close(1, 'Handled');
-
-    await watch(issues, [
-      fired('ADDICTION-BOARDS-SERVER-4', '2026-10-20T10:30:00.000000Z'),
-    ]);
-
-    expect(issues.issues).toHaveLength(1);
-    expect(issues.issues[0]?.state).toBe('OPEN');
-    expect(issues.issues[0]?.body).toContain('2026-10-20T10:30:00.000000Z');
-    expect(issues.comments.at(-1)).toContain('fired this alert again');
   });
 
   it("does not take another alert's copy for its own", async () => {
@@ -562,6 +576,26 @@ describe('copies of the alerts the workflow fired', () => {
     ]);
   });
 
+  it("reports a copy it could not write in the watcher's issue, beside the other findings", async () => {
+    const issues = new CopyRefusingIssues();
+    const { api } = sentry({
+      workflow: { status: 200, body: workflow({ enabled: false }) },
+      history: { status: 200, body: [fired()] },
+    });
+
+    expect(
+      await watchOperationalAlerts({ token: 'token', api, issues, now: NOW }),
+    ).toBe('created');
+    expect(issues.issues.map(({ title }) => title)).toEqual([
+      WATCHER_ISSUE_TITLE,
+    ]);
+    expect(issues.issues[0]?.body).toContain('workflow is disabled');
+    expect(issues.issues[0]?.body).toContain(
+      'could not copy ADDICTION-BOARDS-SERVER-4 into a GitHub issue',
+    );
+    expect(issues.issues[0]?.body).not.toContain('502');
+  });
+
   it('reports a fire history it cannot read in the watcher issue', async () => {
     const issues = new MemoryIssues();
     const { api } = sentry({ history: { status: 403, body: null } });
@@ -575,20 +609,6 @@ describe('copies of the alerts the workflow fired', () => {
     expect(issues.issues[0]?.body).toContain(
       'could not read the alerts the workflow fired from Sentry (HTTP 403)',
     );
-  });
-
-  it('copies a full page of fire history and reports that it may have left alerts out', async () => {
-    const issues = new MemoryIssues();
-    const page = Array.from({ length: 100 }, (_, index) =>
-      fired(`ADDICTION-BOARDS-SERVER-${index + 1}`),
-    );
-
-    await watch(issues, page);
-
-    expect(issues.issues).toHaveLength(101);
-    expect(
-      issues.issues.find(({ title }) => title === WATCHER_ISSUE_TITLE)?.body,
-    ).toContain('more than the watcher copies in one read');
   });
 
   it('reports a fire history in a shape it does not expect', async () => {

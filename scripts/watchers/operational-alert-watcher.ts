@@ -1,3 +1,4 @@
+import { OPERATIONAL_ALERT_DRILL_TITLE } from '../../src/adapters/shared/operational-alert-drill-title';
 import { isMain } from '../lib/entry-point.mts';
 import { withGhFailureReason } from '../lib/github-cli.mts';
 import { repositoryOwner } from '../lib/github-issues.mts';
@@ -39,7 +40,8 @@ const DROP_WINDOW_DAYS = 2;
 // The watcher runs daily, so a week of fire history leaves room for missed
 // runs; an alert copied once is not copied again.
 const COPY_WINDOW_DAYS = 7;
-// A full page may have left alerts out, which the watcher reports.
+// One page. A week with more alerts than this has already sent the owner a
+// page of copies.
 const HISTORY_PAGE_SIZE = 100;
 const REQUEST_TIMEOUT_MS = 20_000;
 const RETRY_DELAY_MS = 5_000;
@@ -338,9 +340,9 @@ export async function findAlertPathProblems(
 }
 
 type FiredAlert = {
+  id: string;
   shortId: string;
-  title: string;
-  permalink: string;
+  drill: boolean;
   lastTriggered: string;
 };
 
@@ -364,55 +366,45 @@ async function firedAlerts(api: SentryApi): Promise<FiredAlert[]> {
       if (Number.isNaN(Date.parse(lastTriggered)))
         throw new UnreadableResponse();
       return {
+        id: text(group.id),
         shortId: text(group.shortId),
-        title: text(group.title),
-        permalink: text(group.permalink),
+        drill: text(group.title) === OPERATIONAL_ALERT_DRILL_TITLE,
         lastTriggered,
       };
     });
 }
 
+// The repository is public, so a copy names no alert kind: a title such as
+// "clerk_backend_call_limiter_failed" would tell anyone that a defense has
+// failed open. Only a drill says what it is, so its monthly copy reads as one.
+function copyTitle(alert: FiredAlert): string {
+  return `${alert.shortId} - ${alert.drill ? OPERATIONAL_ALERT_DRILL_TITLE : 'Operational alert'}`;
+}
+
 function copyBody(alert: FiredAlert): string {
   return (
-    `Sentry's operational alerts workflow fired for [${alert.shortId}](${alert.permalink}) at ${alert.lastTriggered}, and should have emailed you too. ` +
+    `Sentry's operational alerts workflow fired for [${alert.shortId}](https://${WATCHED.organization}.sentry.io/issues/${alert.id}/) at ${alert.lastTriggered}, and should have emailed you too. ` +
     'This copy reaches you through GitHub, so the alert arrives even if that email does not (BUG-377).\n\n' +
-    'What the alert means and what to do: docs/architecture/observability.md, "Operational alerts". ' +
-    'Close this issue once it is handled; it reopens if the alert fires again.\n'
+    'The Sentry issue names the alert. What it means and what to do: docs/architecture/observability.md, "Operational alerts". ' +
+    'Close this issue once it is handled.\n'
   );
 }
 
-// Titled as Sentry's email is. The description holds the last fire time, so a
-// refire reopens the copy with a comment, and a copy the owner closed stays
-// closed until then.
+// One copy per Sentry issue, never rewritten: each episode of an alert opens
+// a Sentry issue of its own. GitHub's title search matches whole words, and
+// the prefix check keeps the match exact.
 async function copyAlert(issues: AlertIssues, alert: FiredAlert) {
-  const prefix = `${alert.shortId} - `;
-  // The search matches words, so a longer ID such as SERVER-40 can match too.
-  const copies = (await issues.find(alert.shortId)).filter((issue) =>
-    issue.title.startsWith(prefix),
+  const copied = (await issues.find(alert.shortId)).some((issue) =>
+    issue.title.startsWith(`${alert.shortId} - `),
   );
-  if (copies.length > 1)
-    throw new Error(
-      `Multiple copies of ${alert.shortId} require consolidation`,
-    );
-  const body = copyBody(alert);
-  const copy = copies[0];
-  if (!copy) {
-    await issues.create(`${prefix}${alert.title}`, body);
-    return;
-  }
-  if (copy.body === body) return;
-  await issues.update(copy.number, body);
-  await issues.comment(
-    copy.number,
-    'Sentry fired this alert again; see the description.',
-  );
+  if (!copied) await issues.create(copyTitle(alert), copyBody(alert));
 }
 
-// BUG-377: Sentry's email is the alerts' only route to the owner, and on
+// BUG-377: Sentry's email was the alerts' only route to the owner, and on
 // 2026-11-03 the drill's email never arrived, though the workflow fired. So
-// each alert it fired also becomes a GitHub issue assigned to the owner: a
-// second route, through another provider. Returns the findings for the
-// watcher's own issue.
+// each alert it fires also becomes a GitHub issue assigned to the owner: a
+// second route, through another provider. Returns findings for the watcher's
+// own issue, so a failed copy cannot keep the other findings from the owner.
 export async function copyFiredAlerts(
   api: SentryApi,
   issues: AlertIssues,
@@ -424,12 +416,19 @@ export async function copyFiredAlerts(
   } catch (error) {
     return [describeFailedRead('alerts the workflow fired', error)];
   }
-  for (const alert of alerts) await copyAlert(issues, alert);
-  return alerts.length < HISTORY_PAGE_SIZE
-    ? []
-    : [
-        `The alerts' workflow fired for at least ${HISTORY_PAGE_SIZE} issues in the last ${COPY_WINDOW_DAYS} days, more than the watcher copies in one read: read the server project's issues in Sentry.`,
-      ];
+  const problems: string[] = [];
+  for (const alert of alerts) {
+    try {
+      await copyAlert(issues, alert);
+    } catch {
+      // Reported below instead of thrown. The cause stays out of the issue,
+      // as in describeFailedRead, so the finding reads the same each day.
+      problems.push(
+        `The watcher could not copy ${alert.shortId} into a GitHub issue: read it in Sentry, and run the watcher again.`,
+      );
+    }
+  }
+  return problems;
 }
 
 export const NOT_CONFIGURED =
