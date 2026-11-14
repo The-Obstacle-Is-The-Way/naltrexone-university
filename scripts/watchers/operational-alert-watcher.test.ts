@@ -596,6 +596,20 @@ describe('copies of the alerts the workflow fired', () => {
     expect(issues.issues[0]?.body).not.toContain('502');
   });
 
+  it('reports a full page of fire history, which may have left older alerts out', async () => {
+    const issues = new MemoryIssues();
+    const page = Array.from({ length: 100 }, (_, index) =>
+      fired(`ADDICTION-BOARDS-SERVER-${index + 1}`),
+    );
+
+    await watch(issues, page);
+
+    expect(issues.issues).toHaveLength(101);
+    expect(
+      issues.issues.find(({ title }) => title === WATCHER_ISSUE_TITLE)?.body,
+    ).toContain('more than the watcher copies in one read');
+  });
+
   it('reports a fire history it cannot read in the watcher issue', async () => {
     const issues = new MemoryIssues();
     const { api } = sentry({ history: { status: 403, body: null } });

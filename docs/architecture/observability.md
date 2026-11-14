@@ -214,10 +214,14 @@ which would copy the scope's user past `scrubEvent`.
   - or a read fails: a server error or no answer is tried once more, and a
     refusal names its HTTP status.
 
-  It closes the issue once every check passes. It assigns the issue to the
-  repository owner, as every scheduled job does: GitHub emails about an issue
-  GitHub Actions opens only the repository's watchers and the issue's
-  assignees (BUG-377).
+  It closes the issue once every check passes. It reads Sentry with the
+  repository secret `SENTRY_WATCHER_TOKEN`: in Sentry, Settings → Custom
+  Integrations → Create New Integration → Internal Integration, with Read on
+  Project, Organization and Alerts and nothing else. Without the token the
+  issue says the watcher is not configured. It assigns the issue to the
+  repository owner, as every job whose issue is for the owner does: GitHub
+  emails about an issue GitHub Actions opens only the repository's watchers
+  and the issue's assignees (BUG-377).
 - **Copies.** Sentry's email can go missing: on 2026-11-03 the workflow fired
   for the drill and no email arrived (BUG-377). So the watcher also copies
   each issue the workflow fired for in the last seven days into a GitHub issue
@@ -227,13 +231,12 @@ which would copy the scope's user past `scrubEvent`.
   is the Sentry issue's ID and "Operational alert", never the alert's kind;
   only the drill's copy keeps the drill's title. The copy links the Sentry
   issue, which names the alert. Each Sentry issue is copied once, and stays
-  open until closed. Each month's drill therefore arrives twice, once by each
-  route: a drill that arrives only once means one route has failed. A copy
-  that cannot be written is a finding in the watcher's issue. It reads Sentry with the
-  repository secret `SENTRY_WATCHER_TOKEN`: in Sentry, Settings → Custom
-  Integrations → Create New Integration → Internal Integration, with Read on
-  Project, Organization and Alerts and nothing else. Without the token the
-  issue says the watcher is not configured.
+  open until closed. A copy that cannot be written, or a full page of fire
+  history, is a finding in the watcher's issue. Each month's drill therefore
+  arrives by both routes. Check the senders, not the count, since the default
+  workflow can add a second Sentry email: at least one email must come from
+  `noreply@md.getsentry.com`, and at least one from `notifications@github.com`.
+  A drill missing either sender means that route has failed.
 - **Watching the watcher.** GitHub disables a public repository's scheduled
   workflows after 60 days without activity, without notice, and a watcher that
   stops looks like one with nothing to report. So the renewal job checks the

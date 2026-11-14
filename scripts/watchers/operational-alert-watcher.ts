@@ -40,8 +40,9 @@ const DROP_WINDOW_DAYS = 2;
 // The watcher runs daily, so a week of fire history leaves room for missed
 // runs; an alert copied once is not copied again.
 const COPY_WINDOW_DAYS = 7;
-// One page. A week with more alerts than this has already sent the owner a
-// page of copies.
+// One page, newest first. A full page may have left older alerts out, which
+// the watcher reports rather than paging through them: such a week has
+// already sent the owner a page of copies.
 const HISTORY_PAGE_SIZE = 100;
 const REQUEST_TIMEOUT_MS = 20_000;
 const RETRY_DELAY_MS = 5_000;
@@ -428,6 +429,10 @@ export async function copyFiredAlerts(
       );
     }
   }
+  if (alerts.length >= HISTORY_PAGE_SIZE)
+    problems.push(
+      `The alerts' workflow fired for at least ${HISTORY_PAGE_SIZE} issues in the last ${COPY_WINDOW_DAYS} days, more than the watcher copies in one read: read the server project's issues in Sentry.`,
+    );
   return problems;
 }
 

@@ -50,17 +50,17 @@ Options 1 and 3.
 - **Copies.**
   - Each Sentry issue the alerts' workflow fired for in the last seven days gets one GitHub issue, assigned to the owner. Each episode of an alert is a Sentry issue of its own, so a copy is opened once and never rewritten. Whether the owner closes it or not, it is not copied again.
   - The repository is public, so a copy's title names no alert kind. A kind such as `clerk_backend_call_limiter_failed` would tell anyone that a defense has failed. The title is the Sentry issue's ID and "Operational alert". The drill keeps its own title, so its monthly copy reads as a drill. The body links the Sentry issue, which names the alert behind a login.
-  - A failed read of the fire history, or a copy that could not be written, becomes a finding in the watcher's own issue. The watcher's other findings still reach the owner.
+  - A failed read of the fire history, a copy that could not be written, or a full page of 100 entries, which may have left older alerts out, becomes a finding in the watcher's own issue. The watcher's other findings still reach the owner.
 
 Option 2 is held for evidence: if the next drill's Sentry email goes missing while its copy arrives, retarget the workflow, with the owner's approval. Option 4 is not taken.
 
 ## Verification
 
 - [x] Red first: each of the three jobs, through its default wiring, assigns its issue to the owner (2026-11-14).
-- [x] Red first: a fired alert opens one copy, titled without its kind except for a drill. A later run writes nothing, whether the copy is open, closed or duplicated. A longer ID does not take another alert's copy. A failed read or a failed copy is reported beside the other findings (2026-11-14).
+- [x] Red first: a fired alert opens one copy, titled without its kind except for a drill. A later run writes nothing, whether the copy is open, closed or duplicated. A longer ID does not take another alert's copy. A failed read, a failed copy or a full page is reported beside the other findings (2026-11-14).
 - [ ] After promotion, the watcher's first run reads the fire history without a finding in #1610. That proves the token can read it.
 - [ ] Owner: the Gmail filter uses the query in `docs/architecture/observability.md`, "Being noticed", so the copies stand out like Sentry's emails; due 2026-12-04.
-- [ ] After promotion, the next drill, in the cycle from 2026-12-03, reaches the owner both as Sentry's email and as its GitHub copy; due 2026-12-04.
+- [ ] After promotion, the next drill, in the cycle from 2026-12-03, reaches the owner from both senders, `noreply@md.getsentry.com` and `notifications@github.com`; due 2026-12-04.
 
 ## Related
 
