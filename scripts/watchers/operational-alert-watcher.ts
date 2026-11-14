@@ -1,5 +1,7 @@
+import { OPERATIONAL_ALERT_DRILL_TITLE } from '../../src/adapters/shared/operational-alert-drill-title';
 import { isMain } from '../lib/entry-point.mts';
 import { withGhFailureReason } from '../lib/github-cli.mts';
+import { repositoryOwner } from '../lib/github-issues.mts';
 import {
   type AlertIssueSync,
   type AlertIssues,
@@ -35,6 +37,12 @@ const CHECK_IN_STALE_MS = DAY_MS + HOUR_MS;
 export const DRILL_WINDOW_DAYS = 32;
 const QUOTA_WARNING_RATIO = 0.8;
 const DROP_WINDOW_DAYS = 2;
+// The watcher runs daily, so a week of fire history leaves room for missed
+// runs; an alert copied once is not copied again.
+const COPY_WINDOW_DAYS = 7;
+// One page. A week with more alerts than this has already sent the owner a
+// page of copies.
+const HISTORY_PAGE_SIZE = 100;
 const REQUEST_TIMEOUT_MS = 20_000;
 const RETRY_DELAY_MS = 5_000;
 
@@ -292,19 +300,26 @@ function describeFailedRead(what: string, error: unknown): string {
   return `The watcher could not read the ${what} from Sentry: the answer was not in the shape it expects. Sentry's API may have changed.`;
 }
 
+async function withRetry<T>(
+  check: () => Promise<T>,
+  retryDelayMs: number,
+): Promise<T> {
+  try {
+    return await check();
+  } catch (error) {
+    if (!isTransient(error)) throw error;
+  }
+  await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+  return check();
+}
+
 async function read(
   what: string,
   check: () => Promise<string[]>,
   retryDelayMs: number,
 ): Promise<string[]> {
   try {
-    return await check();
-  } catch (error) {
-    if (!isTransient(error)) return [describeFailedRead(what, error)];
-  }
-  await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-  try {
-    return await check();
+    return await withRetry(check, retryDelayMs);
   } catch (error) {
     return [describeFailedRead(what, error)];
   }
@@ -324,6 +339,98 @@ export async function findAlertPathProblems(
   return found.flat();
 }
 
+type FiredAlert = {
+  id: string;
+  shortId: string;
+  drill: boolean;
+  lastTriggered: string;
+};
+
+function text(value: unknown): string {
+  if (typeof value !== 'string' || value === '') throw new UnreadableResponse();
+  return value;
+}
+
+// Each issue the alerts' workflow fired for, with the time it last fired.
+async function firedAlerts(api: SentryApi): Promise<FiredAlert[]> {
+  const response = await api(`workflows/${WATCHED.workflowId}/group-history/`, {
+    statsPeriod: `${COPY_WINDOW_DAYS}d`,
+    per_page: String(HISTORY_PAGE_SIZE),
+  });
+  if (response.status !== 200) throw new FailedRead(response.status);
+  return list(response.body)
+    .map(record)
+    .map((entry) => {
+      const group = record(entry.group);
+      const lastTriggered = text(entry.lastTriggered);
+      if (Number.isNaN(Date.parse(lastTriggered)))
+        throw new UnreadableResponse();
+      return {
+        id: text(group.id),
+        shortId: text(group.shortId),
+        drill: text(group.title) === OPERATIONAL_ALERT_DRILL_TITLE,
+        lastTriggered,
+      };
+    });
+}
+
+// The repository is public, so a copy names no alert kind: a title such as
+// "clerk_backend_call_limiter_failed" would tell anyone that a defense has
+// failed open. Only a drill says what it is, so its monthly copy reads as one.
+function copyTitle(alert: FiredAlert): string {
+  return `${alert.shortId} - ${alert.drill ? OPERATIONAL_ALERT_DRILL_TITLE : 'Operational alert'}`;
+}
+
+function copyBody(alert: FiredAlert): string {
+  return (
+    `Sentry's operational alerts workflow fired for [${alert.shortId}](https://${WATCHED.organization}.sentry.io/issues/${alert.id}/) at ${alert.lastTriggered}, and should have emailed you too. ` +
+    'This copy reaches you through GitHub, so the alert arrives even if that email does not (BUG-377).\n\n' +
+    'The Sentry issue names the alert. What it means and what to do: docs/architecture/observability.md, "Operational alerts". ' +
+    'Close this issue once it is handled.\n'
+  );
+}
+
+// One copy per Sentry issue, never rewritten: each episode of an alert opens
+// a Sentry issue of its own. GitHub's title search matches whole words, and
+// the prefix check keeps the match exact.
+async function copyAlert(issues: AlertIssues, alert: FiredAlert) {
+  const copied = (await issues.find(alert.shortId)).some((issue) =>
+    issue.title.startsWith(`${alert.shortId} - `),
+  );
+  if (!copied) await issues.create(copyTitle(alert), copyBody(alert));
+}
+
+// BUG-377: Sentry's email was the alerts' only route to the owner, and on
+// 2026-11-03 the drill's email never arrived, though the workflow fired. So
+// each alert it fires also becomes a GitHub issue assigned to the owner: a
+// second route, through another provider. Returns findings for the watcher's
+// own issue, so a failed copy cannot keep the other findings from the owner.
+export async function copyFiredAlerts(
+  api: SentryApi,
+  issues: AlertIssues,
+  retryDelayMs = RETRY_DELAY_MS,
+): Promise<string[]> {
+  let alerts: FiredAlert[];
+  try {
+    alerts = await withRetry(() => firedAlerts(api), retryDelayMs);
+  } catch (error) {
+    return [describeFailedRead('alerts the workflow fired', error)];
+  }
+  const problems: string[] = [];
+  for (const alert of alerts) {
+    try {
+      await copyAlert(issues, alert);
+    } catch {
+      // Reported below instead of thrown. The cause stays out of the issue,
+      // as in describeFailedRead, so the finding reads the same each day.
+      problems.push(
+        `The watcher could not copy ${alert.shortId} into a GitHub issue: read it in Sentry, and run the watcher again.`,
+      );
+    }
+  }
+  return problems;
+}
+
 export const NOT_CONFIGURED =
   'The watcher has no Sentry token. The owner creates a read-only one and adds it as the repository secret `SENTRY_WATCHER_TOKEN` (docs/architecture/observability.md); until then only the monthly drill email shows the alerts work.';
 
@@ -339,7 +446,7 @@ function describeProblems(problems: string[]): string {
 export async function watchOperationalAlerts({
   token,
   api = token ? createSentryApi(token) : undefined,
-  issues = createGithubAlertIssues(),
+  issues = createGithubAlertIssues(repositoryOwner()),
   now = new Date(),
 }: {
   token: string | undefined;
@@ -348,7 +455,12 @@ export async function watchOperationalAlerts({
   now?: Date;
 }): Promise<AlertIssueSync> {
   const problems =
-    token && api ? await findAlertPathProblems(api, now) : [NOT_CONFIGURED];
+    token && api
+      ? [
+          ...(await findAlertPathProblems(api, now)),
+          ...(await copyFiredAlerts(api, issues)),
+        ]
+      : [NOT_CONFIGURED];
   return syncAlertIssue(
     issues,
     WATCHER_ISSUE_TITLE,

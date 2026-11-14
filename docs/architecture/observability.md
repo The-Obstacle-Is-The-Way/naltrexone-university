@@ -177,9 +177,10 @@ which would copy the scope's user past `scrubEvent`.
   the cron monitor's missed or failed check-in, whose title never says
   "Operational alert", and new server errors. It leaves out the browser
   project's noisier `ADDICTION-BOARDS-WEB-` issues and the weekly reports. The
-  watcher below reports through a GitHub issue, so the query names that email
-  too:
-  `(from:noreply@md.getsentry.com subject:"ADDICTION-BOARDS-SERVER") OR (from:notifications@github.com subject:"Operational alerts may not be reaching the owner")`.
+  watcher below copies each alert into a GitHub issue whose title starts with
+  the same ID, and reports through a GitHub issue of its own, so the query
+  names those emails too:
+  `((from:noreply@md.getsentry.com OR from:notifications@github.com) subject:"ADDICTION-BOARDS-SERVER") OR (from:notifications@github.com subject:"Operational alerts may not be reaching the owner")`.
 - **Drill.** The renewal job sends one `operational_alert_drill` per fixed
   30-day cycle, from the first run that claims the cycle's row in
   `operational_alert_drills`, so the inbox keeps proving the path. Its email
@@ -208,10 +209,27 @@ which would copy the scope's user past `scrubEvent`.
   - more than 80% of the organization's 5,000 monthly errors were used in the
     last 30 days;
   - Sentry dropped server-project errors in the last two days;
+  - the workflow fired for 100 or more issues in a week, more than it copies
+    in one read (below);
   - or a read fails: a server error or no answer is tried once more, and a
     refusal names its HTTP status.
 
-  It closes the issue once every check passes. It reads Sentry with the
+  It closes the issue once every check passes. It assigns the issue to the
+  repository owner, as every scheduled job does: GitHub emails about an issue
+  GitHub Actions opens only the repository's watchers and the issue's
+  assignees (BUG-377).
+- **Copies.** Sentry's email can go missing: on 2026-11-03 the workflow fired
+  for the drill and no email arrived (BUG-377). So the watcher also copies
+  each issue the workflow fired for in the last seven days into a GitHub issue
+  assigned to the owner, a second route through another provider. It reads
+  the workflow's fire history, so a copy arrives when the watcher next runs,
+  a day or more after the alert. The repository is public, so a copy's title
+  is the Sentry issue's ID and "Operational alert", never the alert's kind;
+  only the drill's copy keeps the drill's title. The copy links the Sentry
+  issue, which names the alert. Each Sentry issue is copied once, and stays
+  open until closed. Each month's drill therefore arrives twice, once by each
+  route: a drill that arrives only once means one route has failed. A copy
+  that cannot be written is a finding in the watcher's issue. It reads Sentry with the
   repository secret `SENTRY_WATCHER_TOKEN`: in Sentry, Settings → Custom
   Integrations → Create New Integration → Internal Integration, with Read on
   Project, Organization and Alerts and nothing else. Without the token the

@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import { OPERATIONAL_ALERT_DRILL_INTERVAL_MS } from '@/src/adapters/jobs/operational-alert-drill';
 import { SEND_RENEWAL_NOTICES_MONITOR } from '@/src/adapters/jobs/send-due-renewal-notices';
+import { withRecordedCli } from '../../tests/shared/recorded-cli';
 import { ghRunnerFailure } from '../lib/github-cli-test-helpers';
 import { MemoryIssues } from './github-alert-issues-test-helpers';
 import {
@@ -122,7 +123,7 @@ const drops = (rateLimited: number) => ({
 
 type Responses = Partial<
   Record<
-    'monitor' | 'workflow' | 'usage' | 'drops',
+    'monitor' | 'workflow' | 'usage' | 'drops' | 'history',
     { status: number; body: unknown }
   >
 >;
@@ -135,12 +136,15 @@ function sentry(overrides: Responses = {}) {
     workflow: { status: 200, body: workflow() },
     usage: { status: 200, body: usage(1_200) },
     drops: { status: 200, body: drops(0) },
+    history: { status: 200, body: [] as unknown },
     ...overrides,
   };
   const api: SentryApi = async (path, query = {}) => {
     reads.push({ path, query });
     if (path === `monitors/${WATCHED.monitorSlug}/`) return responses.monitor;
     if (path === `workflows/${WATCHED.workflowId}/`) return responses.workflow;
+    if (path === `workflows/${WATCHED.workflowId}/group-history/`)
+      return responses.history;
     if (path === 'stats_v2/')
       return query.project ? responses.drops : responses.usage;
     return { status: 404, body: null };
@@ -458,6 +462,182 @@ describe('the watcher issue', () => {
 
     expect(reads).toEqual([]);
     expect(issues.issues[0]?.body).toContain('SENTRY_WATCHER_TOKEN');
+  });
+});
+
+// One issue the alerts' workflow fired for, as Sentry's fire history lists it.
+function fired(
+  shortId = 'ADDICTION-BOARDS-SERVER-4',
+  title = 'Operational alert drill: no action needed',
+) {
+  return {
+    group: {
+      id: '7826559733',
+      shortId,
+      title,
+      permalink: 'https://novamindnyc.sentry.io/issues/7826559733/',
+      level: 'error',
+    },
+    count: 1,
+    lastTriggered: '2026-10-20T09:54:47.087438Z',
+    detector: { id: WATCHED.errorDetectorId },
+  };
+}
+
+// Fails each write to a copy, as a GitHub outage would.
+class CopyRefusingIssues extends MemoryIssues {
+  override async create(title: string, body: string) {
+    if (title.startsWith('ADDICTION-BOARDS-SERVER-'))
+      throw new Error('gh: HTTP 502');
+    await super.create(title, body);
+  }
+}
+
+// BUG-377: Sentry's email can go missing, so each alert also reaches the
+// owner as a GitHub issue.
+describe('copies of the alerts the workflow fired', () => {
+  async function watch(issues: MemoryIssues, history: unknown[]) {
+    const { api, reads } = sentry({ history: { status: 200, body: history } });
+    const outcome = await watchOperationalAlerts({
+      token: 'token',
+      api,
+      issues,
+      now: NOW,
+    });
+    return { outcome, reads };
+  }
+
+  it('opens one copy of each alert fired in the last week, linking its Sentry issue', async () => {
+    const issues = new MemoryIssues();
+
+    const { outcome, reads } = await watch(issues, [fired()]);
+
+    expect(outcome).toBe('none');
+    expect(reads).toContainEqual({
+      path: `workflows/${WATCHED.workflowId}/group-history/`,
+      query: { statsPeriod: '7d', per_page: '100' },
+    });
+    expect(issues.issues.map(({ title, state }) => ({ title, state }))).toEqual(
+      [
+        {
+          title:
+            'ADDICTION-BOARDS-SERVER-4 - Operational alert drill: no action needed',
+          state: 'OPEN',
+        },
+      ],
+    );
+    expect(issues.issues[0]?.body).toContain(
+      '[ADDICTION-BOARDS-SERVER-4](https://novamindnyc.sentry.io/issues/7826559733/)',
+    );
+    expect(issues.issues[0]?.body).toContain('2026-10-20T09:54:47.087438Z');
+  });
+
+  // The repository is public.
+  it('names no alert kind, which could tell anyone a defense has failed', async () => {
+    const issues = new MemoryIssues();
+
+    await watch(issues, [
+      fired(
+        'ADDICTION-BOARDS-SERVER-5',
+        'Operational alert: clerk_backend_call_limiter_failed',
+      ),
+    ]);
+
+    expect(issues.issues[0]?.title).toBe(
+      'ADDICTION-BOARDS-SERVER-5 - Operational alert',
+    );
+    expect(JSON.stringify(issues.issues)).not.toContain('limiter');
+  });
+
+  it('writes nothing more while a copy exists, whether open, closed or duplicated', async () => {
+    const issues = new MemoryIssues();
+    await watch(issues, [fired()]);
+    await issues.close(1, 'Handled');
+    await issues.create('ADDICTION-BOARDS-SERVER-4 - Operational alert', 'b');
+    const writes = issues.writes;
+
+    await watch(issues, [fired()]);
+
+    expect(issues.writes).toBe(writes);
+    expect(issues.issues[0]?.state).toBe('CLOSED');
+  });
+
+  it("does not take another alert's copy for its own", async () => {
+    const issues = new MemoryIssues();
+
+    await watch(issues, [
+      fired('ADDICTION-BOARDS-SERVER-40'),
+      fired('ADDICTION-BOARDS-SERVER-4'),
+    ]);
+
+    expect(issues.issues.map(({ title }) => title.split(' - ')[0])).toEqual([
+      'ADDICTION-BOARDS-SERVER-40',
+      'ADDICTION-BOARDS-SERVER-4',
+    ]);
+  });
+
+  it("reports a copy it could not write in the watcher's issue, beside the other findings", async () => {
+    const issues = new CopyRefusingIssues();
+    const { api } = sentry({
+      workflow: { status: 200, body: workflow({ enabled: false }) },
+      history: { status: 200, body: [fired()] },
+    });
+
+    expect(
+      await watchOperationalAlerts({ token: 'token', api, issues, now: NOW }),
+    ).toBe('created');
+    expect(issues.issues.map(({ title }) => title)).toEqual([
+      WATCHER_ISSUE_TITLE,
+    ]);
+    expect(issues.issues[0]?.body).toContain('workflow is disabled');
+    expect(issues.issues[0]?.body).toContain(
+      'could not copy ADDICTION-BOARDS-SERVER-4 into a GitHub issue',
+    );
+    expect(issues.issues[0]?.body).not.toContain('502');
+  });
+
+  it('reports a fire history it cannot read in the watcher issue', async () => {
+    const issues = new MemoryIssues();
+    const { api } = sentry({ history: { status: 403, body: null } });
+
+    expect(
+      await watchOperationalAlerts({ token: 'token', api, issues, now: NOW }),
+    ).toBe('created');
+    expect(issues.issues.map(({ title }) => title)).toEqual([
+      WATCHER_ISSUE_TITLE,
+    ]);
+    expect(issues.issues[0]?.body).toContain(
+      'could not read the alerts the workflow fired from Sentry (HTTP 403)',
+    );
+  });
+
+  it('reports a fire history in a shape it does not expect', async () => {
+    const issues = new MemoryIssues();
+    const { api } = sentry({
+      history: { status: 200, body: [{ group: { shortId: 4 } }] },
+    });
+
+    await watchOperationalAlerts({ token: 'token', api, issues, now: NOW });
+
+    expect(issues.issues[0]?.body).toContain(
+      'could not read the alerts the workflow fired from Sentry: the answer was not in the shape it expects',
+    );
+  });
+});
+
+describe('the issues the watcher opens', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // BUG-377: GitHub emails nobody else about an issue Actions opens.
+  it('are assigned to the repository owner that Actions names', async () => {
+    vi.stubEnv('GITHUB_REPOSITORY_OWNER', 'repo-owner');
+    await withRecordedCli('gh', '[]', async (calls) => {
+      await watchOperationalAlerts({ token: undefined, now: NOW });
+      const created = calls().find((args) => args[1] === 'create');
+      expect(created?.slice(-2)).toEqual(['--assignee', 'repo-owner']);
+    });
   });
 });
 
