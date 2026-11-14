@@ -1,7 +1,7 @@
 import { createGhRunner } from '../lib/github-cli.mts';
 
 // A scheduled job that finds something the owner must act on raises it as one
-// GitHub issue, which notifies them. The issue's title, among GitHub Actions'
+// GitHub issue, assigned to them so that GitHub emails them. The issue's title, among GitHub Actions'
 // issues, identifies the alert: the job opens it, keeps its description
 // current, and closes it once the condition clears.
 export type AlertIssue = {
@@ -106,11 +106,13 @@ function parseIssues(json: string): AlertIssue[] {
   });
 }
 
-// GitHub notifies an assignee whatever their watch setting, so a job whose
-// issue must reach the owner passes the repository owner here (DEBT-515).
+// GitHub notifies an assignee whatever their watch setting, and no one else
+// unless they watch the repository. The assignee is required, so no job can
+// open an issue without deciding who hears of it; a scheduled job passes
+// `repositoryOwner()` (DEBT-515, BUG-377).
 export function createGithubAlertIssues(
+  assignee: string | null,
   run: typeof gh = gh,
-  assignee: string | null = null,
 ): AlertIssues {
   const assign = assignee ? ['--assignee', assignee] : [];
   return {

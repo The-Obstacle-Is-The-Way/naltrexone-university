@@ -108,7 +108,7 @@ describe('one alert issue per title', () => {
 describe('GitHub alert issues', () => {
   it('searches for the alert by title on the server, not by listing every issue', async () => {
     const calls: string[][] = [];
-    const issues = createGithubAlertIssues((args) => {
+    const issues = createGithubAlertIssues(null, (args) => {
       calls.push(args);
       return JSON.stringify([
         { number: 7, title: TITLE, body: 'b', state: 'OPEN' },
@@ -144,6 +144,7 @@ describe('GitHub alert issues', () => {
 
     it('cannot stop the job by making the alert ambiguous', async () => {
       const issues = createGithubAlertIssues(
+        null,
         githubSearch([
           actions({ number: 7, title: TITLE, body: 'Body', state: 'OPEN' }),
           stranger({ number: 8, title: TITLE, body: 'Body', state: 'OPEN' }),
@@ -160,7 +161,7 @@ describe('GitHub alert issues', () => {
       const search = githubSearch([
         stranger({ number: 8, title: TITLE, body: 'Body', state: 'OPEN' }),
       ]);
-      const issues = createGithubAlertIssues((args) => {
+      const issues = createGithubAlertIssues(null, (args) => {
         calls.push(args);
         return args[1] === 'list' ? search(args) : '';
       });
@@ -173,6 +174,7 @@ describe('GitHub alert issues', () => {
 
     it('cannot fill the search up to its limit', async () => {
       const issues = createGithubAlertIssues(
+        null,
         githubSearch(
           Array.from({ length: 100 }, (_, index) =>
             stranger({
@@ -192,7 +194,7 @@ describe('GitHub alert issues', () => {
   // A search capped at its limit may have dropped the existing alert, and
   // the job would then open a duplicate; it fails instead.
   it('fails closed when the search may have been cut off at its limit', async () => {
-    const issues = createGithubAlertIssues(() =>
+    const issues = createGithubAlertIssues(null, () =>
       JSON.stringify(
         Array.from({ length: 100 }, (_, index) => ({
           number: index + 1,
@@ -210,7 +212,7 @@ describe('GitHub alert issues', () => {
 
   it('uses the shared transport for the default issue search', async () => {
     await withRecordedCli('gh', '[]', async (calls) => {
-      expect(await createGithubAlertIssues().find(TITLE)).toEqual([]);
+      expect(await createGithubAlertIssues(null).find(TITLE)).toEqual([]);
       expect(calls()).toEqual([
         [
           'issue',
@@ -229,7 +231,7 @@ describe('GitHub alert issues', () => {
   });
 
   it('rejects a malformed search response', async () => {
-    const issues = createGithubAlertIssues(() => '[{"number":"7"}]');
+    const issues = createGithubAlertIssues(null, () => '[{"number":"7"}]');
     await expect(issues.find(TITLE)).rejects.toThrow(
       'Invalid GitHub issue response',
     );
@@ -237,7 +239,7 @@ describe('GitHub alert issues', () => {
 
   it('creates, updates, comments on and closes issues through gh', async () => {
     const calls: string[][] = [];
-    const issues = createGithubAlertIssues((args) => {
+    const issues = createGithubAlertIssues(null, (args) => {
       calls.push(args);
       return '';
     });
@@ -266,10 +268,10 @@ describe('GitHub alert issues', () => {
 
   it('assigns created and reopened issues to the given assignee, whom GitHub notifies whatever their watch setting', async () => {
     const calls: string[][] = [];
-    const issues = createGithubAlertIssues((args) => {
+    const issues = createGithubAlertIssues('repo-owner', (args) => {
       calls.push(args);
       return '';
-    }, 'repo-owner');
+    });
 
     await issues.create('T', 'B');
     await issues.update(7, 'B2');

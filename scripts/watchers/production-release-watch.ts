@@ -1,5 +1,6 @@
 import { isMain } from '../lib/entry-point.mts';
 import { createGhRunner } from '../lib/github-cli.mts';
+import { repositoryOwner } from '../lib/github-issues.mts';
 import {
   type AlertIssueSync,
   type AlertIssues,
@@ -249,10 +250,7 @@ if (isMain(import.meta.url)) {
     watchProductionRelease({
       reads: createReleaseReads(gh),
       // GitHub notifies an assignee whatever their watch setting.
-      issues: createGithubAlertIssues(
-        undefined,
-        process.env.GITHUB_REPOSITORY_OWNER ?? null,
-      ),
+      issues: createGithubAlertIssues(repositoryOwner()),
     }),
   ).then((code) => {
     process.exitCode = code;

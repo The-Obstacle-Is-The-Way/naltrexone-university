@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import type { OperationalAlertKind } from '@/src/application/ports/operational-alerts';
+import { OPERATIONAL_ALERT_DRILL_TITLE } from './operational-alert-drill-title';
 import { OPERATIONAL_ALERT_FINGERPRINT } from './operational-alert-fingerprint';
 
 export type OperationalAlertEvent = {
@@ -30,7 +31,7 @@ export async function sendOperationalAlertEvent(
   // real alert's, so the same workflow sends it.
   const title =
     event.kind === 'operational_alert_drill'
-      ? 'Operational alert drill: no action needed'
+      ? OPERATIONAL_ALERT_DRILL_TITLE
       : `Operational alert: ${event.kind}`;
   Sentry.captureMessage(title, {
     level: 'error',
