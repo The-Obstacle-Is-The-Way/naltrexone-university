@@ -73,6 +73,11 @@ A major release can also remove a request field, and the SDK release that pins i
 | `subscription` | `session.subscription` | Checkout success | Expanded subscription |
 | `line_items` | `session.line_items` | Session reuse check | Needs `expand` |
 
+### Checkout Rules
+
+- **Stripe's public details carry the Terms and Privacy URLs.** Checkout's required Terms consent (`consent_collection: { terms_of_service: 'required' }`) depends on the live Terms URL, and test mode cannot show a missing live one. Treat any edit to Stripe's public details as release-blocking.
+- **No out-of-band subscription Checkout Sessions.** Subscription activation does not depend on consent evidence. A Session created outside the app, without our consent metadata, still activates the subscription, but records no consent (`getInitialSubscriptionConsent` in `src/adapters/gateways/stripe/stripe-webhook-processor.ts`). Create subscription Sessions only through the app.
+
 ## Idempotent Requests
 
 Stripe saves the status code and response body from the first request made with an idempotency key, and later requests with the same key return that saved result. Stripe permits pruning only after a key is at least 24 hours old; it does not promise deletion at exactly 24 hours. Replayed create responses for short-lived resources therefore are not proof of current live state. The subscription Checkout adapter keeps deterministic provider keys for concurrency collapse and retrieves each created or replayed Session before deciding from its status and expiry. When that result is inactive, the adapter uses Stripe's newest-first Checkout Session list through a bounded full-metadata scan to seed the existing recovery key from one unique tail; an open tail is live-retrieved and reused only while active, while ambiguity or scan failure retains DEBT-466's bounded deterministic walk. DEBT-470 records the provider-contract receipts and implementation bounds.

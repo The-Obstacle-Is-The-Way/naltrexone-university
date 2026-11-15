@@ -1,6 +1,6 @@
 # DEBT-534: Neon's Free Plan Can Suspend Production's Database Until the Month Ends
 
-**Status:** Open — the owner moves it to Neon Launch before the first live sale
+**Status:** Blocked — the owner moves `naltrexone-db` to Neon Launch before the first live sale (decided 2026-10-21)
 **Priority:** P2
 **Date:** 2026-10-21
 
@@ -14,7 +14,7 @@ Preview and Development use the same project (its `dev` branch), so their traffi
 
 ## Evidence
 
-- **The plan.** Vercel's storage API reported `naltrexone-db` on plan `free_v3`, available, with `usageQuotaExceeded: false`, on 2026-10-21 and again on 2026-10-24. It is connected to Production, Preview and Development.
+- **The plan.** Vercel's storage API reported `naltrexone-db` on plan `free_v3`, available, with `usageQuotaExceeded: false`, on 2026-10-21, 2026-10-24 and 2026-11-15. It is connected to Production, Preview and Development.
 - **The limits.** [Neon's plans page](https://neon.com/docs/introduction/plans): Free includes, per project, 100 CU-hours and 5 GB of public network transfer a month, 1 GB of storage, 10 branches and autoscaling up to 2 CU. Its FAQ says that on running out of CU-hours or transfer, "your compute is suspended until the next billing period or until you upgrade". Exceeding the storage cap makes inserts, updates and deletes fail, and branch creation fails at 10 branches. No limit deletes data, and the page describes no grace period.
 - **One project for every environment.** `docs/architecture/environments.md`: Production uses the Neon `main` branch, and Preview and Development the `dev` branch, in one project. A value-free host check on 2026-10-21 found Preview and Development on one host and Production on another.
 - **Recovery window.** The security program's 2026-08-13 check measured point-in-time restore at 6 hours, Free's maximum. Paid plans default to 1 day; Launch can keep up to 7 days, billed at $0.20 per GB-month.
@@ -46,10 +46,13 @@ The move is made in Vercel: Storage → `naltrexone-db` → Settings → Change 
 - [ ] Owner: Vercel's storage API or Storage page reads `naltrexone-db` on Launch.
 - [ ] Owner: the history window reads 7 days.
 - [ ] Owner: a spend alert covers the Neon charge, on Neon's Billing page if the Vercel-managed organization shows one, otherwise in Vercel; this record names which.
-- [ ] Engineering: `/api/health` returns 200 after the change. The plan line in `docs/architecture/environments.md` and the windows in `docs/guides/operations/database-recovery.md` are updated, and DEBT-445's Waiting row is re-read, since this move clears its first prerequisite.
+- [ ] Engineering: `/api/health` returns 200 after the change. The plan lines in `docs/architecture/environments.md:29,40` and the windows and one-snapshot limit in `docs/guides/operations/database-recovery.md:25-36` are updated. DEBT-445's Waiting row is re-read, since this move clears its first prerequisite.
+- [ ] Owner: the owner-adopted security program's exceptions (2) and (3), audit logs and the 6-hour restore window, are revisited (`docs/policies/security/information-security-program.md:162`).
 
 ## Related
 
 - DEBT-512: Vercel Pro, due at the same time.
 - DEBT-445: per-Preview database branches, which wait for this move.
 - [Neon's Vercel-managed integration](https://neon.com/docs/guides/vercel-managed-integration): where its plan is changed.
+
+Corrected 2026-11-15: the plan was re-read as `free_v3` on 2026-11-15. Status is Blocked, since the next action is the owner's purchase. Verification names the doc lines to update and the security program's two plan-gated exceptions.
