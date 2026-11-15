@@ -8,7 +8,7 @@ Coverage says a line was *executed*; mutation tests whether selected behavior ch
 
 ## 1. Tooling and compatibility
 
-`@stryker-mutator/core` and `@stryker-mutator/vitest-runner` are pinned at 10.1.1 in `package.json`. The receipts below were first measured on 9.6.1; those re-checked on 10.1.1 (2026-11-05) say so. Re-verify them before adopting a newer major.
+`@stryker-mutator/core` and `@stryker-mutator/vitest-runner` are pinned at 10.1.1 in `package.json`. The receipts below were first measured on 9.6.1; those re-checked on 10.1.1 say so. Re-verify them before adopting a newer major.
 
 - A fresh 2026-08-13 install resolved StrykerJS core and Vitest runner 9.6.1. The runner peer-accepts `vitest >= 2.0.0`; the pilot ran against the repo's installed Vitest 4.1.x. Runner 10.1.1 declares the same peer and runs on the installed Vitest 5. Stryker 10 requires Node 22 or later, and its Babel 8 parser needs Node `^22.18.0 || >=24.11.0`. The workflows set `node-version: 24` and `.nvmrc` pins `24`, so CI and fresh local installs get the latest Node 24.
 - The runner **enforces per-test coverage analysis internally** (`coverageAnalysis` is ignored) and by default asks Vitest for tests *related* to each mutated file (`vitest.related: true`). Related selection follows the import graph and can include far more than the colocated `foo.test.ts`. The explicit `plugins` entry below is required in this pnpm layout; wildcard auto-discovery did not load the runner.
@@ -149,7 +149,7 @@ The third wave ran on 2026-09-30 over the rest of `src/domain/**`:
 |---|---:|---:|
 | `src/domain/entities/attempt.ts` | 97.37% | 100.00% |
 | `src/domain/entities/question-feedback.ts` | 100.00% | 100.00% |
-| `src/domain/entities/renewal-consent-record.ts` | 83.74% | 100.00% |
+| `src/domain/entities/renewal-consent-record.ts` | 83.74% | 100.00% (rechecked on 10.1.1, 2026-11-15) |
 | `src/domain/entities/renewal-notice-delivery.ts` | 51.85% | 100.00% |
 | `src/domain/errors/domain-errors.ts` | 100.00% | 100.00% |
 | `src/domain/services/question-selection.ts` | 94.12% | 100.00% |
@@ -165,7 +165,7 @@ The third wave ran on 2026-09-30 over the rest of `src/domain/**`:
 | `src/domain/value-objects/question-feedback-rating.ts` | 100.00% | 100.00% |
 | `src/domain/value-objects/question-progress-status.ts` | 100.00% | 100.00% |
 | `src/domain/value-objects/question-status.ts` | 100.00% | 100.00% |
-| `src/domain/value-objects/renewal-consent.ts` | 81.82% | 100.00% |
+| `src/domain/value-objects/renewal-consent.ts` | 81.82% | 100.00% (rechecked on 10.1.1, 2026-11-15) |
 | `src/domain/value-objects/subscription-plan.ts` | 100.00% | 100.00% |
 | `src/domain/value-objects/tag-kind.ts` | 100.00% | 100.00% |
 | **All 21 files with mutants** | **87.25%** | **100.00%** |

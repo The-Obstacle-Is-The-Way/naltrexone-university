@@ -24,25 +24,10 @@ function addUtcYears(date: Date, years: number): Date {
 export const CONSENT_RETENTION_YEARS = 3;
 export const POST_TERMINATION_RETENTION_YEARS = 1;
 
-export function computeRenewalConsentRetainUntil(
-  ...[acceptedAt, subscriptionTerminatedAt]:
-    | [acceptedAt: Date, subscriptionTerminatedAt: Date | null]
-    | [acceptedAt: null, subscriptionTerminatedAt: Date]
-): Date {
-  if (acceptedAt === null) {
-    return addUtcYears(
-      subscriptionTerminatedAt,
-      POST_TERMINATION_RETENTION_YEARS,
-    );
-  }
-  const consentFloor = addUtcYears(acceptedAt, CONSENT_RETENTION_YEARS);
-  if (!subscriptionTerminatedAt) return consentFloor;
+export function computeConsentRetentionFloor(acceptedAt: Date): Date {
+  return addUtcYears(acceptedAt, CONSENT_RETENTION_YEARS);
+}
 
-  const terminationFloor = addUtcYears(
-    subscriptionTerminatedAt,
-    POST_TERMINATION_RETENTION_YEARS,
-  );
-  // Keep both directives on one line so each applies to the return below.
-  /* Stryker disable next-line EqualityOperator: at equal instants either branch yields the same time */ // biome-ignore lint/complexity/useMathMinMax: both operands are Dates; Math.max would return a number, not a Date.
-  return terminationFloor > consentFloor ? terminationFloor : consentFloor;
+export function computeTerminationRetentionFloor(terminatedAt: Date): Date {
+  return addUtcYears(terminatedAt, POST_TERMINATION_RETENTION_YEARS);
 }

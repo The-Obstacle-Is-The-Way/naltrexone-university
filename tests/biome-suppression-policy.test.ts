@@ -37,14 +37,6 @@ function lint(filePath: string, contents: string) {
 
 const cases = [
   {
-    name: 'Date retention comparison',
-    filePath: 'src/domain/value-objects/renewal-consent.ts',
-    flagged:
-      'return terminationFloor > consentFloor ? terminationFloor : consentFloor;',
-    unflagged:
-      'return new Date(Math.max(terminationFloor.getTime(), consentFloor.getTime()));',
-  },
-  {
     name: 'displayed opt-in label',
     filePath: 'tests/e2e/helpers/checkout-consent.ts',
     flagged: "dialog.locator('form > label').innerText()",

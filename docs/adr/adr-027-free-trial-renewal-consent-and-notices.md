@@ -37,7 +37,7 @@
    - A change to consent text or its version changes consent evidence, so it merges only on the owner's explicit instruction (DEBT-478).
 5. **Consent evidence is kept for three years, or one year after termination if that is later (2026-08-06, #743; in production 2026-08-07 through #747).**
    - Only the Stripe webhook writes `renewal_consent_records` (`db/schema.ts`, `RecordRenewalConsentUseCase`). A record holds a SHA-256 consumer reference; the Stripe customer, subscription and Session identifiers; the plan, amount, frequency, trial end, and cancellation deadline and method; the exact disclosure text and version; the Terms version and hash; and the source and acceptance time.
-   - `computeRenewalConsentRetainUntil` takes the later of the two dates. The webhook and the daily reconcile start the termination clock.
+   - Retention runs to the later of the two dates. The webhook and the daily reconcile start the termination clock.
    - After each Stripe webhook, `PruneRenewalConsentsUseCase` deletes up to 100 terminated records whose retention has run out. Account deletion clears the user reference (`onDelete: 'set null'`) and keeps the record.
    - Reason: DEBT-414's legal matrix reads California § 17602 as requiring verification for three years, or one year after termination, whichever is longer.
 6. **An acknowledgment is queued with the consent (2026-08-07, #746; links 2026-10-01).**
