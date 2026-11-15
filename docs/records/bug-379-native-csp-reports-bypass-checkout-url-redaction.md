@@ -42,10 +42,12 @@ Add a positive control to the CSP E2E spec: inject a harmless foreign-host scrip
 
 - [x] Independent challenge of this record and severity before implementation/publication; its corrections are incorporated above. The reviewer independently passed 24 checkout ownership and sign-in preservation tests.
 - [x] Red-first tests: the add-card URL and seven proxy URL/referrer cases failed before the change (8 failed, 41 passed). The first implementation still failed the twice-encoded return URL; bounded decoding fixed it. The focused suites then passed all 60 tests, including the ordinary reporting control.
-- [ ] Browser evidence: positive control detects a real violation with delivery redirected locally; a credential-bearing document receives no delivery directives/endpoints and sends no onward referrer; checkout ownership and sign-in recovery remain covered.
-- [ ] Full local gate, including serialized E2E, and exact-head CI.
-- [ ] Independent adversarial review of the built diff and exact-head CodeRabbit approval before promotion.
-- [ ] After promotion, read-only production header probes with synthetic non-secret query values show the privacy boundary and an ordinary page still has reporting headers. No live purchase or remote database access.
+- [x] Browser evidence: positive control detects a real violation with delivery redirected locally; a credential-bearing document receives no delivery directives/endpoints and sends no onward referrer; checkout ownership and sign-in recovery remain covered. Recorded in #1695 and #1696.
+- [x] Full local gate, including serialized E2E, and exact-head CI. #1696 records all 81 local E2E tests passing and successful source, promotion and main CI.
+- [x] Independent adversarial review of the built diff and exact-head CodeRabbit approval before promotion. #1695 records the review; #1696 records the exact-head approval and guarded promotion.
+- [x] After promotion, read-only production header probes with synthetic non-secret query values show the privacy boundary and an ordinary page still has reporting headers. No live purchase or remote database access. #1696's [production receipt](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1696#issuecomment-6897752115) records every probe passing and the production-domain assignment after main CI passed.
+
+Corrected 2026-11-15: recorded the completed checks from #1695 and #1696. The lasting reporting boundary and its document-lifetime limits are in `docs/architecture/security.md`; the implementation keeps its reason beside the code.
 
 ## Related
 

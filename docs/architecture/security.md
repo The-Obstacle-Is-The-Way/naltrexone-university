@@ -22,6 +22,23 @@
 
 ---
 
+## Native CSP Report Privacy
+
+Browser-native CSP reports bypass the SDK's scrubber and carry the document URL
+and referrer. `lib/content-security-policy.ts` withholds native reporting
+destinations when either URL needs credential-query redaction, including encoded
+auth return URLs, and sets `Referrer-Policy: no-referrer` on those documents.
+The report-only policy remains; ordinary documents retain their reporting
+destinations.
+
+This boundary lasts for the full document, including subsequent client-side
+navigation. A suppressed document regains reporting only on a new document
+load; changing the URL in an already reporting document does not remove its
+reporting policy. The guarantee covers the owned full-document payment returns
+and auth redirects, not arbitrary history changes. The CSP E2E positive control
+proves browser evaluation and intercepted legacy delivery, not production
+Reporting API or Sentry ingestion (BUG-379).
+
 ## Edge Rules
 
 Vercel's firewall refuses some requests before the app runs. Its custom rules live in the Vercel dashboard, not in this repository, so this table is their one home: what each refuses, what it constrains, and when it comes out. Change the table in the same change as the rule; `vercel firewall rules list` shows the rules, marking any change not yet published. A Hobby project allows three custom rules, one of them a rate limit (Vercel Pro allows 40, any of them a rate limit; DEBT-512), so a rule that contains a gap until its fix ships names the check that removes it.

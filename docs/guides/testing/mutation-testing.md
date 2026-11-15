@@ -260,6 +260,7 @@ The after-triage scores exclude suppressed equivalent mutants, each with its rea
 
 - **Pilot:** four equivalent mutants and two siblings.
 - **Third wave:** three and three. Its `EqualityOperator` comments each cover two replacements of one operator; the baseline, run without the comments, shows only the equivalent replacement survived.
+  These are the 2026-09-30 counts. At the 2026-11-15 rechecks, only the comment in `src/domain/services/subscription-canonicalization.ts` remained of those three. BUG-349 removed the entity's comparison and comment; the renewal-consent cleanup removed the value object's unused comparison and comment. The two renewal-consent rows above record their rechecks without those suppressions.
 - **Wave 4a:** two equivalent mutants and three siblings: an `OptionalChaining` mutant, and the `typeof` check in `transactional-email-payload.ts`, whose comment covers three killed `ConditionalExpression` siblings.
 - **Wave 4b:** one equivalent mutant and one sibling.
 - **Wave 4c:** two equivalent mutants and two siblings, all in `get-question-for-view.ts`. Two redundant guards were removed rather than suppressed: the empty-page return in `get-attempted-questions.ts`, since the binding fetch already returns nothing for no rows, and the `typeof` check in `save-exam-draft-answer.ts`, since `Number.isFinite` is false for every non-number.
