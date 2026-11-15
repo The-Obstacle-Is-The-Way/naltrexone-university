@@ -23,6 +23,10 @@ import {
 } from '@/lib/clerk-call-failures';
 import { parseClerkJwtKey } from '@/lib/clerk-jwt-key';
 import {
+  clerkFrontendApiOrigin,
+  contentSecurityPolicyHeaders,
+} from '@/lib/content-security-policy';
+import {
   CRON_ROUTE_PATHS,
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
@@ -88,22 +92,6 @@ export function parseSentrySecurityHeaderEndpoint(
   }
 }
 
-function mergeCspDirectives(
-  baseDirectives: Record<string, string[]>,
-  additionalDirectives: Record<string, string[]>,
-): Record<string, string[]> {
-  return Object.entries(additionalDirectives).reduce<Record<string, string[]>>(
-    (mergedDirectives, [directive, values]) => {
-      const existingValues = mergedDirectives[directive] ?? [];
-      mergedDirectives[directive] = Array.from(
-        new Set([...existingValues, ...values]),
-      );
-      return mergedDirectives;
-    },
-    { ...baseDirectives },
-  );
-}
-
 const sentryIngestOrigin = parseSentryIngestOrigin(
   process.env.NEXT_PUBLIC_SENTRY_DSN,
 );
@@ -113,37 +101,16 @@ const sentrySecurityHeaderEndpoint = parseSentrySecurityHeaderEndpoint(
   sentryEnvironment,
 );
 
-const VERCEL_TOOLBAR_CSP_DIRECTIVES = {
-  'script-src': ['https://vercel.live'],
-  'connect-src': ['https://vercel.live', 'wss://ws-us3.pusher.com'],
-  'img-src': ['https://vercel.live', 'https://vercel.com', 'data:', 'blob:'],
-  'frame-src': ['https://vercel.live'],
-  'style-src': ['https://vercel.live', "'unsafe-inline'"],
-  'font-src': ['https://vercel.live', 'https://assets.vercel.com'],
-} satisfies Record<string, string[]>;
-
-const BASE_CLERK_CSP_DIRECTIVES = {
-  'base-uri': ['self'],
-  'connect-src': [
-    'ws:',
-    'wss:',
-    ...(sentryIngestOrigin ? [sentryIngestOrigin] : []),
-  ],
-  'font-src': ['self', 'data:', 'https:'],
-  'frame-ancestors': ['none'],
-  'img-src': ['self', 'data:', 'blob:', 'https:'],
-  'object-src': ['none'],
-  ...(sentrySecurityHeaderEndpoint
-    ? { 'report-uri': [sentrySecurityHeaderEndpoint] }
-    : {}),
-} satisfies Record<string, string[]>;
-const CLERK_CSP_DIRECTIVES =
-  process.env.VERCEL_ENV === 'preview'
-    ? mergeCspDirectives(
-        BASE_CLERK_CSP_DIRECTIVES,
-        VERCEL_TOOLBAR_CSP_DIRECTIVES,
-      )
-    : BASE_CLERK_CSP_DIRECTIVES;
+// BUG-378: the app's own report-only policy, not Clerk's strict mode, whose
+// nonce the prerendered shells' scripts cannot carry. Why each source is
+// there: lib/content-security-policy.ts.
+const CONTENT_SECURITY_POLICY_HEADERS = contentSecurityPolicyHeaders({
+  clerkFrontendApiOrigin: clerkFrontendApiOrigin(clerkPublishableKey()),
+  sentryIngestOrigin,
+  reportEndpoint: sentrySecurityHeaderEndpoint,
+  vercelEnv: process.env.VERCEL_ENV,
+  nodeEnv: process.env.NODE_ENV,
+});
 
 let cachedClerkMiddleware: NextMiddleware | null = null;
 let hasLoggedSkipClerkProductionWarning = false;
@@ -276,22 +243,6 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
     {
       ...clerkJwtKeyOption(),
       ...clerkPublishableKeyOption(),
-      contentSecurityPolicy: {
-        directives: CLERK_CSP_DIRECTIVES,
-        strict: true,
-        // ⚠️ Keep `reportOnly: true`. Do NOT flip to `false` (enforcing).
-        // Clerk strict mode uses a per-request nonce + 'strict-dynamic', which is
-        // fundamentally incompatible with this app's Next 16 PPR / Cache Components:
-        // prerendered static-shell <script> tags cannot carry the per-request nonce,
-        // so enforcing blocks first-party /_next/static/chunks and breaks the app
-        // (verified via live Sentry + a production-build experiment + Next/Clerk docs).
-        // Real enforcement would require a separate non-nonce host-allowlist policy.
-        // See DEBT-420.
-        reportOnly: true,
-        ...(sentrySecurityHeaderEndpoint
-          ? { reportTo: sentrySecurityHeaderEndpoint }
-          : {}),
-      },
     },
   );
 
@@ -417,6 +368,9 @@ export function createProxy({
     const clerkMw = await getClerkMiddleware();
     const response = await clerkMw(clerkRequest, event);
     if (response) {
+      for (const [name, value] of CONTENT_SECURITY_POLICY_HEADERS) {
+        response.headers.set(name, value);
+      }
       logCheckoutSuccessAuthBounce(request, response);
       if (clerkRequest !== request && clerkWantedWithheldRefresh(response)) {
         console.warn({ event: 'clerk_refresh_withheld' });
