@@ -19,7 +19,7 @@ import type {
   NewRenewalConsentRecord,
   RenewalConsentRecord,
 } from '@/src/domain/entities';
-import { computeRenewalConsentRetainUntil } from '@/src/domain/value-objects';
+import { computeTerminationRetentionFloor } from '@/src/domain/value-objects';
 
 type ConsentRow = typeof renewalConsentRecords.$inferSelect;
 
@@ -153,8 +153,7 @@ export class DrizzleRenewalConsentRecordRepository
     externalSubscriptionId: string;
     terminatedAt: Date;
   }): Promise<number> {
-    const terminationFloor = computeRenewalConsentRetainUntil(
-      null,
+    const terminationFloor = computeTerminationRetentionFloor(
       input.terminatedAt,
     ).toISOString();
     const updated = await this.db

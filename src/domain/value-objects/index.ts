@@ -59,7 +59,8 @@ export {
 export {
   AllRenewalConsentKinds,
   AllRenewalConsentSources,
-  computeRenewalConsentRetainUntil,
+  computeConsentRetentionFloor,
+  computeTerminationRetentionFloor,
   type RenewalConsentFrequency,
   type RenewalConsentKind,
   type RenewalConsentSource,

@@ -5,7 +5,10 @@ import type {
   RenewalConsentSource,
   SubscriptionPlan,
 } from '../value-objects';
-import { computeRenewalConsentRetainUntil } from '../value-objects';
+import {
+  computeConsentRetentionFloor,
+  computeTerminationRetentionFloor,
+} from '../value-objects';
 
 export type RenewalConsentRecordInput = {
   userId: string | null;
@@ -112,7 +115,7 @@ export function newRenewalConsentRecord(
   return {
     ...input,
     subscriptionTerminatedAt: null,
-    retainUntil: computeRenewalConsentRetainUntil(input.acceptedAt, null),
+    retainUntil: computeConsentRetentionFloor(input.acceptedAt),
   };
 }
 
@@ -129,7 +132,7 @@ export function terminateRenewalConsentRecord<
         record.retainUntil.getTime(),
         // The stored date already holds the consent floor; Postgres applies
         // the same termination floor (BUG-349).
-        computeRenewalConsentRetainUntil(null, terminatedAt).getTime(),
+        computeTerminationRetentionFloor(terminatedAt).getTime(),
       ),
     ),
   };
