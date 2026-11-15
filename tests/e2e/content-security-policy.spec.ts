@@ -52,7 +52,10 @@ test.describe('content security policy, signed out', () => {
     test(`${path} loads every script the policy admits`, async ({ page }) => {
       const violations = await recordCspViolations(page);
 
-      expectReportOnlyPolicy(await page.goto(path));
+      const response = await page.goto(path);
+      // A redirect would test another page under this one's name.
+      await expect(page).toHaveURL((url) => url.pathname === path);
+      expectReportOnlyPolicy(response);
       await waitForClerk(page);
 
       expect(violations).toEqual([]);

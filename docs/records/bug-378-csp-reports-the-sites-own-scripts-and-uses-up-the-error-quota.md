@@ -55,7 +55,8 @@ Option 1.
 - [x] Red first: the new E2E test fails on the strict policy and passes on the new one. *Done 2026-11-14:* on the strict policy all five pages reported their own chunks and inline scripts; on the new one, none did.
 - [ ] After promotion:
   - production's and the dev Preview's `/sign-up` still send the report-only policy with `report-uri`, `report-to` and `Reporting-Endpoints`;
-  - a view of `/sign-up` and of a signed-in page on each adds no CSP event to the web project.
+  - a view of `/sign-up` and of a signed-in page on each adds no CSP event to the web project;
+  - a script from a host the site does not use, added by hand to a production page, reaches the web project as a CSP report, so reports still arrive. Its issue is then resolved.
 
   Due 2026-11-21.
 - [ ] The web project's CSP issues, the archived ones included, are resolved, with the owner's approval.
