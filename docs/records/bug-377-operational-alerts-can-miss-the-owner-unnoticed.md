@@ -1,6 +1,6 @@
 # BUG-377: Operational Alerts Can Miss the Owner, and Nothing Notices
 
-**Status:** Verifying — the watcher's first run after promotion reads the fire history, and the next drill arrives by both routes; due 2026-12-04
+**Status:** Verifying — the next drill arrives by both routes; due 2026-12-04
 **Priority:** P2
 **Date:** 2026-11-14
 
@@ -58,10 +58,10 @@ Option 2 is held for evidence: if the alerts' workflow's email for the next dril
 
 - [x] Red first: each of the three jobs, through its default wiring, assigns its issue to the owner (2026-11-14).
 - [x] Red first: a fired alert opens one copy, titled without its kind except for a drill. A later run writes nothing, whether the copy is open, closed or duplicated. A longer ID does not take another alert's copy. A failed read, a failed copy or a full page is reported beside the other findings (2026-11-14).
-- [ ] After promotion, the watcher's first run reads the fire history without a finding in #1610. That proves the token can read it.
+- [x] After promotion, the watcher's first run reads the fire history without a finding in #1610. That proves the token can read it. *Done 2026-11-14:* the first run on the promoted main reported its findings unchanged, and #1610 still held only the quota finding.
 - [x] Owner: the Gmail filter uses the query in `docs/architecture/observability.md`, "Being noticed", so the copies stand out like Sentry's emails.
 
-  *Done 2026-11-14:* with the owner's approval, the existing filter was edited in Gmail. Its query is the runbook's, and it keeps its star, label, important and never-spam actions. It now also files alerts under Primary, because the Sentry alert emails had been landing in the Updates tab among unread GitHub mail. It was read back from Gmail's filter list after saving. It is still the only alert filter, and old mail was left as it was.
+  *Done 2026-11-14:* with the owner's approval, the existing filter was edited in Gmail. Its query is the runbook's, and it keeps its star, label, important and never-spam actions. It now also files alerts under Primary, because the Sentry alert emails had been landing in the Updates tab among unread GitHub mail. It was read back from Gmail's filter list after saving, and old mail was left as it was. It was then the only alert filter; a lighter one for the web project's emails followed on 2026-11-15 ("Being noticed").
 - [ ] After promotion, the next drill, in the cycle from 2026-12-03 while the earlier drills' issues, SERVER-1 and SERVER-4, are still open (leave them unresolved until then), opens a new issue and reaches the owner by both routes: the alerts' workflow's email, whose link carries `alert_rule_id=6133179`, and its copy from `notifications@github.com`. A Sentry email from the default workflow alone does not pass; due 2026-12-04.
 
 ## Related
