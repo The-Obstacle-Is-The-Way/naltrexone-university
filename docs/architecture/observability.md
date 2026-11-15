@@ -175,9 +175,14 @@ which would copy the scope's user past `scrubEvent`.
   `noreply@md.getsentry.com` with a subject starting with the issue's ID,
   `ADDICTION-BOARDS-SERVER-<n>`. That covers the operational alerts, the drill,
   the cron monitor's missed or failed check-in, whose title never says
-  "Operational alert", and new server errors. It leaves out the browser
-  project's noisier `ADDICTION-BOARDS-WEB-` issues and the weekly reports. The
-  watcher below copies each alert into a GitHub issue whose title starts with
+  "Operational alert", and new server errors. It leaves out the weekly reports
+  and the browser project's `ADDICTION-BOARDS-WEB-` issues. Those have a
+  second, lighter filter, `from:noreply@md.getsentry.com
+  subject:"ADDICTION-BOARDS-WEB"`, which files them under Primary and never
+  sends them to spam, with no star, label or importance, so the operational
+  alerts still stand out. Without it, three of the web project's six emails
+  from July to November 2026 were real application errors, left unread in
+  Updates. The watcher below copies each alert into a GitHub issue whose title starts with
   the same ID, and reports through a GitHub issue of its own, so the query
   names those emails too:
   `((from:noreply@md.getsentry.com OR from:notifications@github.com) subject:"ADDICTION-BOARDS-SERVER") OR (from:notifications@github.com subject:"Operational alerts may not be reaching the owner")`.

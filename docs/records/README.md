@@ -3,7 +3,7 @@
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
 **Now** — 2026-11-03.
-- **Verifying, by due date.** DEBT-505 11-05; BUG-368 11-07; BUG-353, BUG-364 and BUG-365 11-08; BUG-378 11-21; BUG-379 11-22; BUG-377 12-04.
+- **Verifying, by due date.** DEBT-505 11-05; BUG-368 11-07; BUG-353, BUG-364 and BUG-365 11-08; BUG-378 11-24; BUG-377 12-04.
 - **In progress.** DEBT-518, the documentation revamp: records, agent instructions, layout and archive removal are done; the four splits and the pilot follow.
 - **Next.** DEBT-537's advisory bundle (vite, brace-expansion, Clerk, and the `postcss` and `nanoid` overrides), due 11-20. Alert kinds for the silent conditions (DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520. BUG-363's investigation, due 11-04. DEBT-525 sets a performance baseline before choosing optimizations.
 - **Before the first live sale.** DEBT-503 item 4's handshake limits, due 11-06; DEBT-501 item 9's reconcile watch, 11-13. Vercel Pro (DEBT-512), Neon Launch (DEBT-534), the live purchase and refund, its receipt checked as Massachusetts' monthly notice (DEBT-501 item 7, DEBT-414 F19c), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription's correction (BUG-343: the re-check, sweep and alerts ship; its option 4 needs the owner's refund decision, follow-up due 10-30). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 39 days before the first live renewal: the identity resolver (DEBT-502), DEBT-511 on it, and Massachusetts' annual notice if it applies (DEBT-414 F19a).
@@ -29,8 +29,8 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[BUG-365](./bug-365-app-frame-keeps-a-lost-subscription-until-a-full-load.md)|The app frame keeps a lost subscription until a full load|P3|Verifying — the owner's no-card production trial check, before the first live sale; due 2026-11-08|
 |[BUG-368](./bug-368-a-stripe-call-can-start-with-a-sliver-of-its-budget.md)|A Stripe call can start with only a sliver of its caller's budget left|P3|Verifying — two weeks of CI after the merge without the call-budget refusal test failing; due 2026-11-07|
 |[BUG-373](./bug-373-hosted-add-card-e2e-cannot-click-its-button.md)|The hosted trial add-card E2E cannot click its add-card button|P3|Open — read the 295a1179 trace's DOM snapshot for the button's box and its ancestors; due 2026-11-05|
-|[BUG-377](./bug-377-operational-alerts-can-miss-the-owner-unnoticed.md)|Operational alerts can miss the owner, and nothing notices|P2|Verifying — the watcher's first run after promotion reads the fire history, and the next drill arrives by both routes; due 2026-12-04|
-|[BUG-378](./bug-378-csp-reports-the-sites-own-scripts-and-uses-up-the-error-quota.md)|The CSP reports the site's own scripts and uses up Sentry's error quota|P2|Verifying — after release, the policy still reports, and production and Preview page views send Sentry no CSP report; due 2026-11-21|
+|[BUG-377](./bug-377-operational-alerts-can-miss-the-owner-unnoticed.md)|Operational alerts can miss the owner, and nothing notices|P2|Verifying — the next drill arrives by both routes; due 2026-12-04|
+|[BUG-378](./bug-378-csp-reports-the-sites-own-scripts-and-uses-up-the-error-quota.md)|The CSP reports the site's own scripts and uses up Sentry's error quota|P2|Verifying — the watcher's quota finding leaves #1610 as the old reports age out; due 2026-11-24|
 |[DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)|Public legal pages, renewal consent, and security-program closure|P1|Open — F21 needs engineering, F22 is Verifying in BUG-364, the Resend webhook awaits a real report; owner, counsel and tax decisions remain|
 |[DEBT-501](./debt-501-billing-operations-resilience.md)|Billing operations can leave payers without access as the service grows or changes|P2|Open — item 9's reconcile watch, due 2026-11-13; then the pre-sale items|
 |[DEBT-502](./debt-502-account-identity-and-action-hardening.md)|Rare account states can lock a person out, and payment actions expose test seams|P3|Open — decided per item|
@@ -52,7 +52,6 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-533](./debt-533-the-queue-review-cannot-read-some-production-triggers.md)|The weekly queue review cannot read some production triggers|P3|Blocked — the owner reads the sources below, or chooses a read path for the review; follow-up due 2026-10-30|
 |[DEBT-534](./debt-534-neon-free-plan-can-suspend-production.md)|Neon's Free plan can suspend production's database until the month ends|P2|Open — the owner moves it to Neon Launch before the first live sale|
 |[DEBT-537](./debt-537-three-advisory-fixes-wait-on-the-release-age-gate.md)|Three advisory fixes wait on the 7-day gate: vite, brace-expansion and Clerk|P3|Open — one repo-owned bundle takes the vite, brace-expansion and @clerk/backend fixes once the last clears the gate (2026-11-19 22:57Z); due 2026-11-20|
-|[BUG-379](./bug-379-native-csp-reports-bypass-checkout-url-redaction.md)|Native CSP reports expose checkout URLs|P2|Verifying — post-release reporting header checks; due 2026-11-22|
 
 ## Waiting
 

@@ -493,8 +493,6 @@ Check the browser installation and the selected session/profile. Close only the 
 4. **Is the test asserting on state created by a different test?**
    - This is a cross-spec dependency. Add explicit state setup in the affected test.
 
-Use `resetBookmarksForE2EUser()` only when a test truly needs bookmark-only isolation and does not rely on session/attempt state.
-
 See DEBT-293 for the full analysis and the resolved reset strategy.
 
 ### Server actions hang / UI stuck on "Loading..."
