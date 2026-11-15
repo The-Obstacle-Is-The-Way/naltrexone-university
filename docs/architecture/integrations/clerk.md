@@ -93,25 +93,23 @@ So on Clerk's production instance (a `pk_live_` key), the proxy counts those req
 
 ## Content Security Policy (CSP)
 
-We generate CSP headers via **Clerk middleware**, not `next.config.ts`.
+The app builds its policy in `lib/content-security-policy.ts`, and `proxy.ts` sets it, report-only, on Clerk's responses. Clerk's middleware is given no `contentSecurityPolicy` option.
 
-**Why:**
-- Next.js requires inline scripts for runtime bootstrapping unless you implement a nonce/hash strategy.
-- Clerk requires specific CSP allowances (e.g., `worker-src blob:`).
-- Static CSP in `next.config.ts` is brittle and can conflict with Clerk’s requirements.
+**Why not Clerk's policy:**
+- Clerk's strict mode admits only scripts that carry the request's nonce (`'strict-dynamic'`). The prerendered shells (Cache Components) cannot carry one, so every page view reported the site's own scripts, and the reports used up Sentry's error quota (BUG-378; DEBT-420 has the build experiment and the Next.js docs).
+- Clerk's other mode allows any `https:` or `http:` script, so it would never report one.
 
-### Current Implementation
+**What it admits.** Every directive Clerk's strict mode sent is unchanged except `script-src`, which lists:
+- `'self'`, and `'unsafe-inline'`, since Next.js bootstraps every page with inline scripts.
+- Clerk's Frontend API, decoded from the publishable key. It serves Clerk JS and its UI bundle.
+- `https://challenges.cloudflare.com`, for Clerk's bot protection, and the hosts Clerk's defaults list.
+- `'unsafe-eval'` outside production builds, which Next.js needs in development, and the Vercel Toolbar's hosts on Preview.
 
-In `proxy.ts`, we pass `contentSecurityPolicy` options to `clerkMiddleware()` so Clerk emits a Clerk + Stripe compatible CSP header, and we merge in app-specific directives (e.g., `base-uri`, `frame-ancestors`, `object-src`, expanded `img-src`).
+**Reports.** They go to Sentry's web project, by `report-uri` and `report-to`. A normal page view sends none, and `tests/e2e/content-security-policy.spec.ts` fails on any violation. So a report means a source the site does not use, and a new script host belongs in the policy in the same change. Enforcing the policy is a separate decision.
 
-We run in **strict report-only** mode (`{ strict: true, reportOnly: true }`) with per-request nonce plumbing:
-- `proxy.ts` sets `strict: true` + `reportOnly: true` in `clerkMiddleware()` CSP config
-- `app/layout.tsx` reads the nonce via `headers()` and passes it to `<Providers nonce={nonce}>`
-- Sentry CSP reporting is wired via `reportTo` and `report-uri` when the endpoint is configured
+**The nonce.** Nothing issues one. `app/layout.tsx` still reads `x-nonce` through `headers()` and passes it to `<Providers nonce={nonce}>`, where it is undefined. Removing the read changes how every page renders; DEBT-522's trigger covers it.
 
-**Current posture:** Strict CSP is active but in **report-only** mode — violations are reported to the configured reporting endpoint (Sentry when enabled), but not blocked. DEBT-420 records the current decision: do **not** enforce Clerk strict nonce CSP on this stack because Next 16 PPR/Cache Components serve prerendered shell scripts without the per-request nonce; if enforcement is prioritized later, use a separate non-nonce host-allowlist CSP design.
-
-Our directives are merged into Clerk's defaults: they add sources, and only a `'none'` value replaces a default directive. Billing redirects to Stripe-hosted pages and loads no Stripe.js, so our directives add no Stripe hosts (Clerk's defaults already carry some); adding Stripe.js, Elements or embedded Checkout means revisiting it. Before any enforcing policy, check `form-action` against the billing redirects (DEBT-332).
+**Stripe.** Billing redirects to Stripe-hosted pages and loads no Stripe.js; the Stripe hosts in the policy are Clerk's defaults. Adding Stripe.js, Elements or embedded Checkout means revisiting it. Before any enforcing policy, check `form-action` against the billing redirects (DEBT-332).
 
 ### Server Components
 

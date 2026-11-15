@@ -1,6 +1,6 @@
 # BUG-378: The CSP Reports the Site's Own Scripts and Uses Up Sentry's Error Quota
 
-**Status:** In Progress — the host-allowlist script rule, red first
+**Status:** Verifying — after release, a production and a Preview page view send Sentry no CSP report; due 2026-11-21
 **Priority:** P2
 **Date:** 2026-11-14
 
@@ -42,7 +42,7 @@ Option 1.
 
 ## Verification
 
-- [ ] Red first: the new E2E test fails on the strict policy and passes on the new one.
+- [x] Red first: the new E2E test fails on the strict policy and passes on the new one. *Done 2026-11-14:* on the strict policy all five pages reported their own chunks and inline scripts; on the new one, none did.
 - [ ] After promotion, a production page view and a Preview page view add no CSP event to the web project; due 2026-11-21.
 - [ ] The web project's CSP issues, the archived ones included, are resolved, with the owner's approval.
 - [ ] The watcher's quota finding leaves #1610 as the old reports age out of its 30-day window; due 2026-11-24.
