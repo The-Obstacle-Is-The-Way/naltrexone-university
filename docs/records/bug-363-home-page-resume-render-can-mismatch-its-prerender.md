@@ -1,6 +1,6 @@
 # BUG-363: The Home Page's Resume Render Can Fail to Match Its Prerender
 
-**Status:** Open — find why the resume render differs from the prerender, or record what could not be checked; due 2026-11-04
+**Status:** Open — moves to a Waiting row: the cause is unknown, and 8 events in 33 days came from one old Chrome 131 client with no signed-in user
 **Priority:** P3
 **Date:** 2026-10-21
 
@@ -8,48 +8,46 @@
 
 ## Summary
 
-Sentry's server project recorded three unhandled errors on `POST /` on 2026-10-13: "Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering". With `cacheComponents` on, the home page is a partial prerender, and `POST /` is the resume request that renders its dynamic parts. React raises this error only while it replays a postponed render, so each of these requests was a resume. React raises this error when the tree it renders on resume does not match the prerendered shell. It then renders that part in the browser instead, so the page still works.
+Sentry's server issue ADDICTION-BOARDS-SERVER-2 records unhandled errors on `POST /`: "Couldn't find all resumable slots by key/index during replaying. The tree doesn't match so React will fallback to client rendering". With `cacheComponents` on, the home page is a partial prerender. React raises this error when the tree it renders on resume does not match the prerendered shell, and then renders that part in the browser, so the page still works.
 
-BUG-319 took the same error, seen 12 times from 2026-04-21 to 2026-09-26, for skew between builds, and expected it to stop once the server-action key was stable. It came back from a release that had been live for hours. Whether skew can still explain that is open, since nothing records which build the resumed shell came from or how long it was cached. The cause is unknown.
+BUG-319 took the same error, seen 12 times from 2026-04-21 to 2026-09-26, for skew between builds. The cause is unknown.
 
 ## Evidence
 
-- **Sentry, read 2026-10-21 through its API** (counts and tags only):
-  - 3 events, all in issue ADDICTION-BOARDS-SERVER-2, from 09:13:01Z to 15:31:45Z on 2026-10-13. None since, to 2026-10-21T14:50Z. The web project had none from BUG-319's production assignment (2026-10-05T22:24:30Z) to then. The server project exists since 2026-10-08.
-  - All three were unhandled production events from release `f66056bd`, the merge of promotion #1481 at 01:45Z that day. The next promotion, #1485, merged at 16:17Z, after the last event.
-  - None of the three had a signed-in user. Each reported Chrome 131, a 2024 version, two on Linux and one on macOS. One old version across two systems suggests an automated client.
-  - At the server's 5% trace sample, Sentry kept two successful `POST /` resume transactions on that release. Two samples suggest on the order of 40 successful resumes; an exact 95% Poisson interval for two samples puts it between about 5 and 145. Sentry records every error event, so the three failures are a full count. Across that range, the three failures stay under half of all resumes, but their exact share is unknown. Because resumes also succeeded on that release, whatever differs likely depends on the request.
-  - Ingestion was healthy: both projects accepted events every day, and nothing was rate-limited or dropped for quota.
-- **The earlier issue,** ADDICTION-BOARDS-WEB-T (12 events, four releases, all on `POST /`), was deleted under BUG-318. Only the facts BUG-319 kept remain.
-- **A resume needs minimal mode and the prerender's saved state.** Next.js treats a request as a resume only in minimal mode, as Vercel runs it, for a `POST` with the `next-resume: 1` header (`base-server.js`). The body must parse as the prerender's saved state, which is never sent to the browser. A body that does not parse is logged as "Failed to parse postponed state" and rendered without resuming (`postponed-state.js`), so it cannot raise this error. Checked in 16.4.1, and reported the same for 16.3.8.
-- **The versions.** Release `f66056bd` ran Next.js 16.3.8. Production has run 16.4 since #1513 (2026-10-15), with no event since. At this rate, that silence proves little.
-- **The page did not change.** Between promotions #1474 and #1485, `app/layout.tsx`, `app/page.tsx`, `components/marketing/`, `proxy.ts` and `next.config.ts` are unchanged.
-- **The request-time parts.** `app/page.tsx` renders `MarketingHomeShell` (`components/marketing/marketing-home.tsx`). Its request-time parts are the get-started call to action and the header's sign-in navigation (`components/marketing/marketing-layout.tsx`), each inside a `Suspense` boundary. The root layout reads the request's CSP nonce from `headers()` (`app/layout.tsx`), also behind `Suspense`.
+- **Sentry, read 2026-11-15 through its API** (tags and header names only): 8 events, none from a signed-in user.
+  - 3 on 2026-10-13, from release `f66056bd` on Next.js 16.3.8, each from Chrome 131, two on Linux and one on macOS. They have aged out of the event list; these facts were read on 2026-10-21.
+  - 5 from 2026-11-02 11:13Z to 2026-11-04 09:12Z, on four releases running Next.js 16.4.2 and 16.4.3, each from Chrome 131 on Linux, and each 1.5 to 24 hours after its promotion. None since, to 2026-11-15. So the error is not a Next.js 16.3.8 defect that 16.4 removed.
+  - Chrome 131 dates from late 2024. One old version across every event suggests one automated client.
+  - The web project has no matching issue.
+- **The captured requests.** All five are `POST /index` with a `next-action` header and no `next-resume` header. Next.js 16.4.5 treats a request as a resume only for a `POST` with `next-resume: 1` in minimal mode (`node_modules/next/dist/server/base-server.js:647`). Whether that header is stripped before Sentry captures the request, or the error arises on a server-action path, is not settled.
+- **Server actions on `/`.** The app's own actions live under `/app` and `/pricing`. The root layout's `ClerkProvider` ships Clerk's `invalidateCacheAction`, so a `next-action` POST to `/` can come from Clerk's client as well as from a probe.
+- **The page.** `app/page.tsx` and `components/marketing/` last changed on 2026-09-22. The request-time parts sit inside `Suspense`: the get-started call to action (`components/marketing/marketing-home.tsx:305-307`), the header's sign-in navigation (`components/marketing/marketing-layout.tsx:155-157`), and the root layout's `x-nonce` read (`app/layout.tsx:75`). Since BUG-378 (promotion #1694, 2026-11-15) nothing sets `x-nonce`, so the read returns nothing unless a client sends the header; the five events predate that and carry it.
 - **Unverified explanations:**
-  1. For some requests, something in the shell renders differently at request time than at build time: a value read from the environment, the clock or the request outside a dynamic boundary, or a difference in what a particular client is sent.
-  2. The resume carried saved state from another build, for example a shell cached from an earlier deployment. The events came seven to fourteen hours after the deploy, but nothing records the resumed shell's build or cache lifetime, so this is not ruled out.
-  3. A defect in Next.js 16.3.8's resume that 16.4 changed.
+  1. Something in the shell renders differently at request time than at build time, for some requests.
+  2. The request carried state from another build (BUG-319's skew). Each event came within a day of a promotion, but so would most requests, since promotions are almost daily.
 
 ## Impact
 
-For each request affected, React renders the home page's dynamic part in the browser instead of streaming it from the server: the page works, a little later. The volume is low, 15 events in six months. None of the three recorded here had a signed-in user, and their clients look automated, so possibly no person saw them.
+For each request affected, React renders the home page's dynamic part in the browser instead of streaming it from the server: the page works, a little later. All 8 events came from one client signature with no signed-in user, so possibly no person saw them. Each is an unhandled error, counted against Sentry's error quota.
 
 ## Options
 
-1. **Investigate first.** Reproduce a resume locally against a production build, sending Chrome 131's user agent, on 16.3.8 and on 16.4.1. The probe has to run Next.js in minimal mode, as Vercel does, and keep the `next-resume` header, which `next start` drops from outside requests unless `NEXT_PRIVATE_TEST_HEADERS` is set. Search Next.js's issues and changelog between 16.3.8 and 16.4.1 for this error. Read the three events' non-personal request facts: headers that mark a resume, never bodies or addresses.
+1. **Investigate.** Reproduce locally against a production build in minimal mode, with Chrome 131's user agent and a `next-action` POST to `/`, and search Next.js's issues for this error on action requests.
 2. **Filter the error in the server's `beforeSend`.** Only once the cause is known: if explanation 1 holds, a filter would hide a real rendering difference.
-3. **Accept it,** with a trigger such as a rise in volume.
+3. **Accept it,** with a trigger.
 
 ## Resolution (decided)
 
-No fix is decided yet. The decided next step is option 1, by 2026-11-04. Then choose between fixing the render, accepting an upstream defect that 16.4 removed, or accepting the error with a trigger.
+Option 3, chosen 2026-11-15. Option 1 rebuilds Vercel's minimal mode by hand for an error one old client raised, while the page still works. The record moves to a Waiting row: revive it when ADDICTION-BOARDS-SERVER-2 records an event from a signed-in user or from a browser other than Chrome 131, or more than 10 events in a week.
 
 ## Verification
 
-- [ ] The cause is found, or the checks that could not be made are recorded, and an option is chosen (due 2026-11-04).
+- [x] The checks that could not be made are recorded, and an option is chosen (due 2026-11-04; done 2026-11-15). Not made: a local minimal-mode reproduction, the October events' request headers, which have aged out, and which build a resumed shell came from.
 
 ## Related
 
-- BUG-319: first recorded the error, as probable skew.
-- BUG-318 (archived): why ADDICTION-BOARDS-WEB-T was deleted.
-- DEBT-522: the root layout's nonce read and partial prefetching.
+- BUG-319: first recorded the error, as probable skew; its Waiting row holds Skew Protection.
+- BUG-378: removed the CSP nonce.
+- DEBT-522: the root layout's `x-nonce` read and partial prefetching.
+
+Corrected 2026-11-15: Sentry now holds 8 events, 5 of them on Next.js 16.4.2 and 16.4.3 (2026-11-02 to 11-04), which rules out the 16.3.8 explanation. Their requests carry `next-action` and no `next-resume` header, and nothing has set `x-nonce` since BUG-378. The lapsed 2026-11-04 step is done by recording what could not be checked, and option 3 moves the record to Waiting. The 2026-10-21 sampling estimate and the ingestion check are in git at 34d9aea0.
