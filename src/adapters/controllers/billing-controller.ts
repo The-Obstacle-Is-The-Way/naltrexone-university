@@ -145,9 +145,8 @@ function toTrialPaymentMethodReturnUrl(
 ): string {
   const url = new URL(ROUTES.APP_BILLING, appUrl);
   url.searchParams.set('trial_payment_method', outcome);
-  if (outcome === 'success') {
-    return `${url.toString()}&session_id={CHECKOUT_SESSION_ID}`;
-  }
+  // Billing reads saved-card state for the authenticated account. It never
+  // consumes a Checkout Session ID, so do not expose one in the return URL.
   return url.toString();
 }
 

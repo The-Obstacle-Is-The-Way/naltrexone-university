@@ -73,6 +73,54 @@ describe('contentSecurityPolicyHeaders', () => {
     ]);
   });
 
+  it.each([
+    'https://example.com/checkout/success?session_id=synthetic',
+    'https://example.com/sign-in?redirect_url=%2Fcheckout%2Fsuccess%3Fsession_id%3Dsynthetic',
+    'https://example.com/pricing?return_url=%E0%A4%A',
+    `https://example.com/sign-in?redirect_url=${Array.from({ length: 10 }).reduce<string>((value) => encodeURIComponent(value), '/checkout/success?session_id=synthetic')}`,
+  ])(
+    'keeps source directives but withholds delivery for sensitive or uncertain URL encoding (%#)',
+    (url) => {
+      const headers = new Headers(
+        contentSecurityPolicyHeaders(productionSources, {
+          url,
+          referrer: null,
+        }),
+      );
+      const policy = headers.get('Content-Security-Policy-Report-Only') ?? '';
+
+      expect(policy).toBe(
+        policyOf({ ...productionSources, reportEndpoint: null }),
+      );
+      expect(headers.get('Reporting-Endpoints')).toBeNull();
+      expect(headers.get('Referrer-Policy')).toBe('no-referrer');
+    },
+  );
+
+  it('keeps native reporting for an encoded non-sensitive URL', () => {
+    expect(
+      contentSecurityPolicyHeaders(productionSources, {
+        url: 'https://example.com/sign-in?redirect_url=%2Fpricing%3Fplan%3Dmonthly',
+        referrer: 'https://example.com/?campaign=fall%20sale',
+      }),
+    ).toEqual(contentSecurityPolicyHeaders(productionSources));
+  });
+
+  it('prevents onward sensitive referrers even without Sentry configured', () => {
+    const headers = new Headers(
+      contentSecurityPolicyHeaders(
+        { ...productionSources, reportEndpoint: null },
+        {
+          url: 'https://example.com/pricing',
+          referrer: 'https://example.com/checkout/success?session_id=synthetic',
+        },
+      ),
+    );
+
+    expect(headers.get('Reporting-Endpoints')).toBeNull();
+    expect(headers.get('Referrer-Policy')).toBe('no-referrer');
+  });
+
   it('sends no reports when there is no report endpoint', () => {
     const headers = contentSecurityPolicyHeaders({
       ...productionSources,
