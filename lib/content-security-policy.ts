@@ -14,12 +14,12 @@
 //
 // Every directive other than `script-src` is what Clerk's strict mode sent
 // through @clerk/nextjs 7.9.25: Clerk's defaults, its Frontend API in
-// `connect-src`, and the app's own additions.
+// `connect-src`, and the app's own additions. `script-src` is the list Clerk
+// documents for a policy without nonces.
 
 const SELF = "'self'";
 const CLERK_FRAUD_PROTECTION = 'https://*.protect.clerk.com';
 const CLOUDFLARE_CHALLENGES = 'https://challenges.cloudflare.com';
-const STRIPE_JS = ['https://js.stripe.com', 'https://*.js.stripe.com'];
 const GOOGLE_MAPS = 'https://maps.googleapis.com';
 const REPORT_TO_GROUP = 'csp-endpoint';
 
@@ -92,8 +92,9 @@ function baseDirectives({
       // Clerk's bot protection runs Cloudflare Turnstile on sign-up.
       CLOUDFLARE_CHALLENGES,
       CLERK_FRAUD_PROTECTION,
-      ...STRIPE_JS,
-      GOOGLE_MAPS,
+      // Clerk's defaults also admit Stripe.js and Google Maps, for Clerk's
+      // billing and address components, which the site does not use. Left
+      // out: Google Maps serves JSONP, a known way around a host allowlist.
     ],
     'style-src': [SELF, "'unsafe-inline'"],
     'worker-src': [SELF, 'blob:'],

@@ -42,9 +42,6 @@ describe('contentSecurityPolicyHeaders', () => {
       'https://clerk.example.com',
       'https://challenges.cloudflare.com',
       'https://*.protect.clerk.com',
-      'https://js.stripe.com',
-      'https://*.js.stripe.com',
-      'https://maps.googleapis.com',
     ]);
   });
 
@@ -60,7 +57,7 @@ describe('contentSecurityPolicyHeaders', () => {
         "frame-src 'self' https://challenges.cloudflare.com https://*.js.stripe.com https://js.stripe.com https://hooks.stripe.com https://*.protect.clerk.com",
         "img-src 'self' https://img.clerk.com data: blob: https:",
         "object-src 'none'",
-        "script-src 'self' 'unsafe-inline' https://clerk.example.com https://challenges.cloudflare.com https://*.protect.clerk.com https://js.stripe.com https://*.js.stripe.com https://maps.googleapis.com",
+        "script-src 'self' 'unsafe-inline' https://clerk.example.com https://challenges.cloudflare.com https://*.protect.clerk.com",
         "style-src 'self' 'unsafe-inline'",
         "worker-src 'self' blob:",
         `report-uri ${REPORT_ENDPOINT}`,

@@ -102,14 +102,16 @@ The app builds its policy in `lib/content-security-policy.ts`, and `proxy.ts` se
 **What it admits.** Every directive Clerk's strict mode sent is unchanged except `script-src`, which lists:
 - `'self'`, and `'unsafe-inline'`, since Next.js bootstraps every page with inline scripts.
 - Clerk's Frontend API, decoded from the publishable key. It serves Clerk JS and its UI bundle.
-- `https://challenges.cloudflare.com`, for Clerk's bot protection, and the hosts Clerk's defaults list.
+- `https://challenges.cloudflare.com`, for Clerk's bot protection, and `https://*.protect.clerk.com`, for its fraud protection. This is the list Clerk documents for a policy without nonces.
 - `'unsafe-eval'` outside production builds, which Next.js needs in development, and the Vercel Toolbar's hosts on Preview.
+
+It leaves out Stripe.js and Google Maps, which Clerk's defaults admit for its billing and address components. The site uses neither, and Google Maps serves JSONP, a known way around a host allowlist.
 
 **Reports.** They go to Sentry's web project, by `report-uri` and `report-to`. A normal page view sends none, and `tests/e2e/content-security-policy.spec.ts` fails on any violation. So a report means a source the site does not use, and a new script host belongs in the policy in the same change. Enforcing the policy is a separate decision.
 
-**The nonce.** Nothing issues one. `app/layout.tsx` still reads `x-nonce` through `headers()` and passes it to `<Providers nonce={nonce}>`, where it is undefined. Removing the read changes how every page renders; DEBT-522's trigger covers it.
+**The nonce.** Nothing issues one. `app/layout.tsx` still reads `x-nonce` through `headers()` and passes it to `<Providers nonce={nonce}>`, where it is undefined unless a client sends the header for its own render. Removing the read changes how every page renders; DEBT-522's trigger covers it.
 
-**Stripe.** Billing redirects to Stripe-hosted pages and loads no Stripe.js; the Stripe hosts in the policy are Clerk's defaults. Adding Stripe.js, Elements or embedded Checkout means revisiting it. Before any enforcing policy, check `form-action` against the billing redirects (DEBT-332).
+**Stripe.** Billing redirects to Stripe-hosted pages and loads no Stripe.js, so `script-src` lists no Stripe host; Clerk's defaults keep Stripe in `connect-src` and `frame-src`. Adding Stripe.js, Elements or embedded Checkout means adding its hosts. Before any enforcing policy, check `form-action` against the billing redirects (DEBT-332).
 
 ### Server Components
 
