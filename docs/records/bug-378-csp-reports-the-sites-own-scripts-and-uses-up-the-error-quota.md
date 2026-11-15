@@ -19,8 +19,8 @@ The Content Security Policy is report-only, and no page can satisfy its script r
 - **All of it is CSP.** Discover finds no event in the web project over those 30 days other than `event.type:csp`: 3,791 from Preview and 575 from production. All but five are `script-src-elem` reports whose blocked URI is the page's own `/_next/static` chunk or `inline`. The five are one production `eval` report, and two `connect-src` and two `frame-ancestors` reports from Preview.
 - **Why.** The policy is Clerk's strict mode, `script-src … 'strict-dynamic' 'nonce-…'`. Under `'strict-dynamic'`, browsers ignore `'self'`, `'unsafe-inline'` and host sources, so only a script with the nonce passes. The prerendered shell's scripts have none, so each view reports every script file the page fetches and its inline scripts: 16 reports on production's `/` and `/sign-up`, 18 on `/pricing`.
 - **Hidden, not stopped.**
-  - The three production script issues (ADDICTION-BOARDS-WEB-F, -G and -H) are archived forever, so Sentry no longer shows them, but their events still count.
-  - The unresolved issues are three Preview script issues, three Preview `connect-src` and `frame-ancestors` issues (WEB-26, -2E and -2F), and production's `eval` report (WEB-2C). Read after they were resolved: WEB-2C came from HeadlessChrome 120, a bot; WEB-26, -2E and -2F are connect and framing reports against the Preview's own origin. None was an application script.
+  - The three production script issues (ADDICTION-BOARDS-WEB-F, -G and -H) were archived forever, so Sentry no longer showed them, but their events still counted.
+  - The unresolved issues were three Preview script issues, three Preview `connect-src` and `frame-ancestors` issues (WEB-26, -2E and -2F), and production's `eval` report (WEB-2C). Read after they were resolved: WEB-2C came from HeadlessChrome 120, a bot; WEB-26, -2E and -2F are connect and framing reports against the Preview's own origin. None was an application script.
   - In 90 days the owner received four emails from the web project, all unread. Two were CSP reports, one of them WEB-2C, which the web project's high-priority workflow sent for a new production issue.
 - **The watcher saw it.** #1610 has reported the quota past 80% since 2026-11-13.
 
@@ -28,7 +28,7 @@ The Content Security Policy is report-only, and no page can satisfy its script r
 
 No visitor is affected: a report-only policy blocks nothing. The harm is to alerting. The reports grow with traffic: at about 17 a view, some 300 page views use a month's quota, after which Sentry drops server errors and operational alerts until the quota resets. They also drown the one signal the script rule could give, a script from a host the site never uses.
 
-The current period has 593 errors left until 2026-11-17, about 37 Preview page views. On 2026-11-15 the other sessions were asked to stay off the dev Preview and production in a browser until this fix ships; the request ended with the release that day. Production's own traffic averaged about 19 reports a day over the 30 days.
+On 2026-11-15 the period had 593 errors left until 2026-11-17, about 37 Preview page views. That day the other sessions were asked to stay off the dev Preview and production in a browser until this fix ships; the request ended with the release that day. Production's own traffic averaged about 19 reports a day over the 30 days.
 
 ## Options
 
@@ -62,6 +62,8 @@ Option 1.
 - [x] The web project's CSP issues, the archived ones included, are resolved, with the owner's approval. *Done 2026-11-15:* all eleven, WEB-F, -G, -H and -2H included; none is unresolved or archived.
 - [ ] The watcher's quota finding leaves #1610 as the old reports age out of its 30-day window; due 2026-11-24.
 
+  Sentry accepted no error from 04:00Z on 2026-11-15, just after the release, to 23:00Z that day. The totals here are organization-wide, as the watcher counts, and reconstructed from Sentry's hourly accepted-error counts read on 2026-11-15. At each scheduled watcher run from 11-12 to 11-15 (19:05Z, 18:42Z, 17:16Z and 17:56Z), the reconstructed 30-day total falls on the same side of 4,000 as that run's finding. If later runs start between 17:00Z and 19:00Z, as those did, and no error is accepted, the total falls to 3,916 at the 11-19 run, under the 4,000 that clears the finding, and to 2,779 at the 11-24 run. New errors delay it: 84 to 495 move the clearing to 11-21 or 11-22, 496 to 1,220 to 11-23 or 11-24, and 1,221 or more past the due date.
+
 ## Related
 
 - DEBT-420 (closed): why the policy is report-only, and the path taken here.
@@ -70,4 +72,4 @@ Option 1.
 - DEBT-522 and DEBT-525: the root layout's nonce read.
 - BUG-379: from this fix's adversarial review. Native CSP reports bypass the SDK's redaction, so credential-bearing documents send none; it also added the CSP spec's foreign-script positive control.
 
-*Corrected 2026-11-15 (adversarial review of #1693): the 66 filtered reports were ignored-source matches, not invalid reports; option 4's filter cannot keep foreign-script reports; option 6's cap is not on the current plan; option 1's "a report" meant a script report.*
+*Corrected 2026-11-15 (adversarial review of #1693): the 66 filtered reports were ignored-source matches, not invalid reports; option 4's filter cannot keep foreign-script reports; option 6's cap is not on the current plan; option 1's "a report" meant a script report. Records review: the resolved issues and the period's remaining quota are past tense, and the remaining check dates the finding's clearing from reconstructed hourly usage, with the run hours it assumes and the range new errors would move it to.*

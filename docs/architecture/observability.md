@@ -86,7 +86,7 @@ between one row's `period_end` and the next one's `period_start`.
   proxy could not verify, forged ones included. `counted` includes refused
   requests, so it measures demand; Clerk's dashboard shows the calls it served.
 - A row whose `period_start` is before 2026-11-03 18:08:12Z, when BUG-374's fix
-  reached production, overcounts `signed-in-session`, `signed-in` and `site`:
+  reached production, overcounts `signed-in-session`, `signed-in-address` and `site`:
   a returning visitor's page counted up to six for one refresh.
 - A production check counts like a visitor and can trip a limit on purpose.
   Compare a row's busiest minute with the checks' times before reading it as
@@ -277,6 +277,24 @@ which would copy the scope's user past `scrubEvent`.
 - **A known repeat.** A drill whose send Sentry did not confirm gives its
   cycle back even if Sentry received it, so while flushes fail the owner may
   get a drill email each day.
+- **Sentry configuration.** Set by hand on 2026-10-08 and 2026-10-09, and
+  read back from Sentry's API on 2026-11-15. The watcher checks the monitor
+  and the alerts' workflow, not these:
+  - the server project's privacy settings, copied from the web project:
+    server-side scrubbing, its default rules, IP scrubbing and the same
+    sensitive fields;
+  - its default "Send a notification for high priority issues" workflow,
+    production only and throttled to 30 minutes, like the web project's;
+  - workflow 6142118, "Cron monitor: email the owner on a missed or failed
+    check-in (DEBT-505)", on the `send-renewal-notices` monitor: production,
+    a new, regressed or reappeared issue, and the alerts' workflow's email
+    action. It reports a stopped renewal job even if GitHub stops the watcher.
+- **Token expiry.** `GITHUB_READ_TOKEN`, set on 2026-10-08, expires about a
+  year after its creation; the exact date is in the owner's GitHub token
+  settings. An expired token raises `scheduled_checks_unreadable`.
+- **An unchecked start.** No production check covers the proxy's start: its
+  alerts are raised through `waitUntil` from another bundle, which the drill,
+  raised by the renewal job, never takes. Only the proxy's tests cover it.
 
 | Kind | Meaning | First steps |
 | --- | --- | --- |
