@@ -52,7 +52,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-533](./debt-533-the-queue-review-cannot-read-some-production-triggers.md)|The weekly queue review cannot read some production triggers|P3|Blocked — the owner reads the sources below, or chooses a read path for the review; follow-up due 2026-10-30|
 |[DEBT-534](./debt-534-neon-free-plan-can-suspend-production.md)|Neon's Free plan can suspend production's database until the month ends|P2|Open — the owner moves it to Neon Launch before the first live sale|
 |[DEBT-537](./debt-537-three-advisory-fixes-wait-on-the-release-age-gate.md)|Three advisory fixes wait on the 7-day gate: vite, brace-expansion and Clerk|P3|Open — one repo-owned bundle takes the vite, brace-expansion and @clerk/backend fixes once the last clears the gate (2026-11-19 22:57Z); due 2026-11-20|
-|[BUG-379](./bug-379-native-csp-reports-bypass-checkout-url-redaction.md)|Native CSP reports bypass checkout URL redaction|P2|In Progress — prevent checkout identifiers in native CSP reports, then verify deployed headers; due 2026-11-22|
+|[BUG-379](./bug-379-native-csp-reports-bypass-checkout-url-redaction.md)|Native CSP reports expose checkout URLs|P2|Verifying — after promotion, check sensitive and ordinary reporting headers; due 2026-11-22|
 
 ## Waiting
 

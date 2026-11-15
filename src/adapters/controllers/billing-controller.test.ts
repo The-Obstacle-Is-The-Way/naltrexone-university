@@ -32,7 +32,7 @@ describe('billing-controller', () => {
           email: 'user@example.com',
           expectedDisclosureVersion: '2026-09-28.2',
           successUrl:
-            'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
+            'https://app.example.com/app/billing?trial_payment_method=success',
           cancelUrl:
             'https://app.example.com/app/billing?trial_payment_method=cancel',
         },

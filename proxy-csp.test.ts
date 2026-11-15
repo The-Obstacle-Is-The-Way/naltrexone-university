@@ -17,7 +17,10 @@ type ClerkMiddlewareCallback = (
 
 // Runs the proxy once through a mocked Clerk middleware and returns the
 // options the proxy handed Clerk, with the proxy's response.
-const runProxyThroughClerk = async (): Promise<{
+const runProxyThroughClerk = async (
+  url?: string,
+  referrer?: string,
+): Promise<{
   clerkOptions: Record<string, unknown>;
   response: Response;
 }> => {
@@ -41,7 +44,9 @@ const runProxyThroughClerk = async (): Promise<{
 
   const { default: middleware } = await import('./proxy');
 
-  const response = await middleware(...proxyInvocation());
+  const invocation = proxyInvocation(url);
+  if (referrer) invocation[0].headers.set('referer', referrer);
+  const response = await middleware(...invocation);
   if (!(response instanceof Response)) throw new Error('No response');
   return { clerkOptions, response };
 };
@@ -62,6 +67,76 @@ describe('proxy content security policy', () => {
     restoreProcessEnv(ORIGINAL_ENV);
     vi.resetModules();
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    ['checkout return', '/checkout/success?session_id=synthetic', undefined],
+    [
+      'old trial return',
+      '/app/billing?trial_payment_method=success&session_id=synthetic',
+      undefined,
+    ],
+    ['encoded parameter name', '/pricing?%73ession_id=synthetic', undefined],
+    [
+      'Clerk return URL',
+      '/sign-in?redirect_url=https%3A%2F%2Fexample.com%2Fcheckout%2Fsuccess%3Fsession_id%3Dsynthetic',
+      undefined,
+    ],
+    [
+      'twice-encoded Clerk return URL',
+      '/sign-in?redirect_url=https%253A%252F%252Fexample.com%252Fcheckout%252Fsuccess%253Fsession_id%253Dsynthetic',
+      undefined,
+    ],
+    [
+      'credential referrer',
+      '/pricing',
+      'https://example.com/checkout/success?session_id=synthetic',
+    ],
+    ['Clerk handshake', '/sign-in?__clerk_handshake=synthetic', undefined],
+  ])(
+    'withholds native reports and onward referrers for a %s',
+    async (_label, path, referrer) => {
+      vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+      vi.stubEnv(
+        'NEXT_PUBLIC_SENTRY_DSN',
+        'https://abc123@o456.ingest.us.sentry.io/789',
+      );
+
+      const { response } = await runProxyThroughClerk(
+        `https://example.com${path}`,
+        referrer,
+      );
+
+      expect(directive(policyOf(response), 'script-src')).toContain("'self'");
+      expect(directive(policyOf(response), 'report-uri')).toBeUndefined();
+      expect(directive(policyOf(response), 'report-to')).toBeUndefined();
+      expect(response.headers.get('reporting-endpoints')).toBeNull();
+      expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+      // SDK events still have their scrubbed path to Sentry.
+      expect(directive(policyOf(response), 'connect-src')).toContain(
+        'https://o456.ingest.us.sentry.io',
+      );
+    },
+  );
+
+  it('keeps native reporting for a non-sensitive return and referrer', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+    vi.stubEnv(
+      'NEXT_PUBLIC_SENTRY_DSN',
+      'https://abc123@o456.ingest.us.sentry.io/789',
+    );
+
+    const { response } = await runProxyThroughClerk(
+      'https://example.com/app/billing?trial_payment_method=success',
+      'https://example.com/pricing?plan=monthly',
+    );
+
+    expect(directive(policyOf(response), 'report-uri')).toHaveLength(1);
+    expect(directive(policyOf(response), 'report-to')).toEqual([
+      'csp-endpoint',
+    ]);
+    expect(response.headers.get('reporting-endpoints')).not.toBeNull();
+    expect(response.headers.get('referrer-policy')).toBeNull();
   });
 
   it('sets the app’s report-only policy on Clerk’s responses, with no nonce', async () => {

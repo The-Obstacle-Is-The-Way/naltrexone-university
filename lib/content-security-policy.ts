@@ -1,3 +1,5 @@
+import { redactCredentialParams } from './sentry-data-collection';
+
 // The site's Content Security Policy, report-only.
 //
 // BUG-378: the app builds this policy rather than taking Clerk's strict mode.
@@ -22,6 +24,25 @@ const CLERK_FRAUD_PROTECTION = 'https://*.protect.clerk.com';
 const CLOUDFLARE_CHALLENGES = 'https://challenges.cloudflare.com';
 const GOOGLE_MAPS = 'https://maps.googleapis.com';
 const REPORT_TO_GROUP = 'csp-endpoint';
+const MAX_URL_DECODE_PASSES = 8;
+
+function urlNeedsRedaction(value: string): boolean {
+  let decoded = value;
+  for (let pass = 0; pass < MAX_URL_DECODE_PASSES; pass += 1) {
+    if (redactCredentialParams(decoded) !== decoded) return true;
+    let next: string;
+    try {
+      next = decodeURIComponent(decoded);
+    } catch {
+      // Malformed URL encoding is not proof that the native payload is safe.
+      return true;
+    }
+    if (next === decoded) return false;
+    decoded = next;
+  }
+  // Bound work on caller-controlled nested redirects; uncertainty sends none.
+  return true;
+}
 
 export type ContentSecurityPolicySources = {
   /** Clerk's Frontend API, which also serves Clerk JS and its UI bundle. */
@@ -112,6 +133,7 @@ function mergeDirectives(base: Directives, extra: Directives): Directives {
 /** The response headers that set and report the policy. */
 export function contentSecurityPolicyHeaders(
   sources: ContentSecurityPolicySources,
+  request?: { url: string; referrer: string | null },
 ): Array<[string, string]> {
   const base = baseDirectives(sources);
   const directives =
@@ -121,9 +143,21 @@ export function contentSecurityPolicyHeaders(
   const parts = Object.entries(directives).map(
     ([name, values]) => `${name} ${values.join(' ')}`,
   );
-  const { reportEndpoint } = sources;
+  // Native reports bypass the SDK's scrubber and carry the document URL and
+  // referrer. Withhold delivery for a document whose URLs need that scrubber,
+  // including Clerk's encoded return URLs. Do not mutate the auth return URL.
+  // This policy lasts for the document, including subsequent SPA navigation.
+  const sensitiveDocument =
+    request !== undefined &&
+    [request.url, request.referrer ?? ''].some(urlNeedsRedaction);
+  const reportEndpoint = sensitiveDocument ? null : sources.reportEndpoint;
   if (!reportEndpoint) {
-    return [['Content-Security-Policy-Report-Only', parts.join('; ')]];
+    const headers: Array<[string, string]> = [
+      ['Content-Security-Policy-Report-Only', parts.join('; ')],
+    ];
+    // A later document must not inherit this URL as its CSP report's referrer.
+    if (sensitiveDocument) headers.push(['Referrer-Policy', 'no-referrer']);
+    return headers;
   }
   // `report-uri` for browsers without the Reporting API, `report-to` for the rest.
   parts.push(`report-uri ${reportEndpoint}`, `report-to ${REPORT_TO_GROUP}`);
