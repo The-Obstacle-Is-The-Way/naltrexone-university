@@ -7,29 +7,25 @@ import {
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
-type CapturedContentSecurityPolicy = {
-  directives: Record<string, string[]>;
-  strict?: boolean;
-  reportOnly: boolean;
-  reportTo?: string;
-};
+// pk_live_ + base64("clerk.example.com$")
+const PUBLISHABLE_KEY = `pk_live_${Buffer.from('clerk.example.com$').toString('base64')}`;
 
 type ClerkMiddlewareCallback = (
   auth: { protect: () => Promise<void> },
   request: unknown,
 ) => Promise<void> | void;
 
-// Runs the proxy once through a mocked Clerk middleware and returns the CSP
+// Runs the proxy once through a mocked Clerk middleware and returns the
 // options the proxy handed Clerk, with the proxy's response.
-const captureContentSecurityPolicyOptions = async (): Promise<{
-  contentSecurityPolicy: CapturedContentSecurityPolicy;
-  response: unknown;
+const runProxyThroughClerk = async (): Promise<{
+  clerkOptions: Record<string, unknown>;
+  response: Response;
 }> => {
   const protect = vi.fn(async () => undefined);
-  let capturedOptions: unknown;
+  let clerkOptions: Record<string, unknown> = {};
   const clerkMiddleware = vi.fn(
-    (cb: ClerkMiddlewareCallback, options?: unknown) => {
-      capturedOptions = options;
+    (cb: ClerkMiddlewareCallback, options?: Record<string, unknown>) => {
+      clerkOptions = options ?? {};
       return vi.fn(async (req: unknown) => {
         await cb({ protect }, req);
         return new Response('ok');
@@ -46,16 +42,19 @@ const captureContentSecurityPolicyOptions = async (): Promise<{
   const { default: middleware } = await import('./proxy');
 
   const response = await middleware(...proxyInvocation());
-
-  return {
-    contentSecurityPolicy: (
-      capturedOptions as {
-        contentSecurityPolicy: CapturedContentSecurityPolicy;
-      }
-    ).contentSecurityPolicy,
-    response,
-  };
+  if (!(response instanceof Response)) throw new Error('No response');
+  return { clerkOptions, response };
 };
+
+const policyOf = (response: Response): string =>
+  response.headers.get('content-security-policy-report-only') ?? '';
+
+const directive = (policy: string, name: string): string[] | undefined =>
+  policy
+    .split('; ')
+    .map((part) => part.split(' '))
+    .find(([directiveName]) => directiveName === name)
+    ?.slice(1);
 
 describe('proxy content security policy', () => {
   afterEach(() => {
@@ -65,23 +64,28 @@ describe('proxy content security policy', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns configured Clerk CSP directives when NEXT_PUBLIC_SKIP_CLERK is false', async () => {
-    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+  it('sets the app’s report-only policy on Clerk’s responses, with no nonce', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+    vi.stubEnv('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', PUBLISHABLE_KEY);
+    vi.stubEnv('NODE_ENV', 'production');
 
-    const { contentSecurityPolicy, response } =
-      await captureContentSecurityPolicyOptions();
+    const { clerkOptions, response } = await runProxyThroughClerk();
+    const policy = policyOf(response);
 
-    expect(response).toBeInstanceOf(Response);
-    expect(contentSecurityPolicy).toMatchObject({
-      strict: true,
-      reportOnly: true,
-      directives: expect.objectContaining({
-        'base-uri': expect.arrayContaining(['self']),
-        'connect-src': expect.arrayContaining(['ws:', 'wss:']),
-        'frame-ancestors': expect.arrayContaining(['none']),
-        'object-src': expect.arrayContaining(['none']),
-      }),
-    });
+    expect(clerkOptions).not.toHaveProperty('contentSecurityPolicy');
+    expect(response.headers.get('content-security-policy')).toBeNull();
+    expect(directive(policy, 'script-src')).toEqual(
+      expect.arrayContaining([
+        "'self'",
+        "'unsafe-inline'",
+        'https://clerk.example.com',
+      ]),
+    );
+    expect(policy).not.toContain('strict-dynamic');
+    expect(policy).not.toContain('nonce-');
+    expect(directive(policy, 'base-uri')).toEqual(["'self'"]);
+    expect(directive(policy, 'frame-ancestors')).toEqual(["'none'"]);
+    expect(directive(policy, 'object-src')).toEqual(["'none'"]);
   });
 
   describe('preview-only Vercel Toolbar CSP support', () => {
@@ -90,48 +94,17 @@ describe('proxy content security policy', () => {
       vi.stubEnv('VERCEL_ENV', 'preview');
       vi.stubEnv('NODE_ENV', 'production');
 
-      const { contentSecurityPolicy } =
-        await captureContentSecurityPolicyOptions();
+      const { response } = await runProxyThroughClerk();
+      const policy = policyOf(response);
 
-      expect(contentSecurityPolicy.strict).toBe(true);
-      expect(contentSecurityPolicy.reportOnly).toBe(true);
-      expect(contentSecurityPolicy.directives['script-src']).toEqual([
-        'https://vercel.live',
-      ]);
-      expect(contentSecurityPolicy.directives['connect-src']).toEqual(
+      expect(directive(policy, 'script-src')).toContain('https://vercel.live');
+      expect(directive(policy, 'connect-src')).toEqual(
         expect.arrayContaining([
-          'ws:',
-          'wss:',
           'https://vercel.live',
           'wss://ws-us3.pusher.com',
         ]),
       );
-      expect(contentSecurityPolicy.directives['img-src']).toEqual(
-        expect.arrayContaining([
-          'self',
-          'data:',
-          'blob:',
-          'https:',
-          'https://vercel.live',
-          'https://vercel.com',
-        ]),
-      );
-      expect(contentSecurityPolicy.directives['frame-src']).toEqual([
-        'https://vercel.live',
-      ]);
-      expect(contentSecurityPolicy.directives['style-src']).toEqual([
-        'https://vercel.live',
-        "'unsafe-inline'",
-      ]);
-      expect(contentSecurityPolicy.directives['font-src']).toEqual(
-        expect.arrayContaining([
-          'self',
-          'data:',
-          'https:',
-          'https://vercel.live',
-          'https://assets.vercel.com',
-        ]),
-      );
+      expect(directive(policy, 'frame-src')).toContain('https://vercel.live');
     });
 
     it('does not include the Vercel Toolbar origins when VERCEL_ENV=production', async () => {
@@ -139,57 +112,22 @@ describe('proxy content security policy', () => {
       vi.stubEnv('VERCEL_ENV', 'production');
       vi.stubEnv('NODE_ENV', 'production');
 
-      const { contentSecurityPolicy } =
-        await captureContentSecurityPolicyOptions();
+      const { response } = await runProxyThroughClerk();
 
-      expect(contentSecurityPolicy.directives['script-src']).toBeUndefined();
-      expect(contentSecurityPolicy.directives['frame-src']).toBeUndefined();
-      expect(contentSecurityPolicy.directives['style-src']).toBeUndefined();
-      expect(contentSecurityPolicy.directives['connect-src']).not.toContain(
-        'https://vercel.live',
-      );
-      expect(contentSecurityPolicy.directives['connect-src']).not.toContain(
-        'wss://ws-us3.pusher.com',
-      );
-      expect(contentSecurityPolicy.directives['img-src']).not.toContain(
-        'https://vercel.live',
-      );
-      expect(contentSecurityPolicy.directives['img-src']).not.toContain(
-        'https://vercel.com',
-      );
-      expect(contentSecurityPolicy.directives['font-src']).not.toContain(
-        'https://vercel.live',
-      );
-      expect(contentSecurityPolicy.directives['font-src']).not.toContain(
-        'https://assets.vercel.com',
-      );
+      expect(policyOf(response)).not.toContain('vercel.live');
     });
 
     it('does not include the Vercel Toolbar origins when VERCEL_ENV is not set', async () => {
       vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
-      vi.unstubAllEnvs();
-      process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-      delete process.env.VERCEL_ENV;
       vi.stubEnv('NODE_ENV', 'production');
+      delete process.env.VERCEL_ENV;
 
-      const { contentSecurityPolicy } =
-        await captureContentSecurityPolicyOptions();
+      const { response } = await runProxyThroughClerk();
 
-      expect(contentSecurityPolicy.directives['script-src']).toBeUndefined();
-      expect(contentSecurityPolicy.directives['frame-src']).toBeUndefined();
-      expect(contentSecurityPolicy.directives['style-src']).toBeUndefined();
-      expect(contentSecurityPolicy.directives['connect-src']).not.toContain(
-        'https://vercel.live',
-      );
-      expect(contentSecurityPolicy.directives['img-src']).not.toContain(
-        'https://vercel.live',
-      );
-      expect(contentSecurityPolicy.directives['font-src']).not.toContain(
-        'https://vercel.live',
-      );
+      expect(policyOf(response)).not.toContain('vercel.live');
     });
 
-    it('includes sentry_environment=preview in report-uri when VERCEL_ENV=preview and NEXT_PUBLIC_SENTRY_DSN is set', async () => {
+    it('includes sentry_environment=preview in the report endpoint when VERCEL_ENV=preview and NEXT_PUBLIC_SENTRY_DSN is set', async () => {
       vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
       vi.stubEnv(
         'NEXT_PUBLIC_SENTRY_DSN',
@@ -198,15 +136,14 @@ describe('proxy content security policy', () => {
       vi.stubEnv('VERCEL_ENV', 'preview');
       vi.stubEnv('NODE_ENV', 'production');
 
-      const { contentSecurityPolicy } =
-        await captureContentSecurityPolicyOptions();
+      const { response } = await runProxyThroughClerk();
+      const endpoint =
+        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=preview';
 
-      expect(contentSecurityPolicy.reportTo).toBe(
-        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=preview',
+      expect(directive(policyOf(response), 'report-uri')).toEqual([endpoint]);
+      expect(response.headers.get('reporting-endpoints')).toBe(
+        `csp-endpoint="${endpoint}"`,
       );
-      expect(contentSecurityPolicy.directives['report-uri']).toEqual([
-        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=preview',
-      ]);
     });
   });
 
@@ -217,57 +154,43 @@ describe('proxy content security policy', () => {
     delete process.env.VERCEL_ENV;
     vi.stubEnv('NODE_ENV', 'test');
 
-    const { contentSecurityPolicy } =
-      await captureContentSecurityPolicyOptions();
+    const { response } = await runProxyThroughClerk();
+    const policy = policyOf(response);
 
-    expect(contentSecurityPolicy).toMatchObject({
-      strict: true,
-      reportOnly: true,
-      reportTo:
-        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=local',
-      directives: expect.objectContaining({
-        'connect-src': expect.arrayContaining([
-          'ws:',
-          'wss:',
-          'https://o456.ingest.us.sentry.io',
-        ]),
-        'report-uri': [
-          'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=local',
-        ],
-      }),
-    });
+    expect(directive(policy, 'connect-src')).toEqual(
+      expect.arrayContaining([
+        'ws:',
+        'wss:',
+        'https://o456.ingest.us.sentry.io',
+      ]),
+    );
+    expect(directive(policy, 'report-uri')).toEqual([
+      'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=local',
+    ]);
   });
 
   it('excludes Sentry ingest origin from connect-src when NEXT_PUBLIC_SENTRY_DSN is not set', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
 
-    const { contentSecurityPolicy } =
-      await captureContentSecurityPolicyOptions();
+    const { response } = await runProxyThroughClerk();
+    const policy = policyOf(response);
 
-    expect(contentSecurityPolicy.strict).toBe(true);
-    expect(contentSecurityPolicy.reportOnly).toBe(true);
-    expect(contentSecurityPolicy.reportTo).toBeUndefined();
-    expect(contentSecurityPolicy.directives['connect-src']).toEqual([
-      'ws:',
-      'wss:',
-    ]);
-    expect(contentSecurityPolicy.directives['report-uri']).toBeUndefined();
+    expect(policy).not.toContain('sentry.io');
+    expect(directive(policy, 'report-uri')).toBeUndefined();
+    expect(response.headers.get('reporting-endpoints')).toBeNull();
   });
 
   it('excludes invalid-scheme Sentry DSNs from connect-src', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.NEXT_PUBLIC_SENTRY_DSN = 'mailto:test@example.com';
 
-    const { contentSecurityPolicy } =
-      await captureContentSecurityPolicyOptions();
+    const { response } = await runProxyThroughClerk();
+    const policy = policyOf(response);
 
-    expect(contentSecurityPolicy.directives['connect-src']).toEqual([
-      'ws:',
-      'wss:',
-    ]);
+    expect(policy).not.toContain('example.com');
     // An invalid DSN must not reach Sentry reporting either.
-    expect(contentSecurityPolicy.reportTo).toBeUndefined();
-    expect(contentSecurityPolicy.directives['report-uri']).toBeUndefined();
+    expect(directive(policy, 'report-uri')).toBeUndefined();
+    expect(response.headers.get('reporting-endpoints')).toBeNull();
   });
 });

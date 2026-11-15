@@ -69,6 +69,9 @@ export async function NonceBoundProviders({
 }: {
   children: React.ReactNode;
 }) {
+  // BUG-378: nothing sets x-nonce now, since the CSP has no nonce, so this is
+  // undefined unless a client sends the header for its own render. Removing
+  // the read changes how every page renders, which DEBT-522 covers.
   const nonce = (await headers()).get('x-nonce') ?? undefined;
 
   return <RootProvidersShell nonce={nonce}>{children}</RootProvidersShell>;
