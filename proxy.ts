@@ -104,13 +104,13 @@ const sentrySecurityHeaderEndpoint = parseSentrySecurityHeaderEndpoint(
 // BUG-378: the app's own report-only policy, not Clerk's strict mode, whose
 // nonce the prerendered shells' scripts cannot carry. Why each source is
 // there: lib/content-security-policy.ts.
-const CONTENT_SECURITY_POLICY_HEADERS = contentSecurityPolicyHeaders({
+const CONTENT_SECURITY_POLICY_SOURCES = {
   clerkFrontendApiOrigin: clerkFrontendApiOrigin(clerkPublishableKey()),
   sentryIngestOrigin,
   reportEndpoint: sentrySecurityHeaderEndpoint,
   vercelEnv: process.env.VERCEL_ENV,
   nodeEnv: process.env.NODE_ENV,
-});
+};
 
 let cachedClerkMiddleware: NextMiddleware | null = null;
 let hasLoggedSkipClerkProductionWarning = false;
@@ -368,7 +368,10 @@ export function createProxy({
     const clerkMw = await getClerkMiddleware();
     const response = await clerkMw(clerkRequest, event);
     if (response) {
-      for (const [name, value] of CONTENT_SECURITY_POLICY_HEADERS) {
+      for (const [name, value] of contentSecurityPolicyHeaders(
+        CONTENT_SECURITY_POLICY_SOURCES,
+        { url: request.url, referrer: request.headers.get('referer') },
+      )) {
         response.headers.set(name, value);
       }
       logCheckoutSuccessAuthBounce(request, response);
