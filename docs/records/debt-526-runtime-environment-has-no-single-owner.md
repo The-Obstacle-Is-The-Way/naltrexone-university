@@ -1,6 +1,6 @@
 # DEBT-526: Which Environment the Code Runs In Is Decided in Many Places, by Different Rules
 
-**Status:** Open — share explicit environment policies without conflating build, deployment, proxy trust or vendor mode; replace the ineffective Clerk pairing check and prove CI configuration
+**Status:** Open — delete the dead Clerk instance check, give the proxy `lib/env.ts`'s production rule, redact `SENTRY_DSN`, and check the app URL's origin in production
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -8,92 +8,51 @@
 
 ## Summary
 
-Deployment environment and Clerk bypass policy are read in several places. Eight production expressions read `NEXT_PUBLIC_SKIP_CLERK` directly. The startup and middleware bypass guards disagree off Vercel. Other checks deliberately answer different questions: build mode, live Clerk instance, trusted proxy headers and telemetry labeling. Consolidation must preserve those distinctions.
+The Clerk bypass is guarded twice, by different production rules, and `lib/env.ts` carries a Clerk instance check that can never fire. The server's Sentry DSN, sensitive under ADR-026, is missing from the logger's redaction list. The site's origin has two owners that nothing ties together in production.
 
-This family has been fixed before, in one file at a time:
-- BUG-136 (the logger) and BUG-143 (Sentry) were the same inlined `NODE_ENV` mistake, fixed separately on the same day.
-- DEBT-197 aligned `proxy.ts` on `VERCEL_ENV`. Two hours later, `dca45291`, a review-feedback commit, added a `NODE_ENV` fallback for hosts without `VERCEL_ENV`, so `proxy.ts` again differs from `lib/env.ts` off Vercel.
-
-The same pattern shows in four related places:
-- **Clerk key pairing.** The check that the two Clerk keys come from one instance cannot fire on real keys, though the environments guide says it is enforced.
-- **The env file.** CI's build and E2E server load `.env.test` as a hidden layer.
-- **The site origin.** It has two owners.
-- **Configuration visibility and log redaction.** Their classifications are partly independent and need explicit rules.
+DEBT-197 aligned the proxy's guard on `VERCEL_ENV`; two hours later a review commit (`dca45291`) added a `NODE_ENV` fallback, and the two have differed since.
 
 ## Evidence
 
-**Environment-dependent policies, an illustrative inventory rather than equivalent predicates:**
-- `lib/env.ts:163`: `VERCEL_ENV === 'production'`. Its comment at `:144-154` explains why `NODE_ENV` is unreliable: the build inlines it.
-- `lib/env.ts:220-221`: production or preview.
-- `proxy.ts:190-192`: `VERCEL_ENV`, else `NODE_ENV` when `VERCEL_ENV` is unset.
-- `proxy.ts:269-274,298-302,337-339`: the `pk_live_` prefix selects live Clerk allowance protection, deliberately independent of deployment environment (BUG-323/DEBT-503).
-- `lib/logger.ts:6-8`: `test`, else `VERCEL_ENV || NODE_ENV`.
-- `lib/request-ip.ts:3-9`: `NODE_ENV` controls trusted proxy-header handling. Replacing it with Vercel-production detection would change Preview trust.
-- `instrumentation.ts:17` and `lib/sentry-data-collection.ts` (`sentryEnvironmentFor`): `VERCEL_ENV`, else `'local'`.
-- Build-mode checks, correctly on `NODE_ENV`: `lib/db.ts:24` (the hot-reload cache), `lib/report-client-error.ts:55` (a development console line) and `app/(app)/app/request-boundary.ts:4` (skipped in tests). A single module must keep build mode separate from the deployment environment.
+Checked at `34d9aea0`.
 
-**"Is Clerk skipped?":**
-- `NEXT_PUBLIC_SKIP_CLERK` is read raw at `proxy.ts:186`, `lib/container.ts:66,75`, `components/providers.tsx:57`, `components/auth-nav.tsx:35`, `components/get-started-cta.tsx:24`, and both sign-in and sign-up page clients (`:15`).
-- Only `lib/env.ts:233-234` and `proxy.ts:190-198` guard it, each with its own production rule.
-- With no `VERCEL_ENV`, the env validator permits a skip build, while middleware with compiled production `NODE_ENV` refuses that bypass. Direct skip consumers still treat visitors as signed out. With missing or dummy Clerk keys, authentication can fail. This is a source-derived mismatch, not a reproduced failure of a deployed configuration.
-
-**The Clerk instance check cannot fire:**
-- `lib/env.ts:23-36` decodes the publishable key's middle part and requires `/^[a-z0-9-]+$/`.
-- A real publishable key decodes to a host ending in `$`, such as `example-mole-12.clerk.accounts.dev$`, which fails the pattern, so the function returns null. A secret key carries no instance at all.
-- So the comparison at `:198-209` never runs. Its test passes only on synthetic keys (`lib/env.test.ts:398-399`).
-- `docs/architecture/environments.md` ("Clerk key pairing rule") says `lib/env.ts` validates both the environment type and the instance; only the type check (by prefix) works.
-
-**`.env.test` loads in CI's build and app server:**
-- `ci.yml:36` and `stripe-hosted-checkout-smoke.yml:24` set `NODE_ENV: test` for the job. Next then loads `.env.test` and skips `.env.local`, for both `next build` and `next start`.
-- `.env.test:2` says it is for integration tests. It sets `NEXT_PUBLIC_SKIP_CLERK=true` (`:13`), `CLERK_WEBHOOK_SIGNING_SECRET=whsec_dummy` (`:17`) and `CRON_SECRET=cron_test_dummy` (`:30`).
-- The Build overrides (`.github/workflows/ci.yml:181`; hosted workflow :69) prevent compiling `.env.test`'s bypass into the bundle. The E2E overrides (`ci.yml:199`; hosted :86) align runtime validation. Removing only the runtime override cannot rewrite the already compiled public flag. The installed Next env loader was probed with `NODE_ENV=test`: it loaded `.env.test` and all three dummy settings.
-- CI sets neither `CRON_SECRET` nor `CLERK_WEBHOOK_SIGNING_SECRET`, so CI's E2E server gets both only from `.env.test`. Moving the file needs CI to declare them.
-
-**Two owners of the site's origin:**
-- `PUBLIC_SITE_ORIGIN` in `lib/public-routes.ts` feeds metadata, the sitemap and robots.
-- `NEXT_PUBLIC_APP_URL` (`lib/env.ts`) feeds Stripe's return URLs and renewal-notice links.
-- Nothing checks they agree in production. BUG-080 sent a Preview checkout's return to localhost through the second.
-
-**Configuration visibility and log redaction:**
-- `SECRET_ENV_NAMES` in `lib/logger.ts:28-43` is an explicit redaction list.
-- `lib/logger.test.ts:109,140` uses name heuristics to discover omissions; these are tests, not independent lists of the same secrets.
-- `docs/architecture/environments.md` marks sensitive configuration. ADR-026 deliberately publishes the browser DSN but keeps the server DSN sensitive because it accepts operational events. `SENTRY_DSN` is absent from the logger list.
-
-`SENTRY_DSN` is sensitive under ADR-026 §2 but absent from `SECRET_ENV_NAMES`. The registry must say whether sensitive means redacted from logs.
-
-**History:** BUG-002, BUG-136, BUG-143, DEBT-041, DEBT-129 and DEBT-197 concern environment/skip checks. BUG-040 concerns Clerk configuration; BUG-064 was a false alarm closed Won't Fix, and BUG-079 concerned expected cross-environment session cookies. BUG-080 concerns the app URL. DEBT-240/446 concern database targets. BUG-345's pooled timeout configuration is an adjacent boundary problem, not evidence of duplicate environment predicates.
+- **Two bypass guards.** `lib/env.ts:163` treats only `VERCEL_ENV === 'production'` as production, and refuses `NEXT_PUBLIC_SKIP_CLERK=true` there (`:233-235`); its comment (`:144-162`) explains why `NODE_ENV` is unreliable: the build inlines it. `proxy.ts:168-170` also falls back to `NODE_ENV` when `VERCEL_ENV` is unset. Off Vercel, a production build with the bypass on therefore passes `lib/env.ts`, while the proxy enforces Clerk and the other consumers treat everyone as signed out. No test covers the fallback (`proxy.test.ts:96-99` sets `VERCEL_ENV`). The app deploys only to Vercel, where both guards agree.
+- **The bypass reads.** Eight expressions read the flag raw, all as `=== 'true'`: `proxy.ts:164`, `lib/container.ts:73,82`, `components/providers.tsx:57`, `components/auth-nav.tsx:35`, `components/get-started-cta.tsx:24`, and both sign-in and sign-up page clients (`:15`). They agree with each other.
+- **The dead instance check.** `lib/env.ts:12-36` decodes the publishable key and keeps the result only if it matches `/^[a-z0-9-]+$/`. A real key decodes to a host ending in `$`, such as `example-mole-12.clerk.accounts.dev$`, so the function returns null, and a secret key carries no instance. The comparison at `:198-209` never runs; its test (`lib/env.test.ts:384-407`) passes only on synthetic keys. `docs/architecture/environments.md:121` already says `lib/env.ts` does not establish instance equality.
+- **`SENTRY_DSN`.** `SECRET_ENV_NAMES` (`lib/logger.ts:28-43`) omits it, and the coverage test's name pattern (`lib/logger.test.ts:111-116`) cannot catch a `_DSN`.
+- **The origin.** `PUBLIC_SITE_ORIGIN` (`lib/public-routes.ts:4`) feeds metadata, the sitemap and robots. `NEXT_PUBLIC_APP_URL` (`lib/env.ts:92`) feeds Stripe's return URLs and renewal-notice links. BUG-080 sent a Preview checkout's return to localhost through the second.
+- **CI's `.env.test`.** With `NODE_ENV: test` (`ci.yml:36`; `stripe-hosted-checkout-smoke.yml:24`), Next loads `.env.test` for `next build` and `next start` (`@next/env` 16.4.5 reads `.env.test.local`, `.env.test`, `.env`). The steps set every value the app needs (`ci.yml:189,218`; hosted `:81,98`). The file still supplies `CRON_SECRET` and `CLERK_WEBHOOK_SIGNING_SECRET` dummies, which no E2E test uses.
 
 ## Impact
 
-The confirmed liabilities are inconsistent bypass policies and an ineffective instance check. No deployed Vercel failure was verified. A new consumer can copy a predicate with different semantics; P3 reflects that maintenance risk.
+No deployed failure. The guard mismatch shows only in a local production build with the bypass on. The dead check suggests a protection that does not exist. A logged server DSN would let a log reader send events to the error project. A wrong production app URL would put another host in Stripe returns and renewal notices.
 
 ## Options
 
-1. **One typed environment-policy module with narrow adapters.** *Recommended.*
-   - Keep deployment, build, auth bypass, live vendor instance, proxy trust and telemetry label as distinct policies. Server/client adapters expose only their permitted inputs; preserve BUG-323 and ADR-026.
-   - Server code reads it. The current client env reads use `NEXT_PUBLIC_*` values fixed at build; expose the intended public auth mode through a narrow build-time export without exposing server configuration.
-   - A scoped source scan enforces the named production-source invariants and permitted policy adapters. Tests and tooling can still read environment inputs; do not ban every environment read by keyword.
-   - **The Clerk instance check.** `lib/env.ts` cannot learn a secret key's instance without a network call, which it must not make at module load. Remove the ineffective decoder and correct the guide to state only the prefix compatibility check. Add a separate bounded deployment/readiness check if authoritative provider instance evidence is available. The existing JWT check reads public JWKS and returns early without `CLERK_JWT_KEY`; it does not authenticate the secret key, so pairing must not depend on that optional path. Never log keys or weaken DEBT-503's public-JWKS behavior.
-   - Move test-only env loading to explicit test configuration and declare CI build/server inputs, including the dummy secrets. Migrate integration callers with it and retain step-scoped real credentials. Prove build-and-serve behavior, not only file placement.
-   - In production, assert that `NEXT_PUBLIC_APP_URL`'s origin equals `PUBLIC_SITE_ORIGIN`.
-   - Derive logging redaction from a registry that separately states public visibility, preserving the sensitive server/public browser DSN distinction.
-2. **Align the rules by hand.** DEBT-197 did, and a review commit diverged them again the same night.
+1. **The four small fixes below.** *Recommended.*
+2. **One environment-policy module, a source scan over every environment read, a redaction registry, an instance-pairing readiness check, and moving `.env.test`.** Rejected: each adds machinery the evidence does not need. The eight bypass reads agree; the CI file supplies only unused dummies; the guide has pairing verified in the Clerk Dashboard (`environments.md:121`), and a local check cannot learn a secret key's instance.
 
 ## Resolution (proposed)
 
 Option 1, red first:
-- the scan, failing on today's sites;
-- real-shaped key fixtures prove local prefix validation and the guide's corrected scope; an independent readiness check must prove pairing before the guide claims it;
-- a production-mode build-and-serve check proves explicit CI configuration and real auth mode.
+
+1. **Delete the instance check.** Remove `lib/env.ts:12-36` and `:198-209`, and the synthetic test. The prefix check (`:187-196`) and its tests stay.
+2. **One production rule.** `proxy.ts` treats only `VERCEL_ENV === 'production'` as production, as `lib/env.ts` does, with a comment naming it. Red test: with `VERCEL_ENV` unset and `NODE_ENV=production`, the proxy honors the bypass.
+3. **Redact `SENTRY_DSN`.** Add it to `SECRET_ENV_NAMES`, and `DSN` to the coverage test's pattern; `NEXT_PUBLIC_` names stay excluded. Red test: the pattern change fails until the name is added.
+4. **Tie the origins.** On Vercel production, `lib/env.ts` refuses a `NEXT_PUBLIC_APP_URL` whose origin is not `PUBLIC_SITE_ORIGIN`. Red test in `lib/env.test.ts`. Before merging, the owner confirms production's value in Vercel.
+
+**Net code effect.** About 60 lines deleted (the decoder, the comparison and its test, the fallback); about 10 added.
 
 ## Verification
 
-- [ ] Shared explicit policies preserve deployment/build/vendor/proxy/telemetry distinctions; the scan rejects a demonstrated bypass-policy violation.
-- [ ] Local Clerk validation and the guide agree. Any implemented pairing check uses authoritative instance evidence, independent of optional JWT configuration, and rejects mismatches without printing keys.
-- [ ] CI build and server use declared inputs, with auth enabled and integration-test configuration migrated.
-- [ ] Production app origin equals the public-site origin; the redaction registry preserves ADR-026's visibility distinctions.
+- [ ] `lib/env.ts` has no instance decoder, and its prefix tests pass.
+- [ ] The proxy and `lib/env.ts` share one production rule, with the red test above.
+- [ ] `SENTRY_DSN` is redacted, and the coverage test would catch another server DSN.
+- [ ] A production build refuses an app URL off the public origin.
 
 ## Related
 
 - DEBT-197, BUG-136, BUG-143 (closed): the earlier one-file fixes.
-- BUG-345: pooled database timeouts, an adjacent configuration boundary.
+- ADR-026: the server DSN is sensitive.
+
+Corrected 2026-11-15: resolution narrowed to four fixes, with the policy module, source scan, redaction registry, pairing check and `.env.test` move proposed as declined (needs sign-off); `environments.md` no longer claims the instance check; the `.env.test` values CI relies on are unused dummies; line drift corrected (`proxy.ts:164,168-170`, `lib/container.ts:73,82`, `ci.yml:189,218`); the illustrative inventory is in git at `34d9aea0`.

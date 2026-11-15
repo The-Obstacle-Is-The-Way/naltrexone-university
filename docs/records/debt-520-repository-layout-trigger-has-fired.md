@@ -1,6 +1,6 @@
 # DEBT-520: ADR-013's Repository-Layout Trigger Has Fired Without a Decision
 
-**Status:** Open — decide whether the repositories stay flat or move into aggregate folders, and record it as an ADR
+**Status:** Verifying — ADR-013's amendment lands in this pull request, which closes this record as Resolved; due 2026-11-22
 **Priority:** P4
 **Date:** 2026-10-11
 
@@ -8,31 +8,37 @@
 
 ## Summary
 
-ADR-013 kept `src/adapters/repositories/` flat, and promised to restructure it by aggregate "when a new aggregate is introduced, or the flat list starts to hinder navigation". Since then, content releases, question feedback, renewal consent and notices, and trial payment-method setup have each added repositories. The folder now holds 25 files, and no decision was recorded either way.
+ADR-013 kept `src/adapters/repositories/` flat, and promised to restructure it by aggregate "when a new aggregate is introduced, or the flat list starts to hinder navigation". Since then, question feedback, renewal consent and notices, trial card setup, Clerk events, deleted Clerk users, idempotency keys and pending Stripe customer cleanups have each added a repository, and no decision was recorded either way.
 
 ## Evidence
 
-- ADR-013, "Trigger to Restructure": "We will restructure by aggregate when a new aggregate is introduced". Its status note of 2026-02-09 already deferred it once.
-- `src/adapters/repositories/` holds 25 non-test entries, among them `drizzle-question-feedback-repository.ts`, `drizzle-renewal-consent-record-repository.ts`, `drizzle-renewal-notice-delivery-repository.ts` and `drizzle-trial-payment-method-setup-operation-repository.ts`, none in ADR-013's aggregate list.
-- The documentation census of 2026-10-11 (DEBT-518) found it.
+Checked at `34d9aea0`.
+
+- ADR-013, "Trigger to Restructure", and its 2026-02-09 status note, which deferred it once. ADR-013 still reads Accepted.
+- `src/adapters/repositories/` holds 25 non-test entries: 17 `drizzle-*-repository.ts` files, the barrel, six helpers and `shared/`. Eight of the 17 are outside ADR-013's four aggregates.
+- The newer repositories do not fit those aggregates: idempotency keys serve every keyed action, and the Clerk and Stripe event ledgers serve webhooks.
+- `src/application/ports/` is flat too, one file per repository.
+- 97 files outside `docs/` name a repository path, 81 of them in `tests/integration/`.
 
 ## Impact
 
-None at runtime. An ADR whose trigger has fired without a decision misleads: readers cannot tell whether the flat layout is still intended.
+None at runtime. An ADR whose trigger has fired without a decision misleads: readers cannot tell whether the flat layout is intended.
 
 ## Options
 
-1. **Restructure by aggregate,** keeping `src/adapters/repositories/index.ts`'s exports API-compatible, as ADR-013 promised.
-2. **Keep the flat layout,** and supersede ADR-013 with the reason: for example, that the barrel and file names already group by aggregate.
+1. **Restructure by aggregate,** as ADR-013 promised. Folders of one to four files, a mismatch with the flat ports, and about 97 importers to change, for no navigation gain the file names do not already give.
+2. **Keep the flat layout,** and withdraw the trigger. *Recommended.*
 
-## Resolution (decided)
+## Resolution (proposed)
 
-Not yet. Weigh both against the import churn and the current navigation cost, then record the choice as a new ADR that supersedes ADR-013.
+Option 2, as an amendment to ADR-013, the repository's usual way to change an accepted decision (`docs/adr/README.md`, "How to Propose a New ADR"); no ADR has been superseded so far. The amendment keeps the folder flat for the reasons above, and withdraws the aggregate list and the trigger without setting a new one. Update ADR-013's status line, its `docs/adr/README.md` index row and summary to name the amendment. No code changes.
 
 ## Verification
 
-- [ ] A new ADR records the decision, and ADR-013's status names it.
+- [ ] ADR-013 carries a dated amendment keeping the folder flat with no trigger, and its status and index row name it.
 
 ## Related
 
-- [ADR-013](../adr/adr-013-repository-organization.md)
+- ADR-013 (`docs/adr/adr-013-repository-organization.md`).
+
+Corrected 2026-11-15: content releases added no repository (their write side is in `scripts/content-release/`); listed the repositories that did; recommended an amendment over a superseding ADR, keeping the folder flat.

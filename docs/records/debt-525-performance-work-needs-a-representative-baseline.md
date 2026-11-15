@@ -1,6 +1,6 @@
 # DEBT-525: Performance Work Needs a Representative Baseline
 
-**Status:** Open — assemble the baseline at the start of performance work, before selecting rendering, scoring, caching or index changes
+**Status:** Open — close as Reclassified once the owner agrees: a procedure, not a liability, and each deferred optimization's Waiting row already demands its measurement
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -8,44 +8,36 @@
 
 ## Summary
 
-Performance work can start without an architecture rewrite. Existing server instrumentation and query-specific triggers supply the starting point, but no retained, representative baseline brings request latency, database waits and recovery progress together. Without it, a local speedup can miss the actual bottleneck or make recovery less reliable.
-
-The owner adopted DEBT-524 option 2 and Resolution steps 1–8 on 2026-10-17. This record owns step 7. It authorizes measurement within the existing collection policy, not changes to rendering, scoring or data collection.
+The owner adopted DEBT-524's step 7 on 2026-10-17: measure a representative baseline before choosing rendering, scoring, caching or index changes. This record held that step. It names no current defect. Its trigger, "the start of performance work", is not observable, and before the first live sale production has no representative workload to measure.
 
 ## Evidence
 
-- `lib/sentry-data-collection.ts:399` samples server traces at 5%. `src/adapters/shared/server-tracing.ts:7-26,68-105` defines action spans and their allowed custom attributes. BUG-331 verified trace privacy; whether to keep the 5% sample is the owner's decision, held in BUG-331's Waiting row, and comes before expanding collection.
-- `lib/db.ts:19-22` limits one postgres.js pool to ten clients. Aggregate connection demand and pool waits need measurement alongside query time. BUG-345 supplies the missing server timeout backstop.
-- DEBT-450 names Sentry/Neon measurements and the bookmark census. Its scoring description predates ADR-022: `src/application/use-cases/get-user-stats.ts:110-124` requests lifetime count and score plus bounded recent metrics; `src/adapters/repositories/drizzle-attempt-repository.ts:383-428` joins corrected revisions and practice state.
-- The root reads `headers()` for a nonce (`app/layout.tsx:72`) that nothing has issued since BUG-378, while marketing components cache their content (`components/marketing/marketing-layout.tsx:25,55,73`; `marketing-home.tsx:71,93,135,182,253`). Measure actual request/render work rather than treating all content as uncached.
-- Recovery shares finite invocation time: reconcile checks its budget between pages (`src/adapters/jobs/reconcile-all-stripe-subscription-pages.ts:120-152`); notice dispatch checks monitoring before business work (`src/adapters/jobs/send-due-renewal-notices.ts:368-423`). DEBT-501 and DEBT-414 own the resulting code changes.
-- On 2026-10-16, production's `x-vercel-id` header showed functions in `iad1`; its pooled database hostname showed `us-east-1`.
+Checked at `34d9aea0`.
+
+- The instrumentation the baseline would use exists: server traces sampled at 5% (`lib/sentry-data-collection.ts:418`), the traced action families (`src/adapters/shared/server-tracing.ts:7`), and a ten-client pool (`lib/db.ts:21`). BUG-331's Waiting row holds the owner's decision on the 5% sample.
+- Every deferred optimization already waits on its own measured trigger in the index's Waiting table: DEBT-450 (finalize, bookmark pagination, dashboard aggregates and ranking, with the bookmark census and the sanitized EXPLAIN procedure in `docs/guides/database/`), DEBT-349 (cross-request content caching), DEBT-522 (prefetching), and DEBT-479 and DEBT-464 (browser measurement and Web Analytics).
+- The first live sale is still ahead (DEBT-512, DEBT-534), so production traffic is not yet representative.
 
 ## Impact
 
-Query latency alone can hide connection waits, lock contention, cached rendering and work that a recovery job never reaches. A baseline makes the existing optimization triggers assessable.
+None now. Without a baseline, an optimization could miss the real bottleneck; the Waiting rows' evidence requirements already prevent that, part by part.
 
 ## Options
 
-1. Optimize from isolated timings. Rejected: they do not establish the dominant production cost or recovery progress.
-2. Assemble a representative baseline from the existing instrumentation and local controlled workloads. Adopted. Expand collection only after its separate owner decision.
+1. Keep this record open until performance work starts. It would sit with no observable trigger.
+2. Close it as Reclassified, relying on the Waiting rows' triggers. *Recommended.*
 
-## Resolution (decided)
+## Resolution (proposed)
 
-**Trigger:** the start of the performance pass, before selecting an optimization. No billing or identity refactor is a prerequisite.
-
-- Record the sampled routes/actions, measurement period, representative data cardinalities, concurrency, sample limitations and retention period. Keep credentials, user data and live business metrics out of the public repository; retain operational receipts in the approved location.
-- Measure route/query latency, transaction duration, lock and pool waits, and recovery progress. For reconcile, include rows reached, retries and cleanup time. For notices, include the monitoring/GitHub checks and dispatch time. Use existing instrumentation; BUG-331 governs any expansion.
-- Use the current ADR-022 scoring queries. Apply DEBT-450's existing slow-query and query-plan procedure before changing scoring or indexes. A rollup/cache is not a prerequisite to measurement.
-- Preserve DEBT-420's CSP decision and DEBT-522's `partialPrefetching: false` and upgrade trigger. Reconsider nonce placement only at its function-usage trigger. Preserve DEBT-349's measured bottleneck and invalidation requirements before adding cross-request content caching.
-- Browser field measurement and Web Analytics remain under DEBT-479 and DEBT-464, including their source, quota, privacy and hosting decisions.
+Option 2. Closing declines an owner-adopted step, so it needs the owner's agreement. No guide is added: the only lasting rule, measure the bottleneck before optimizing, is already each Waiting row's trigger.
 
 ## Verification
 
-- [x] A second agent checked every receipt, the existing triggers and record rules on 2026-10-17; no substantiated correction. The dated region observations were retained without a new production read.
-- [ ] The baseline names its workload, period, retention and limits, with reproducible measurement steps and receipts for the metrics above.
-- [ ] Each proposed optimization identifies its measured bottleneck, applicable trigger and before/after check. Work that lacks a fired trigger remains deferred.
+- [x] A second agent checked the receipts and triggers on 2026-10-17.
+- [ ] The owner agrees to close it as Reclassified.
 
 ## Related
 
-DEBT-524, DEBT-450, DEBT-349, DEBT-420, DEBT-522, DEBT-479, DEBT-464, BUG-331, BUG-345, DEBT-501 and DEBT-414.
+DEBT-524 (closed), DEBT-450, DEBT-349, DEBT-522, DEBT-479, DEBT-464, BUG-331.
+
+Corrected 2026-11-15: proposed closing as Reclassified; line drift corrected (`lib/sentry-data-collection.ts:418`, `lib/db.ts:21`); the step-by-step measurement plan, which no trigger would start, is in git at `34d9aea0`.

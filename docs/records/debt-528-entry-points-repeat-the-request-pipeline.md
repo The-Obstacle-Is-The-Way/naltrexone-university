@@ -1,6 +1,6 @@
 # DEBT-528: Several Server Entry Points Repeat Policy, and the Copies Have Drifted
 
-**Status:** Open — share bearer parsing, rate-limit responses, webhook failure recording and manage-billing requests; keep each endpoint's orchestration explicit
+**Status:** Open — five small deletions, each red first: the request-ID helper (from DEBT-504), cron bearer auth, rate-limit refusals, the manage-billing request copy, the bare sign-ups
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -8,95 +8,58 @@
 
 ## Summary
 
-Several entry points repeat policy, but they do not all implement one interchangeable pipeline. `createAction` already owns controller parsing, dependency resolution, execution and error mapping; manage billing already has a shared core. Health, cron bearer authentication, provider signatures and browser sessions have different contracts.
-
-The demonstrated copies and drift are:
-
-- **Six API route handlers** each carry their own rate-limit block, with its 429 and its 503 when the limiter fails. Two cron routes each parse `Authorization: Bearer` themselves, differently. All three webhook routes verify signatures after rate limiting; Stripe separately checks for a missing signature header before the limiter.
-- **Clerk and Stripe webhooks** each keep their own failure-record writer.
-- **The billing form actions** each map form input, sign-in failures and errors themselves. DEBT-180 moved manage billing's shared logic to `lib/manage-billing/` and kept a thin wrapper per route; BUG-324 then added an identical `manage-billing-request.ts` to each route.
-- **The current user and their entitlement** use cached auth in pricing and the app layout/default entitlement helper, while billing also resolves them directly.
+The route handlers and billing form actions repeat the same policy in several copies, and some copies have drifted. `createAction` already owns controller parsing, dependency resolution and error mapping, and `lib/manage-billing/manage-billing-core.ts` already holds manage billing's shared logic. What remains is copy-paste around them. DEBT-504's request-ID helper is folded in here: four of its five callers are among the route handlers below.
 
 ## Evidence
 
-**API route handlers:**
-- The rate-limit block, with "Rate limiter unavailable", is repeated in:
-  - `app/api/stripe/webhook/handler.ts`
-  - `app/api/webhooks/clerk/handler.ts`
-  - `app/api/webhooks/resend/handler.ts`
-  - `app/api/health/handler.ts`
-  - `app/api/cron/send-renewal-notices/route-handler.ts`
-  - `app/api/cron/reconcile-stripe-subscriptions/route-handler.ts`
-- Bearer parsing differs:
-  - Renewal (`send-renewal-notices/route-handler.ts:36-51`) splits at the first space, so `Bearer <secret> extra` is refused.
-  - Reconcile (`reconcile-stripe-subscriptions/route-handler.ts:71-81`) uses `split(' ', 2)`, which drops everything after the second space, so the same header is accepted.
-  - Both use the same hash comparison. With the correct secret plus trailing text, renewal refuses (401) and reconcile accepts. The secret is still required, so this is not an authentication bypass.
-- Logging differed at `134b0578`: renewal and health logged through `projectSafeErrorDiagnostics`, while reconcile logged `error.message` (`route-handler.ts:175,238,266`). BUG-348 projects all three, and its scan keeps them projected.
-- `proxy.ts`, `lib/clerk-call-failures.ts` and `lib/clerk-backend-call-limit.ts` log with `console.*`, outside pino's level and redaction. BUG-348 projects their errors; moving them onto the shared logger belongs here.
-- The Stripe webhook checks for its signature header before the limiter; Clerk and Resend rate-limit first.
+Checked at `34d9aea0`.
 
-**Webhook failure records:** `persistFailure` is written twice, at `src/adapters/controllers/clerk-webhook-controller.ts:187` and `stripe-webhook-controller.ts:418`, each with its own "already processed" check. BUG-183, then BUG-285 and DEBT-458, fixed the Stripe copy's transaction handling over four months.
-
-**Billing form actions:**
-- `app/pricing/manage-billing-request.ts` and `app/(app)/app/billing/manage-billing-request.ts` are identical apart from one import. The two `manage-billing-actions.ts` files differ only in an import and a type re-export.
-- A signed-out user is sent to different places:
-
-  | Action | Destination |
-  | --- | --- |
-  | Subscribe | Sign-up, returning to `/pricing?plan` |
-  | Manage billing, from pricing (`app/pricing/manage-billing-action.ts:19-21`) | Sign-up, returning to pricing |
-  | Manage billing, in the app (`app/(app)/app/billing/manage-billing-action.ts:18-19`) | Bare `/sign-up` |
-  | Add a card (`trial-payment-method-action-handler.ts`) | Bare `/sign-up` |
-
-- Add-card checks the key before the controller (`app/(app)/app/trial-payment-method-action-handler.ts:22-49`) and also at the controller boundary. Subscribe/manage billing rely on controller validation (`billing-controller.ts:36,41,55,61`). Add-card's early refusal skips its result-error log; the other paths use their route-specific result redirects/logs.
-- Some pricing redirects bypass the existing typed `toPricingRoute` (`app/(app)/app/layout.tsx:63`; `checkout-success-sync.tsx:41,454`). Billing's `?error=…` has a distinct route/schema and local parser (`billing/page.tsx:164,187-193`); it needs a matching billing builder if shared, not the pricing builder.
-
-**The current user, resolved twice:**
-- Pricing and the app layout use request-cached `getRequestAuthState` (`lib/auth-request-cache.ts`); default entitled-action helpers use it too.
-- The billing page builds a fresh container, so `GET /app/billing` has independent user/subscription reads in layout and page when both render, with duplicate trial-card reads only when the subscription is `inTrial` (`app/(app)/app/layout.tsx:55-77`; `billing/page.tsx:51-76`).
-- A fresh successful checkout path reads identity at `billing-controller.ts:225,234,162`; a replay or early refusal need not execute all three. Its CONFLICT compares the two internal user IDs, not all three identity values. Preserve that safety check.
-- `requireEntitledUserId` ignores the dependencies it is given when the action runs on the default container (`src/adapters/controllers/require-entitled-user-id.ts:24-26`). Its unit test covers only the other branch; E2E exercises the default path but does not prove its cache count or injected-dependency fidelity. Its `lib/auth-request-cache` import is composition-time wiring that the architecture scan allows (`tests/architecture-boundary-source-scan.ts:50` bans only `app/` and `components/`), and ADR-001's allowed composition locations include the `*-controller.ts` files this helper serves. Moving caching out of controllers would need an ADR amendment.
-
-**History:**
-- BUG-048: both webhooks failed open, fixed per route.
-- BUG-084 pinned Stripe's already-generic error response; BUG-088 fixed Clerk's remaining raw payload-error response.
-- DEBT-093.
-- DEBT-196: rate limiting added to one cron.
-- BUG-207.
-- `0ba85539`: both cron handlers gained wiring to the already-shared secret validator.
-- BUG-325 item 6: the signature log level changed in three routes.
-- DEBT-180, then BUG-324: manage billing's logic shared, then a request module copied into each route.
-- BUG-165 and BUG-247 show route-specific omissions. BUG-232 propagated idempotency through both manage-billing wrappers and their core. BUG-275 fixed return context on pricing. Not every cited change missed a twin.
-- DEBT-504: request IDs built per entry point.
+- **Request IDs (from DEBT-504).** `lib/request-context.ts:10-24` makes a random UUID and a pino child for five entry points: `app/api/health/route.ts:12-13`, `app/api/stripe/webhook/route.ts:9-10`, `app/api/webhooks/clerk/route.ts:33-34`, `app/api/webhooks/resend/route.ts:9-10` and `app/pricing/subscribe-to-plan.ts:37-43`. None passes a user ID or an incoming ID. Vercel already groups a request's runtime log lines by its own request ID. The last caller forwards the child through `ActionOptions.logger` (`src/adapters/controllers/create-action.ts:9,49,67`). Without it, `handleError` uses the root logger (`action-result.ts:52`), the same one the container injects (`lib/container.ts:48`). ADR-008 (`:30,40-43`) decided these request IDs, so removing them amends it.
+- **Cron bearer auth.** Both cron handlers carry their own copy of header parsing, the unset and header-unsafe secret checks and the hashed comparison, each with its logs: `send-renewal-notices/route-handler.ts:36-57,64-105` and `reconcile-stripe-subscriptions/route-handler.ts:75-91,128-154`. The parsers differ. Renewal takes everything after the first space, so `Bearer <secret> extra` fails the comparison (401). Reconcile's `split(' ', 2)` drops the trailing text and accepts it. The secret is still required, so this is not a bypass.
+- **Rate-limit refusals.** Six handlers repeat the same block: the limiter call, a 429 with `Retry-After`, `X-RateLimit-Limit` and `X-RateLimit-Remaining`, and on a limiter error a log and a 503 "Rate limiter unavailable". They are `app/api/stripe/webhook/handler.ts:49-79`, `app/api/webhooks/clerk/handler.ts:60-90`, `app/api/webhooks/resend/handler.ts:37-64`, `app/api/health/handler.ts:23-53`, `app/api/cron/send-renewal-notices/route-handler.ts:107-134` and `app/api/cron/reconcile-stripe-subscriptions/route-handler.ts:156-187`. Only the key, the policy, the log message and health's extra `ok: false` differ. The admission order differs on purpose: Stripe refuses a missing signature header before the limiter, and the crons authorize first.
+- **Manage billing.** `app/pricing/manage-billing-request.ts` and `app/(app)/app/billing/manage-billing-request.ts` are identical apart from one import. DEBT-180 removed this duplication, and BUG-324's server-only split brought it back. The two `manage-billing-actions.ts` files differ only in an import and a type re-export.
+- **Bare sign-ups.** Pricing's manage billing returns a signed-out user to pricing (`app/pricing/manage-billing-action.ts:19-21`), as subscribe does. The app's manage billing (`app/(app)/app/billing/manage-billing-action.ts:19`) and add-card (`app/(app)/app/trial-payment-method-action-handler.ts:62`) send a bare `/sign-up`, which falls back to the dashboard (`components/providers.tsx:74-75`).
 
 ## Impact
 
-App billing and add-card lose their return destination after an unauthenticated action: their bare sign-up falls back to the dashboard (`components/providers.tsx:74-75`). No browser reproduction was run. Independent billing reads add work; actual query counts were not measured. The bearer discrepancy still requires the secret. These limited effects and repeated policy maintenance support P3; raw-error diagnostics remain BUG-348's finding.
+Each copy must be changed in step, and two already disagree: the cron parsers, and the sign-up destinations. No user-facing failure was reproduced. `proxy.ts:240` protects `/app/*`, so the app's bare sign-ups are reachable only when the proxy admits a request that the controller then refuses (an inference). P3 reflects maintenance cost, not an outage.
 
 ## Options
 
-1. **Share the evidenced policies at their existing boundaries.** *Recommended.* One bearer parser/hash comparison, one rate-limit response/error helper with endpoint-owned policy and response shape, one manage-billing request module with route-owned redirects, and one narrow failure-ledger helper for the identical claim/lock/processed-check/failure sequence.
-   - Keep health, cron and webhook orchestration explicit. Preserve signature verification order and raw bodies, provider-specific event semantics, post-commit Stripe customer deletion and original-error causality (BUG-285/DEBT-458).
-   - Reuse `createAction`; do not add a competing universal controller/form framework. Framework responses and redirects stay outward in `app`/`lib`, and event-ledger policy stays behind narrow adapter seams.
-   - Reuse the pricing route schema and add only the missing shared billing schema. Keep the two route-owned server-action entry points: BUG-324 allows only form data from the client, not a client-selected redirect table.
-   - Make `requireEntitledUserId`'s default-container path honor the dependencies it is given. DEBT-502 owns the identity-resolution contract; this record owns the repeated resolution wiring.
-2. **One universal route/form pipeline.** This would combine provider verification, browser auth, bearer auth, limiting and presentation into a module with several reasons to change. The current evidence supports smaller shared policies, not this abstraction.
+1. **Delete each copy into one shared function at its existing boundary.** *Recommended.* Each endpoint keeps its own orchestration, admission order, keys and response bodies.
+2. **One universal route and form pipeline.** Rejected: it would join provider signatures, browser sessions, bearer auth and limiting in one module with several reasons to change.
 
 ## Resolution (proposed)
 
-Option 1, red first on the bearer parser, lost return destination and production auth wiring. Extract the identical ledger protocol with tests for processed-event protection, transaction failure and preserved original errors. Consume BUG-348's diagnostic policy, DEBT-504's request correlation, DEBT-502's identity contract and DEBT-527's deadline; define none of them a second time.
+Option 1, as five separate pull requests, each red first. Reuse `createAction`; add no new framework. Framework responses and redirects stay in `app/` and `lib/`.
+
+1. **Request IDs.** Delete `lib/request-context.ts` and its test. The five callers use the container's default logger (health uses `lib/logger` directly). Remove `ActionOptions.logger` and the `{ logger: requestLogger }` argument. Red test: a type assertion in `create-action.test.ts` that `ActionOptions` has no `logger` key. Amend ADR-008 (request IDs come from Vercel's runtime logs) and drop the helper from `docs/architecture/observability.md`. Before merging, read one production request with `vercel logs --request-id <id> --expand` and confirm its lines group together; record counts only. Leave the dated census in the privacy policy's provenance appendix (`docs/policies/legal/privacy-policy.md:190`) as it is.
+2. **Cron bearer auth.** One `authorizeCronRequest` beside the crons (`app/api/cron/`) returns a 401 response or nothing. It uses renewal's parser and keeps each route's log context. Red test: reconcile refuses `Bearer <secret> extra` with 401.
+3. **Rate-limit refusals.** One helper in `lib/` takes the limiter, the key and policy, the log message and an optional body extension, and returns the 429 or 503 response or nothing. Red test: the helper's own unit test, written first; every route's existing 429 and 503 tests pass unchanged.
+4. **Manage billing.** Move `submitManageBilling` into `lib/manage-billing/manage-billing-core.ts`, taking the route's redirects. Each route keeps its `'use server'` entry point, which takes only form data (BUG-324), and a route-owned redirects constant. Delete both `manage-billing-request.ts`. Red test: `submitManageBilling`'s test in `manage-billing-core.test.ts`, written before the move, with each route's redirects.
+5. **Bare sign-ups.** The app's manage billing and add-card redirect with `toSignUpRedirectRoute(ROUTES.APP_BILLING)`, as pricing does. Red test: each sends an unauthenticated result to sign-up with `redirect_url` set to `/app/billing`.
+
+**Declined (needs sign-off).** These would add code or risk without removing a real copy:
+- A shared webhook failure-ledger helper. The two `persistFailure` functions (`clerk-webhook-controller.ts:187`, `stripe-webhook-controller.ts:484`) are about 28 lines each, differing only in their repository and log message. Sharing them needs a generic ledger seam over two transaction shapes, saves about ten lines, and touches the path BUG-183, BUG-285 and DEBT-458 hardened.
+- Changing `requireEntitledUserId`'s default-container path (`src/adapters/controllers/require-entitled-user-id.ts:22-25`). It reuses the request-cached auth state, which the same default container builds; it is not a defect.
+- The billing page's second user and subscription reads (`app/(app)/app/billing/page.tsx:45-69`). These are two unmeasured, cheap reads; DEBT-450's measure-first rule applies.
+- Moving `proxy.ts` and the Clerk limiter helpers from `console.*` to pino. Their logged values are already projected, and no redaction risk was shown.
+- Routing three hand-built pricing URLs (`app/(app)/app/layout.tsx:66`; `checkout-success-sync.tsx:40,426`) through `toPricingRoute`. This nets zero lines and changes no behavior.
+
+**Net code effect (estimate).** About 300 production lines and 4 files deleted (`lib/request-context.ts`, its test, both `manage-billing-request.ts`); 2 small helpers added. ADR-008 gains a short amendment.
 
 ## Verification
 
-- [ ] Both crons use the same bearer parser and reject trailing text; their endpoint policy and response contracts stay explicit.
-- [ ] One manage-billing request module preserves form-only actions and restores each action's intended post-sign-in destination.
-- [ ] Shared limiter behavior preserves each endpoint's admission order, 429/503 status and response body.
-- [ ] Clerk and Stripe share the evidenced failure-ledger sequence without losing processed-event protection, post-commit behavior or original-error causality.
-- [ ] The default-container path honors injected dependencies, and a test covers it.
+- [ ] Step 1: no `lib/request-context.ts`, no `ActionOptions.logger`, the type assertion holds, ADR-008 is amended, and a production request's log lines group by Vercel's request ID.
+- [ ] Step 2: both crons share one authorization; reconcile refuses trailing text.
+- [ ] Step 3: one rate-limit helper; each endpoint keeps its admission order, status codes, headers and body.
+- [ ] Step 4: one `submitManageBilling`; the two route entry points still accept only `FormData`.
+- [ ] Step 5: the app's manage billing and add-card return a signed-out user to `/app/billing`.
 
 ## Related
 
-- DEBT-502: the identity resolver.
-- DEBT-504: per-entry-point request IDs.
-- BUG-348: per-call-site logging.
-- DEBT-527: the request's time budget.
+- DEBT-504: folded in here (step 1).
+- DEBT-502: the identity resolver, not changed here.
+- ADR-008, ADR-016 (rate limits), ADR-017 (webhook lifecycle).
+
+Corrected 2026-11-15: folded DEBT-504 in as step 1; resolution narrowed to five deletions, with the failure-ledger helper, the entitlement-helper and billing-read changes, the logger move and the pricing-URL change proposed as declined; BUG-348 and DEBT-527 closed on 2026-10-23, so their references went; line drift corrected (reconcile parser `:75-85`, Stripe `persistFailure` `:484`, pricing URLs); the app's bare sign-ups need the proxy to admit a refused request; the earlier history list is in git at `34d9aea0`.

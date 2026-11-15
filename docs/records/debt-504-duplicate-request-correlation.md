@@ -1,94 +1,45 @@
 # DEBT-504: Request Correlation Duplicates the Hosting Platform
 
-**Status:** Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies
+**Status:** Open — folded into DEBT-528 as its step 1; close as Superseded
 **Priority:** P4
 **Date:** 2026-10-06
-**Resolved:** —
-**Verification receipts:** —
+
+---
 
 ## Summary
 
-Five entry points create a random request ID and manually pass a child logger.
-Vercel already associates runtime log rows with its request ID. The application
-ID is a different value, not Vercel's ID, and is not propagated across all paths.
+Five entry points create a random request ID and pass a child logger by hand. Vercel already groups a request's runtime log lines by its own request ID. The application's ID is a different value and reaches only those five paths.
 
 ## Evidence
 
-Inspected on `main` at `0f324edd`:
+Checked at `34d9aea0`.
 
-- `lib/request-context.ts:10-24` generates a UUID and binds it to a pino child.
-- `rg -n 'createRequestContext|getRequestLogger' app lib` finds five production
-  callers: subscribe, health, and the Stripe, Clerk and Resend webhook routes.
-  None passes a user ID or an incoming correlation ID.
-- `app/pricing/subscribe-to-plan.ts:43` forwards the child through the controller's
-  optional logger. BUG-324's production-only stopgap dropped that option.
-  Its final server-only controller design restored it.
-- Vercel's [runtime-log documentation](https://vercel.com/docs/logs/runtime)
-  describes request IDs on log rows. This is platform correlation, not a claim
-  that pino JSON itself contains the platform ID or that local logs have it.
-- Vercel's deployment API dates the stopgap promotion #1388 to production at
-  2026-10-06T04:58:32.853Z and the final design #1390 at 06:17:47.567Z: about
-  79 minutes. The code proves the option was dropped; historical per-line logs
-  are outside Hobby's one-hour retention and were not re-read.
+- `lib/request-context.ts:10-24` makes a UUID and binds it to a pino child.
+- Its five callers are health, the Stripe, Clerk and Resend webhooks, and subscribe (`app/pricing/subscribe-to-plan.ts:37-43`). None passes a user ID or an incoming ID.
+- Subscribe forwards the child through `ActionOptions.logger` (`src/adapters/controllers/create-action.ts:9`). Without it, `handleError` logs to the root logger (`src/adapters/controllers/action-result.ts:52`), the one the container injects (`lib/container.ts:48`).
+- ADR-008 (`docs/adr/adr-008-logging-observability.md:30,40-43`) decided these request IDs, so removing them needs an ADR-008 amendment.
 
 ## Impact
 
-The extra ID adds manual wiring and suggests coverage it does not provide.
-No lost business data or remaining checkout failure is established. Correlation
-inside a hosted request remains available through Vercel.
+The extra ID adds wiring and suggests coverage it does not have. No lost data or failure is established; Vercel still correlates a hosted request's lines.
 
 ## Options
 
-1. Keep both IDs and test each propagation edge. This preserves duplicate
-   concepts and creates work whenever an entry point changes.
-2. Add `AsyncLocalStorage`. This would improve propagation but retains a second
-   ID without a demonstrated cross-request requirement.
-3. Remove the custom ID, its context helper and the per-call logger option. Use
-   Vercel's request grouping for hosted diagnosis and keep the injected `Logger`
-   port for testability.
+1. Keep both IDs and test each propagation edge.
+2. Add `AsyncLocalStorage`. This keeps a second ID with no cross-request need.
+3. Remove the custom ID, its helper and the per-call logger option; keep the injected `Logger` port.
 
 ## Resolution (decided)
 
-Option 3, in a separate code PR:
-
-- Remove `lib/request-context.ts` and its five callers. The five entry points
-  log through the `Logger` in their resolved dependencies, built by the
-  container, as the use cases already do.
-- Remove `ActionOptions.logger` from `createAction`
-  (`src/adapters/controllers/create-action.ts`) and the threaded
-  `{ logger: requestLogger }` in `app/pricing/subscribe-to-plan.ts`. Without the
-  request ID it only repeats `handleError`'s default logger, and it is the
-  optional per-call channel that BUG-324's stopgap dropped in production, as an
-  accepted trade-off. Once `ActionOptions` has no `logger`, an object literal
-  that passes one fails typecheck; a type test keeps the field from returning.
-  `handleError` logs through the controller's resolved `Logger` when one exists.
-- Keep the `Logger` port and its injection through dependencies. Do not replace
-  it with implicit global context, an environment switch, or a framework import
-  in the application layer.
-
-No owner confirmation is needed: the project is on Vercel's Hobby plan and has
-no log drains (the Drains API returned none on 2026-10-06), so nothing outside
-Vercel reads these fields. If cross-request correlation becomes a real
-requirement, specify its scope and transport separately.
-
-*Corrected 2026-10-06: removing the per-call logger option replaces #1410's
-"retain logger injection", which kept that option; the owner check is answered
-from the Drains API (#1410 review).*
+Option 3, decided 2026-10-06. It now lives in DEBT-528 as step 1, beside the other entry-point copies, with its red test, the ADR-008 amendment and the log check. The earlier extra, routing `handleError` through each controller's resolved logger, is dropped: that logger is the same root logger `handleError` already uses, so it would add a hook for no change.
 
 ## Verification
 
-- [ ] Red first: each of the five entry points still emits its operational
-  messages through the `Logger` in its dependencies, and a controller's
-  unexpected error is logged through the controller's resolved `Logger`.
-- [ ] `lib/request-context.ts` and `ActionOptions.logger` are gone, no caller
-  passes a logger per call, and a type test fails if `ActionOptions` gains a
-  `logger` key again.
-- [ ] Engineering, after the promotion: for one production request that logs at
-  least two lines, read them within the hour with
-  `vercel logs --environment production --request-id <id> --expand` and
-  confirm they appear together. Record counts and statuses only.
+- [x] DEBT-528 step 1 carries the whole resolution and its checks (2026-11-15).
 
 ## Related
 
-- BUG-324.
-- [Logging](../architecture/observability.md).
+- DEBT-528, which supersedes this record.
+- BUG-324, which dropped the per-call option once as a stopgap.
+
+Corrected 2026-11-15: folded into DEBT-528 step 1; added ADR-008's request-ID decision, which the removal amends; dropped the resolved-logger hook as a no-op; the Drains API now answers 404 for this Hobby team, so the 2026-10-06 "no drains" reading could not be repeated; finished history is in git at `34d9aea0`.
