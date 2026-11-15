@@ -1,14 +1,9 @@
-import {
-  expect,
-  type Page,
-  type Response,
-  test as signedOutTest,
-} from '@playwright/test';
+import { expect, type Page, type Response } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
-import { test as signedInTest } from './helpers/clerk-auth-test';
+import { test } from './helpers/clerk-auth-test';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -52,44 +47,40 @@ async function waitForClerk(page: Page): Promise<void> {
   );
 }
 
-signedOutTest.describe('content security policy, signed out', () => {
+test.describe('content security policy, signed out', () => {
   for (const path of ['/', '/pricing', '/sign-in', '/sign-up']) {
-    signedOutTest(
-      `${path} loads every script the policy admits`,
-      async ({ page }) => {
-        const violations = await recordCspViolations(page);
-
-        expectReportOnlyPolicy(await page.goto(path));
-        await waitForClerk(page);
-
-        expect(violations).toEqual([]);
-      },
-    );
-  }
-});
-
-signedInTest.describe('content security policy, signed in', () => {
-  signedInTest.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
-  // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
-  signedInTest.setTimeout(120_000);
-  signedInTest.beforeEach(async () => {
-    await runE2EUserStateReset();
-  });
-
-  signedInTest(
-    'the dashboard loads every script the policy admits',
-    async ({ page }) => {
+    test(`${path} loads every script the policy admits`, async ({ page }) => {
       const violations = await recordCspViolations(page);
 
-      await signInWithClerkPassword(page);
-      await ensureSubscribed(page);
-      expectReportOnlyPolicy(await page.goto('/app/dashboard'));
-      await expect(
-        page.getByRole('heading', { name: 'Dashboard' }),
-      ).toBeVisible();
+      expectReportOnlyPolicy(await page.goto(path));
       await waitForClerk(page);
 
       expect(violations).toEqual([]);
-    },
-  );
+    });
+  }
+});
+
+test.describe('content security policy, signed in', () => {
+  test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
+  // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
+  test.setTimeout(120_000);
+  test.beforeEach(async () => {
+    await runE2EUserStateReset();
+  });
+
+  test('the dashboard loads every script the policy admits', async ({
+    page,
+  }) => {
+    const violations = await recordCspViolations(page);
+
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+    expectReportOnlyPolicy(await page.goto('/app/dashboard'));
+    await expect(
+      page.getByRole('heading', { name: 'Dashboard' }),
+    ).toBeVisible();
+    await waitForClerk(page);
+
+    expect(violations).toEqual([]);
+  });
 });
