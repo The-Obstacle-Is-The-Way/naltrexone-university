@@ -351,6 +351,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-374 · A Returning Visitor's Page Load Counts as Several Clerk Refreshes · Resolved · 2026-11-03 · docs/records/bug-374-a-returning-visitor-counts-as-several-clerk-refreshes.md · #1632 · 352196d830ace979c43f8b8120bfc8d506ead98e
 - BUG-375 · A Session Token That Expired Between the Limiter's Check and Clerk's Got an Uncounted Refresh · Resolved · 2026-11-09 · docs/records/bug-375-a-token-expiring-between-checks-got-an-uncounted-refresh.md · #1665 · 466e66f547ea1de924232edec1bd6178218391a2
 - BUG-376 · The E2E Browser Reports Some Completed Responses as Aborted · Resolved · 2026-11-13 · docs/records/bug-376-e2e-browser-reports-completed-responses-as-aborted.md · #1680 · 48c1ffb38d795c77888c975cf62ead82f666d7ae
+- BUG-379 · Native CSP Reports Bypass Checkout URL Redaction · Resolved · 2026-11-15 · docs/records/bug-379-native-csp-reports-bypass-checkout-url-redaction.md · #1700 · f376b524e6107c177d6510708f5ff6da8e5a0ec4
 
 ## Debt
 
