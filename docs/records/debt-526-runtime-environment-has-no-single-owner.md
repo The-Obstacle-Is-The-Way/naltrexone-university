@@ -31,11 +31,11 @@ No deployed failure. The guard mismatch shows only in a local production build w
 ## Options
 
 1. **The four small fixes below.** *Recommended.*
-2. **One environment-policy module, a source scan over every environment read, a redaction registry, an instance-pairing readiness check, and moving `.env.test`.** Rejected: each adds machinery the evidence does not need. The eight bypass reads agree; the CI file supplies only unused dummies; the guide has pairing verified in the Clerk Dashboard (`environments.md:121`), and a local check cannot learn a secret key's instance.
+2. **One environment-policy module, a source scan over every environment read, a redaction registry, an instance-pairing readiness check, and moving `.env.test`.** Rejected 2026-11-15 by the reviewing session, at the owner's delegation: each adds machinery the evidence does not need. The eight bypass reads agree; the CI file supplies only unused dummies; the guide has pairing verified in the Clerk Dashboard (`environments.md:121`), and a local check cannot learn a secret key's instance.
 
-## Resolution (proposed)
+## Resolution (decided)
 
-Option 1, red first:
+Option 1, decided 2026-11-15 by the reviewing session, at the owner's delegation, red first:
 
 1. **Delete the instance check.** Remove `lib/env.ts:12-36` and `:198-209`, and the synthetic test. The prefix check (`:187-196`) and its tests stay.
 2. **One production rule.** Export one predicate, `isVercelProduction()`, from a small `lib/` module (not `lib/env.ts`, which validates on import), and call it from both `lib/env.ts:163` and `proxy.ts:168-170`. Red tests: the predicate is false with `VERCEL_ENV` unset and `NODE_ENV=production`, and in that case the proxy honors the bypass. That is the one behavior change: off Vercel, a production build with the bypass on no longer enforces Clerk in the proxy. It is acceptable because a bypassed visitor is treated as signed out (`lib/container.ts:73,82`). The same pull request adds a comment at `lib/request-ip.ts:3` saying why it reads `NODE_ENV`, so nobody aligns it.
@@ -56,4 +56,4 @@ Option 1, red first:
 - DEBT-197, BUG-136, BUG-143 (closed): the earlier one-file fixes.
 - ADR-026: the server DSN is sensitive.
 
-Corrected 2026-11-15: resolution narrowed to four fixes, with the policy module, source scan, redaction registry, pairing check and `.env.test` move proposed as declined (needs sign-off); `environments.md` no longer claims the instance check; the `.env.test` values CI relies on are unused dummies; line drift corrected (`proxy.ts:164,168-170`, `lib/container.ts:73,82`, `ci.yml:189,218`); the illustrative inventory is in git at `34d9aea0`; fix 2 names the shared predicate and its one behavior change, and keeps `lib/request-ip.ts`'s deliberate `NODE_ENV` read; fix 3's red test now scans root files, where `SENTRY_DSN` is read, since the old pattern change could not fail.
+Corrected 2026-11-15: resolution narrowed to four fixes, with the policy module, source scan, redaction registry, pairing check and `.env.test` move declined by the reviewing session, at the owner's delegation; `environments.md` no longer claims the instance check; the `.env.test` values CI relies on are unused dummies; line drift corrected (`proxy.ts:164,168-170`, `lib/container.ts:73,82`, `ci.yml:189,218`); the illustrative inventory is in git at `34d9aea0`; fix 2 names the shared predicate and its one behavior change, and keeps `lib/request-ip.ts`'s deliberate `NODE_ENV` read; fix 3's red test now scans root files, where `SENTRY_DSN` is read, since the old pattern change could not fail.

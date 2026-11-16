@@ -84,7 +84,7 @@ numeric value with `session-token-but-no-client-uat` means another trigger;
 request's cookie fields can be unavailable, which proves nothing; only its
 redirect's response line shows what was sent.
 
-Reporting the behavior to Clerk stays the owner's call, as for BUG-333.
+Reporting this behavior to Clerk is the owner's call; for BUG-333 the owner chose on 2026-11-15 to add evidence to clerk/javascript#10411.
 
 ## Verification
 

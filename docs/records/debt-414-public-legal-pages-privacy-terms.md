@@ -48,7 +48,7 @@ For F21, the early failure report:
 1. **Tag each send with its delivery row's ID** (decided 2026-10-06, kept 2026-11-15). Resend's bounced, failed and suppressed payloads carry the send's tags in `data.tags`, so the webhook can match a failure by its tag before the email ID is stored.
 2. **A retryable webhook response** (rejected 2026-10-06). It still loses an early delivery report.
 3. **A durable inbox of unmatched reports** (rejected 2026-10-06). It would store outcomes for unrelated mail.
-4. **Accept the gap** (rejected 2026-11-15). A suppression is decided without contacting the recipient's server, so its report can be the fastest. A crash between the send and the ID write is already covered: it ends in `outcome_unknown`, the daily job quarantines a claim stale for 15 minutes and raises its alert (`src/application/use-cases/send-due-renewal-notices.ts:200-221`). An early failure report is not covered.
+4. **Accept the gap** (rejected 2026-11-15 by the reviewing session, at the owner's delegation). A suppression is decided without contacting the recipient's server, so its report can be the fastest. A crash between the send and the ID write is already covered: it ends in `outcome_unknown`, the daily job quarantines a claim stale for 15 minutes and raises its alert (`src/application/use-cases/send-due-renewal-notices.ts:200-221`). An early failure report is not covered.
 
 ## Resolution (decided)
 
@@ -112,7 +112,7 @@ For F21, the early failure report:
 
 ## Verification
 
-- [ ] F21 ships with its red tests, or the owner's acceptance of option 2 is recorded.
+- [ ] F21 ships with its red tests.
 - [ ] F07: Resend's log shows a 200 for a real report, and its notice's row reads `delivered` or `terminal_failure`.
 - [ ] F19a, F19b and F19c are decided, and anything decided is built. F19d is answered.
 - [ ] The support address and phone are replaced.

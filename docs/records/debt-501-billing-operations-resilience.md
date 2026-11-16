@@ -14,7 +14,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped with BUG-364. **Before the first live sale** (decided 2026-10-08 and 2026-10-30): item 9, then item 7. Items 1, 2 and 3 wait for their triggers and become Waiting rows when this record closes. Item 4's expiry bound is declined and item 8 is Won't Fix.
 
-**Shared billing contract (adopted 2026-10-17, DEBT-524).** The first implementation of item 2, or of BUG-343's option 4a if its Waiting row revives it, defines it before extracting code: fact authority, the observation-version fence, deletion lock order, and each caller's consent and cancellation permissions. ADR-014's read-only refused-checkout sync and ADR-027's webhook consent evidence stay unless those ADRs are amended. ADR-002's single local row does not prevent two provider subscriptions.
+**Shared billing contract (adopted 2026-10-17, DEBT-524).** The first implementation of item 2, or of BUG-343's option 4a if the Waiting row BUG-343 leaves at closing revives it, defines it before extracting code: fact authority, the observation-version fence, deletion lock order, and each caller's consent and cancellation permissions. ADR-014's read-only refused-checkout sync and ADR-027's webhook consent evidence stay unless those ADRs are amended. ADR-002's single local row does not prevent two provider subscriptions.
 - Share observation and persistence policy only where those changes need it; keep SDK normalization and retries in adapters, and preserve each caller's side effects.
 - A broader import guard requires a demonstrated invariant first.
 - Not a separate refactor gate: it is part of the work that first needs it.

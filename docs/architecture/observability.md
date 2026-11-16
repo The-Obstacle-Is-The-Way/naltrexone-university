@@ -46,7 +46,7 @@ const logger = getRequestLogger(ctx);
 That child logger automatically carries `requestId`, and can also include `userId` when available.
 
 The duplicate ID and manual propagation are planned for removal in
-DEBT-504. Do not extend this
+DEBT-528 (step 1). Do not extend this
 pattern to new routes. Keep explicit logger injection.
 
 ## Retention and verification
@@ -63,6 +63,10 @@ such an outcome needs explicit, bounded telemetry or a retained operational
 receipt; do not claim a Sentry search proves its absence.
 DEBT-505 added that
 path for the conditions a person must act on: see Operational alerts below.
+
+The server samples 5% of traces (`SENTRY_SERVER_SETTINGS` in
+`lib/sentry-data-collection.ts`). The owner kept that rate on 2026-11-15
+(BUG-331): the records' Sentry latency triggers (DEBT-450) read those traces.
 
 Clerk's Backend API usage outlasts the logs in `clerk_backend_call_usage`
 (DEBT-503 item 4, step 1). The reconcile and renewal jobs both roll the Clerk

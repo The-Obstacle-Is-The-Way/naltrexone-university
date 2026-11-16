@@ -47,7 +47,7 @@ Option 1.
   - Production loads Clerk JS and its UI bundle from the Frontend API origin (2026-11-14, `/sign-up` and `/pricing`).
   - Clerk's defaults also admit Stripe.js and Google Maps, for Clerk's billing and address components, which the site does not use. They are left out: Google Maps serves JSONP, a known way around a host allowlist. Both stay in `connect-src`, unchanged, and Stripe stays in `frame-src`.
 - **The proof.** An E2E test fails on any CSP violation on the public pages and on a signed-in page, and on a page without the policy.
-- **The nonce.** Nothing issues one now. The root layout still reads `x-nonce` through `headers()`, which is undefined unless a client sends the header for its own render, harmless under a policy with no nonce. Removing the read changes how every page renders, which DEBT-522's trigger and DEBT-525's baseline govern.
+- **The nonce.** Nothing issues one now. The root layout still reads `x-nonce` through `headers()`, which is undefined unless a client sends the header for its own render, harmless under a policy with no nonce. Removing the read changes how every page renders, which DEBT-522's trigger governs.
 - **Sentry.** After the release check passes, resolve the web project's CSP issues, the three archived ones included, so a recurrence reopens as a regression instead of staying archived.
 
 ## Verification
@@ -69,7 +69,7 @@ Option 1.
 - DEBT-420 (closed): why the policy is report-only, and the path taken here.
 - BUG-377 and DEBT-505: the alerts the quota protects. #1610 is the watcher's issue.
 - DEBT-521: Clerk JS loads from the Frontend API origin this policy lists.
-- DEBT-522 and DEBT-525: the root layout's nonce read.
+- DEBT-522: the root layout's nonce read.
 - BUG-379: from this fix's adversarial review. Native CSP reports bypass the SDK's redaction, so credential-bearing documents send none; it also added the CSP spec's foreign-script positive control.
 
 *Corrected 2026-11-15 (adversarial review of #1693): the 66 filtered reports were ignored-source matches, not invalid reports; option 4's filter cannot keep foreign-script reports; option 6's cap is not on the current plan; option 1's "a report" meant a script report. Records review: the resolved issues and the period's remaining quota are past tense, and the remaining check dates the finding's clearing from reconstructed hourly usage, with the run hours it assumes and the range new errors would move it to.*

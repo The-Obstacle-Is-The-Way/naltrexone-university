@@ -22,8 +22,8 @@ clones here, so whatever lint-staged stages can include another session's edit:
 PR #1409 holds 17.5.1: `package.json:115` pins `~17.5.1`, and the `dev`
 version-updates entry in `.github/dependabot.yml:22-26` ignores `>=17.6.0`.
 Security updates use a separate entry and would still open. The ignore's
-comment (:22-24) cites this record's "Exit Paths" section, which the record no
-longer has; option 5's change deletes the ignore and its comment.
+comment (:22-24) says the read-only Biome hook replaces lint-staged; option 5's
+change deletes the ignore and its comment.
 
 ## Evidence
 

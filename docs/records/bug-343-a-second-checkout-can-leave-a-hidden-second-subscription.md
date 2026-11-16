@@ -40,7 +40,7 @@ Shipped: 2 (re-check before handing back a Session), 3 (sweep on completion), 5 
 
 Options 2, 3, 5 and 6, decided 2026-10-14, each for the case the one before cannot close. Rules R24 and R25 state options 2 and 3.
 
-- **Automatic refunds (options 4 and 4a): declined** by the owner, 2026-11-15. On `stripe_duplicate_subscription`, the owner refunds the duplicate by hand in Stripe's Dashboard, cancels it if the reconcile has not, and checks that the kept subscription's open invoices still collect, resuming automatic collection on any the cancel stopped. A Waiting row revisits option 4a the first time a charged duplicate happens in production.
+- **Automatic refunds (options 4 and 4a): declined** by the owner, 2026-11-15. On `stripe_duplicate_subscription`, the owner refunds the duplicate by hand in Stripe's Dashboard, cancels it if the reconcile has not, and checks that the kept subscription's open invoices still collect, resuming automatic collection on any the cancel stopped. When this record closes, it leaves a Waiting row that revisits option 4a the first time a charged duplicate happens in production.
 - **Option 7: declined** by the reviewing session, 2026-11-15, at the owner's delegation: option 3's sweep ends the tail. Option 8 is not taken.
 - **The hold on inviting former trial users back** "until the fix ships" was lifted by its own condition on 2026-10-14, when #1493 and #1495 released options 2 and 3.
 - **The Dashboard checks are kept** (reviewing session, 2026-11-15), in the owner's pre-sale Stripe session: in live and test mode, whether "limit customers to one subscription" is on with the portal's login link enabled; which portal configuration that link uses, and whether a card added there becomes the customer's default; and whether the former live trials ended `canceled` with no payment method. Keep the setting on, as `docs/architecture/integrations/stripe.md` says.
@@ -51,7 +51,8 @@ Options 2, 3, 5 and 6, decided 2026-10-14, each for the case the one before cann
 - [x] Options 6 and 2, 3 and 5 (2026-10-14): red-first unit, controller and contract tests, each with mutations that fail a test; the provider contracts passed in TEST mode. Rules R24 and R25 name the proving tests.
 - [ ] The TEST-mode reproduction, re-run on the released code, ends with one live subscription for a trial and for a returning customer. An agent runs it with disposable test customers.
 - [ ] The owner's Dashboard checks, in the pre-sale Stripe session.
-- [ ] R25's last sentence and the runbook row (`docs/architecture/observability.md:297`) stop promising option 4, and say the daily reconcile cancels the duplicate and the owner refunds it and checks the kept subscription's invoices.
+- [x] R25's last sentence and the runbook row (`docs/architecture/observability.md:315`) stop promising option 4, and say the daily reconcile cancels the duplicate and the owner refunds it and checks the kept subscription's invoices. *Done 2026-11-15 in the records review.*
+- [ ] At closing, the index's Waiting table gains that option-4a row.
 
 Corrected 2026-11-15: production has had one enabled live webhook endpoint since 2026-11-13, so the two-endpoint note is gone. The owner declined automatic refunds; the session declined option 7 and kept the Dashboard checks; the former-trial hold was lifted by its own condition. Added: Stripe's cancel stops collection of the customer's finalized invoices, and "within a day" depends on DEBT-501 item 9. The promotions are #1493, #1495 and #1497, not #1497 alone. Finished build history, the pre-fix evidence at `a57f5c0f` and the review receipts are in git at 34d9aea0.
 
