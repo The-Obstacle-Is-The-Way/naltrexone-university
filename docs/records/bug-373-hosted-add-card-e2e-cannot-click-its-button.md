@@ -70,4 +70,4 @@ carries session URLs), name the cause, and file a new bug.
 - BUG-380: the hosted lane's current failure.
 - BUG-364: the trial banner's other states.
 
-Corrected 2026-11-15: the two runs' traces no longer exist, so the next step was impossible; CI passed the journey for 31 days before BUG-380; the lapsed 2026-11-05 step is resolved by moving the record to a Waiting row. Finished investigation detail is in git at 34d9aea0.
+Corrected 2026-11-15: the two runs' traces no longer exist, so the next step was impossible; CI passed the journey for 31 days before BUG-380; the lapsed 2026-11-05 step is resolved by closing the record as Accepted, with no Waiting row. Finished investigation detail is in git at 34d9aea0.

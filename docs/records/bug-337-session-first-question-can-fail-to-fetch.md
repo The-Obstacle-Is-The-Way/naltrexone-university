@@ -16,8 +16,10 @@ signed-out `__client_uat` of "0", and Clerk's middleware answered with a
 cross-origin handshake redirect that the page's fetch could not complete.
 
 Clerk JS writes that cookie from the page only on development instances, so
-production does not take this path. What leaves Clerk JS with a client that has
-no signed-in session while the session is live was never reproduced. Since
+production does not take this path. That rests on a read of Clerk JS 6.41.0,
+while the current `@6` release is 6.43.1, and Clerk's server behavior was not
+checked. What leaves Clerk JS with a client that has no signed-in session while
+the session is live was never reproduced. Since
 2026-11-08, E2E keeps the signed-in value while a session cookie is present, a
 mitigation that a clean-run count in CI judges.
 
@@ -95,8 +97,9 @@ Reporting the behavior to Clerk stays the owner's call, as for BUG-333.
       to fetch" and no `[E2E_CLERK_AUTH_TRACE]` in their logs. At about eight
       a day, 178 arrives around 2026-11-30.
   - Count only `CI` workflow executions whose E2E step ran and whose tested
-    revision contains the keeper (a5795c0f). Skipped, canceled and local runs
-    do not count, nor does one whose signed-in tests did not run.
+    revision contains the keeper (a5795c0f). Others neither advance the count
+    nor reset it: skipped, canceled and local runs, and any whose signed-in
+    tests did not run.
   - A recurrence resets the count, and its trace is the next action. An aborted
     read without the page error does not reset it.
   - **Closing:** close as Resolved, and say that **the cause was never found**.
@@ -110,4 +113,4 @@ Reporting the behavior to Clerk stays the owner's call, as for BUG-333.
 - BUG-330: E2E's testing token.
 - DEBT-521: Clerk JS stays floating (decided 2026-11-15).
 
-Corrected 2026-11-15: counted the clean runs after the keeper (58 by 2026-11-15); Clerk JS had moved past 6.41.0; DEBT-521 decided to keep Clerk JS floating. Finished investigation history, the censuses, the Playwright 1.64 redirect study and the 2026-10-18 audit are in git at 34d9aea0.
+Corrected 2026-11-15: counted the clean runs after the keeper (58 by 2026-11-15); Clerk JS had moved past 6.41.0; DEBT-521 decided to keep Clerk JS floating; restored two caveats from the old text: Clerk's server behavior was not checked and the production claim rests on a read of 6.41.0, and other runs neither advance the count nor reset it. Finished investigation history, the censuses, the Playwright 1.64 redirect study and the 2026-10-18 audit are in git at 34d9aea0.

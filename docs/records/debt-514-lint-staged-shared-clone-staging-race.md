@@ -21,7 +21,9 @@ clones here, so whatever lint-staged stages can include another session's edit:
 
 PR #1409 holds 17.5.1: `package.json:115` pins `~17.5.1`, and the `dev`
 version-updates entry in `.github/dependabot.yml:22-26` ignores `>=17.6.0`.
-Security updates use a separate entry and would still open.
+Security updates use a separate entry and would still open. The ignore's
+comment (:22-24) cites this record's "Exit Paths" section, which the record no
+longer has; option 5's change deletes the ignore and its comment.
 
 ## Evidence
 
@@ -40,9 +42,12 @@ Security updates use a separate entry and would still open.
   maintainer suggested staging only the originally staged files, as before
   17.6.0. 17.6.1 (2026-11-15) changes only a warning (#1869); no release fixes it.
 - **A hook that cannot stage.** Biome 2.6.6, installed, has `check --staged`
-  ("Checks only staged files"), and `biome.json` enables Git integration. Run
-  without `--write`, it reads the staged files and changes neither the index nor
-  the working tree.
+  ("Checks only staged files"), and `biome.json` enables Git integration. It
+  takes only the staged paths from git (`--name-only`, in the binary's strings)
+  and checks each path's working-tree copy, not its staged contents. Biome's
+  git-hooks recipe (https://biomejs.dev/recipes/git-hooks) guards against this:
+  its hook fails "if staged files have unstaged changes". Run without
+  `--write`, Biome changes neither the index nor the working tree.
 
 ## Impact
 
@@ -61,7 +66,8 @@ only the 17.6.0 regression; the same-file case remains.
    initial set. It covers unrelated paths only.
 4. **Isolated worktrees for every session.** Contradicts the shared-clone
    practice in `AGENTS.md`.
-5. **Replace lint-staged with a read-only hook:**
+5. **Replace lint-staged with a read-only hook** that refuses a staged path
+   with unstaged changes, then runs
    `biome check --staged --no-errors-on-unmatched`. A hook that writes nothing
    can stage nothing, on any version, so both cases close. A commit with Biome
    errors still fails; its author runs `pnpm exec biome check --write --staged`
@@ -74,24 +80,28 @@ only the 17.6.0 regression; the same-file case remains.
 
 Option 5, decided by the owner on 2026-11-15; option 2's hold stays until it
 ships. It removes the risk at its root, with less machinery than any other
-exit: a hook that writes nothing can stage nothing, on any version. Commits no
+exit: a hook that writes nothing can stage nothing, on any version.
+`.husky/pre-commit` first refuses the commit, naming the paths, when any path
+is in both `git diff --name-only` and `git diff --cached --name-only`, since
+`--staged` would check the working-tree copy rather than what is committed.
+Then it runs `biome check --staged --no-errors-on-unmatched`. Commits no
 longer auto-fix; authors run `biome check --write --staged` and stage their own
-paths. A test that
-reads `.husky/pre-commit` replaces the deleted config test and fails if the hook
-runs `lint-staged` or passes `--write`; it fails first against today's hook.
-
+paths. A test replaces the deleted config test and pins both behaviors: the
+hook refuses a staged path with unstaged changes before Biome runs, and it runs
+`biome check --staged` without `--write` and never `lint-staged`. It fails
+first against today's hook.
 
 ## Verification
 
 - [x] A two-version reproduction separates the unrelated-path behavior
       (2026-10-06).
 - [x] The owner chose option 5 (2026-11-15).
-- [ ] Option 5: the hook test fails, then passes; a commit with a Biome error is
-      refused, and an edit made by another process during the hook stays
-      unstaged.
+- [ ] Option 5: the hook test fails, then passes; a commit is refused when a
+      staged path also has unstaged changes, and when a staged file has a Biome
+      error; an edit made by another process during the hook stays unstaged.
 
 ## Related
 
 - [Dependency update protocol](../guides/dependencies/updating-dependencies.md#dependabot-config-policy): the Dependabot ignore.
 
-Corrected 2026-11-15: the task glob includes `mts`; 17.6.1 fixes nothing here, and upstream tracks the race as lint-staged#1865; added option 5, a read-only Biome hook; the retired archive step is gone. The full reproduction tables are in git at 34d9aea0.
+Corrected 2026-11-15: the task glob includes `mts`; 17.6.1 fixes nothing here, and upstream tracks the race as lint-staged#1865; added option 5, a read-only Biome hook; `--staged` checks working-tree copies, so the hook first refuses a staged path with unstaged changes, as Biome's git-hooks recipe does, and the test pins both; the Dependabot comment's dangling "Exit Paths" citation is noted; the retired archive step is gone. The full reproduction tables are in git at 34d9aea0.

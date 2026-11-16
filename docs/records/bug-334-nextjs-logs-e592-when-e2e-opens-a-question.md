@@ -56,15 +56,17 @@ None now. It was log noise in E2E; no user failure was found.
    `cacheComponents`). Not needed.
 2. Wait for upstream. The 16.4.1 upgrade ended it.
 3. Fail E2E, or list errors in its summary, when the web server logs an error
-   not on a known-noise list. Proposed for decline with this closure: it was
-   proposed to catch this error, which no longer occurs, and the list would need
-   upkeep for the errors E2E provokes on purpose.
+   not on a known-noise list. Declined 2026-11-15 by the reviewing session, at
+   the owner's delegation: it was proposed to catch this error, which no longer
+   occurs, and the list would need upkeep for the errors E2E provokes on
+   purpose.
 
 ## Resolution (decided)
 
-Option 2, done by the 16.4.1 upgrade. The owner's production check is no longer
-needed: the E2E signal that prompted it is gone, and production's error groups
-and Sentry would record a render failure.
+Option 2, done by the 16.4.1 upgrade. The owner's production check is
+withdrawn, decided 2026-11-15 by the reviewing session at the owner's
+delegation: E592 is gone from 88 CI runs and from Vercel's runtime-error
+groups, and Sentry would record a render failure.
 
 ## Verification
 
@@ -78,4 +80,4 @@ and Sentry would record a render failure.
 - BUG-337: its 2026-10-11 server output held no E592 either.
 - DEBT-522: `partialPrefetching`.
 
-Corrected 2026-11-15: Next.js is 16.4.5; E592 ended with 16.4.1, per CI logs before and after; production checked again; the owner's production check is withdrawn; option 3 is proposed for decline. Finished investigation detail is in git at 34d9aea0.
+Corrected 2026-11-15: Next.js is 16.4.5; E592 ended with 16.4.1, per CI logs before and after; production checked again; the owner's production check is withdrawn and option 3 declined, both by the reviewing session at the owner's delegation. Finished investigation detail is in git at 34d9aea0.

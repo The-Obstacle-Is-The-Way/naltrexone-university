@@ -14,7 +14,8 @@ truncates it again. The child uses a different Docker project on the same port.
 If the clone's integration database is running, E2E stops at Docker startup,
 before Playwright or any provider test starts. No current clone is affected:
 the longest clone basename on the owner's machine, `naltrexone-university-csp-privacy`,
-is 33 characters, and the failure starts at 40.
+is 33 characters, and the failure starts at 40. An explicit instance name whose
+48th character is a separator fails the same way.
 
 ## Evidence
 
@@ -29,6 +30,10 @@ Checked at `34d9aea0` (2026-11-15):
 - Explicit instances pass through the same 48-character cap
   (`sanitizeExplicitInstanceId`, :179-187), so resolving a generated name again
   changes it.
+- `sanitizeInstanceId` strips leading and trailing hyphens (:173) before the
+  cut (:174). So an explicit `LOCAL_TEST_INSTANCE` whose 48th character is a
+  separator resolves to a name ending in `-`, and the child's re-resolution
+  strips it: the same mismatch, with no long clone name involved.
 - `scripts/test-lanes/e2e-local-orchestrator.ts:44-51` passes the resolved
   target's environment to `run-local-test-db.ts`, which resolves it again
   (`scripts/test-lanes/run-local-test-db.ts:33-34`). The environment keeps the
@@ -54,18 +59,21 @@ On 2026-10-06, after `pnpm db:test:up` and a passing integration lane,
 
 ## Resolution (decided)
 
-Option 3. In `deriveInstanceIdFromWorktree`, cut the sanitized basename to 39
-characters (48 less the nine-character suffix), strip trailing hyphens, then
-append the full suffix. Name the 48 and the suffix length as constants, shared
-with `sanitizeInstanceId`. Names that sanitize to 39 characters or fewer keep
-their current instance, project and ports.
+Option 3. `sanitizeInstanceId` takes its length limit, strips leading hyphens,
+cuts, and only then strips trailing hyphens. `deriveInstanceIdFromWorktree`
+sanitizes the basename to 39 characters (48 less the nine-character suffix),
+then appends the full suffix. Name the 48 and the suffix length as constants.
+Names that sanitize to 39 characters or fewer keep their current instance,
+project and ports, and so do explicit names that do not end in a separator at
+the cut.
 
 Red first, in `scripts/test-lanes/resolve-local-test-target.test.ts`: for
-basenames of 39, 40, 48 and 60 characters, and one whose 39th character is a
+basenames of 39, 40, 48 and 60 characters, one whose 39th character is a
+separator, and an explicit `LOCAL_TEST_INSTANCE` whose 48th character is a
 separator, resolving `createLocalTestTargetEnv(target)` returns `target`
-unchanged, and the instance ends with the full eight-character hash. A short
-name's instance stays `<sanitized basename>-<hash>`. Today the 40-character
-case and longer fail.
+unchanged. A generated instance ends with the full eight-character hash, and a
+short name's instance stays `<sanitized basename>-<hash>`. Today the
+40-character case and longer, and the explicit case, fail.
 
 No guide change is needed: no current clone's target changes.
 
@@ -73,7 +81,8 @@ No guide change is needed: no current clone's target changes.
 
 - [x] The resolver mismatch is reproduced with the probe (2026-10-06, again
   2026-11-15), and E2E's Docker startup failure observed (2026-10-06).
-- [ ] The round-trip test fails before the fix and passes after it.
+- [ ] The round-trip test, for generated and explicit names, fails before the
+  fix and passes after it.
 - [ ] A short clone's instance is unchanged.
 
 ## Related
@@ -82,4 +91,4 @@ No guide change is needed: no current clone's target changes.
 - AUDIT-014, the external record audit.
 
 Corrected 2026-10-19: update the executable reproduction import after DEBT-532 moved test-lane files; the cited baseline and E2E defect remain unchanged.
-Corrected 2026-11-15: line references moved with DEBT-532's move to `scripts/test-lanes/`; the Resolution names the files and the red test; dropped the guide change and the affected-clone E2E run, since no current clone is affected and the unit round-trip covers the child re-resolution.
+Corrected 2026-11-15: line references moved with DEBT-532's move to `scripts/test-lanes/`; the Resolution names the files and the red test; dropped the guide change and the affected-clone E2E run, since no current clone is affected and the unit round-trip covers the child re-resolution; an explicit name whose 48th character is a separator also fails to round-trip, so the sanitizer strips trailing hyphens after its cut, and the red test covers explicit names again.
