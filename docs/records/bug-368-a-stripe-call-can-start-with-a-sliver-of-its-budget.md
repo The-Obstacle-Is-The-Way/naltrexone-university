@@ -1,6 +1,6 @@
 # BUG-368: A Stripe Call Can Start With Only a Sliver of Its Caller's Budget Left
 
-**Status:** Verifying — two weeks of CI after the merge without the call-budget refusal test failing; due 2026-11-07
+**Status:** Verifying — every check is recorded; closes as Resolved in this pull request; due 2026-11-22
 **Priority:** P3
 **Date:** 2026-10-24
 
@@ -51,8 +51,10 @@ Option 1, with `STRIPE_MIN_REQUEST_MS = 10`. That is about four times the worst 
 ## Verification
 
 - [x] The new unit and transport tests fail before the change and pass after it (2026-10-24).
-- [ ] Two weeks of CI after the merge without the call-budget refusal test failing; due 2026-11-07.
+- [x] Two weeks of CI after the merge without the call-budget refusal test failing. #1602 merged to `dev` on 2026-10-24 at 05:29Z, and #1613 promoted it. Of the 257 `ci.yml` runs created from then to 2026-11-15 23:03Z, the "Integration tests" step passed in 241, 130 of them by 2026-11-07, and failed in none; 15 skipped it after an earlier step failed, and one, queued since 2026-11-11, never started. The first attempts of the three re-run runs also passed it. Every failed run failed at Typecheck, Biome, unit tests or E2E. The logs show the call-budget integration file running in that step.
 
 ## Related
 
 - DEBT-527: the caller budget this record bounds (closed 2026-10-23).
+
+Corrected 2026-11-15: the CI check is done, counted from `gh run list` and each run's and attempt's "Integration tests" step; the record closes as Resolved in this pull request, re-dated from 2026-11-07 for that.

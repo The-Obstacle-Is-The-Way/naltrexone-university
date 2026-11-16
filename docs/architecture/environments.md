@@ -107,14 +107,14 @@ Stripe live mode and test mode should remain on the same Stripe account. This av
 
 ### Stripe price ID rule
 
-Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` in an environment that has subscribers. The app recognizes only the current monthly and annual IDs (DEBT-501 item 2). Every subscription still on an old ID would then fail:
+Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` in an environment that holds any subscription rows, former trials' included. The app recognizes only the current monthly and annual IDs (DEBT-501 item 2). Every subscription still on an old ID would then fail:
 
 - its webhooks answer 500;
 - reads of it throw;
 - the reconcile job fails its row;
 - the success page sends its buyer to an error.
 
-A new price for new customers waits for item 2's list of recognized legacy IDs. Nothing enforces this rule yet.
+A new price for new customers waits for DEBT-501 item 2's recorded-plan design. Nothing enforces this rule yet.
 
 ### Clerk key pairing rule
 

@@ -1,6 +1,6 @@
 # DEBT-530: Commercial Terms Are Restated by Hand in Each Place That Shows Them
 
-**Status:** Open — one source for the current offer, with tests tying live copy to it; historical consent stays frozen; blocking statuses follow DEBT-501's billing contract
+**Status:** Verifying — closes in this pull request; its Waiting row carries the work; due 2026-11-22
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -33,7 +33,7 @@ The billing page's cancellation date, a live presentation defect in the same are
   - `app/pricing/plan-consent-dialog.tsx:99`
   - `app/pricing/pricing-view.tsx:262`
   - `app/(marketing)/checkout/success/page.tsx:61`
-  - `app/(marketing)/terms/terms-content.ts:45`
+  - `app/(marketing)/terms/terms-content.ts:9,45`
   - the frozen consent registry, `lib/checkout-disclosures.ts:26-60`
 - The runtime fence (`create-checkout-session.ts:144-155`) compares trial eligibility and the disclosure version, not the text/hash or granted days directly. `create-checkout-session.test.ts:348,383` pins the actual seven days. `lib/pricing-data.test.ts:77-107` checks cancellation text against Terms and pins amount/version/hash; `lib/checkout-disclosures.test.ts:47-81` checks historical hashes and active copy against its registry entry.
 
@@ -58,10 +58,10 @@ The billing page's cancellation date, a live presentation defect in the same are
 
 **Blocking statuses:**
 - The domain's list: `BlockingCheckoutSubscriptionStatuses` (`src/domain/value-objects/subscription-status.ts:40-41`).
-- Checkout's Stripe-side list: `BLOCKING_SUBSCRIPTION_STATUSES` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:58-65`).
-- Reconcile's list: `BLOCKING_STATUSES` (`src/adapters/jobs/reconcile-stripe-subscriptions.ts:22-29`).
+- Checkout's Stripe-side list: `BLOCKING_SUBSCRIPTION_STATUSES` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:60-67`), which BUG-321's sync also reads through `getBlockingSubscriptionStatus`. That function throws `STRIPE_ERROR` on a status it does not know (`:389-394`).
+- Reconcile's list: `BLOCKING_STATUSES` (`src/adapters/jobs/reconcile-stripe-subscriptions.ts:22-29`), read by `isBlockingStatus` (`:42-44`), which filters an unknown status out of the customer's listing (`:133`) instead of throwing.
 - The fall-through: `determineNonEntitledReason` separately handles an expired period and pending payment before its current-period status fallback (`src/domain/services/entitlement.ts:23-32`). The pricing page reads that reason; list extraction must preserve those distinctions.
-- The two Stripe-side lists name Stripe's statuses; the domain's names ours, and the status mapping joins them.
+- The two Stripe-side lists name the same six Stripe statuses; the domain's names ours, and the status mapping joins them.
 
 **Email copy:**
 - The notice and acknowledgment emails each carry their own footer and `formatAmount`: `src/application/use-cases/send-due-renewal-notices.ts` and `send-renewal-acknowledgment.ts`.
@@ -85,22 +85,26 @@ A change made to one copy can leave another stating old terms. Existing tests ca
    - Hold the current amounts, trial days, support contact and terms version in one inner module, or inject them through the existing `getRenewalTerms` seam. Use cases must not import outer `lib/pricing-data.ts`, `lib/support.ts` or `app` modules. Build the current copy outward from it, and keep presentation formatting and billing lifecycle logic out of it.
    - History needs no versioned values: the stored consent records and the append-only disclosure registry already keep it. Only the active disclosure and current legal copy are tied to the module. An authorized offer change appends a disclosure version; ADR-027 Decision 4 keeps the owner's approval for adopted wording, and this record does not authorize any change.
    - Share email footer formatting, while the acknowledgment continues to render the accepted, stored terms rather than today's price. Existing-subscriber changes remain with DEBT-501 and the price-change freeze.
-   - The blocking statuses become one domain list that checkout, reconcile and the pricing page's reason read. It is a billing rule, so it follows DEBT-501's shared billing contract (adopted 2026-10-17): the contract is defined first, then the list is extracted.
+   - The blocking statuses: the reconcile reads checkout's exported Stripe-side list, and the pricing page's reason reads the domain list, which the status mapping joins to it. Behavior is unchanged, so DEBT-501's shared billing contract does not govern it.
 2. **Tests only:** keep every literal, and add tests that compare each copy with `FREE_TRIAL_DAYS`, `amountCents` and `SUPPORT_EMAIL`. This is cheaper, and it leaves the constants scattered.
 
 ## Resolution (proposed)
 
-Option 1, with the next offer or copy change, red first: a test that fails when any live copy states a trial length, amount or address other than the module's. The blocking-status list moves with DEBT-501's contract, in the first implementation of its item 2 or BUG-343 option 4.
+Option 1, with the next offer or copy change, red first: a test that fails when any live copy states a trial length, amount or address other than the module's. Nothing is due before that change, so the record moves to a Waiting row (reviewing session, 2026-11-15, at the owner's delegation).
+
+The blocking-status piece waits on nothing else: DEBT-501 item 2 is deferred and BUG-343's option 4 declined, so tying it to their contract would leave it undone. It rides in the same Waiting row, whose trigger includes a change to either Stripe-side list. Export `BLOCKING_SUBSCRIPTION_STATUSES` and use it inside `isBlockingStatus`, deleting `BLOCKING_STATUSES`. Calling `getBlockingSubscriptionStatus` there instead would change behavior: one unknown status would throw and fail the reconcile's whole row.
 
 ## Verification
 
 - [ ] Trial days, amounts, saving and support address each have one source, and tests tie the live copy to it.
 - [ ] The terms effective date is derived from `TERMS_VERSION`; registered disclosures stay unchanged.
-- [ ] One list decides which statuses block a new checkout; checkout, reconcile and the pricing page read it, and tests cover all eight statuses across current and expired periods, including pending-payment presentation.
+- [ ] One Stripe-side list decides which Stripe statuses block, read by checkout and the reconcile, and the reconcile still skips an unknown status; the pricing page's reason reads the domain list, and tests cover all eight statuses across current and expired periods, including pending-payment presentation.
 
 ## Related
 
-- DEBT-501: item 2's step 5 owns the Stripe price check; its shared billing contract governs the blocking-status list.
+- DEBT-501: item 2's step 5 owns the Stripe price check.
 - DEBT-524 (closed): found the three blocking-status lists.
 - BUG-350: the billing page's cancellation date.
 - DEBT-414: renewal consent.
+
+Corrected 2026-11-15: two line references drifted (the checkout list, and the terms' trial length, also at `:9`). The Resolution, proposed for the next offer change, moves to a Waiting row with that change as its trigger. The blocking-status piece no longer waits on DEBT-501's contract, and the `getBlockingSubscriptionStatus` shortcut is replaced by the export, since that function throws where the reconcile filters.
