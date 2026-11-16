@@ -9,7 +9,7 @@ The [directory](#directory) below gives every script one row: what it does and w
   - The check follows package commands, workflow steps' `run` text, and only `vercel.json`'s `buildCommand`, looking for the complete path or a `pnpm` package command that references it. Comments and commands whose first word names `echo` or `printf` (including executable paths) are excluded.
   - It does not interpret shell control flow, command wrappers, variables, heredocs, continued lines or imports, prove that a command executes, or find omitted callers. Those claims and the purpose column need source review; changes to callers update the row.
 
-The non-content families are grouped below. BUG-351, which carried DEBT-531's decisions, closed on 2026-11-11 with source admission and the release planner in place; DEBT-532 owns the remaining content-family move as well as the layout decisions and validation.
+The non-content families are grouped below. The content family (the seed and import scripts in the root, `seed/` and `content-release/`) stays where it is: moving it is tidiness, and would touch the commands DEBT-483's irreversible bootstrap runs (declined 2026-11-15 by the records accuracy review, at the owner's delegation). Once the bootstrap makes the seeds refuse production, `seed-production.ts` and `pnpm db:seed:prod` go (DEBT-483).
 
 ## Conventions
 
@@ -18,7 +18,7 @@ The non-content families are grouped below. BUG-351, which carried DEBT-531's de
   - the two `.mts` jobs run with plain `node`;
   - `ci/*.sh` runs with `bash`.
 
-  Some callers still use a path where a package script exists. `ci.yml` calls `test-lanes/resolve-local-test-target.ts` by path, and the local E2E plan spawns `test-lanes/run-local-test-db.ts` by path (DEBT-532).
+  Package scripts are for people; automation may call a script by path. `ci.yml` and the hosted Checkout smoke call `test-lanes/resolve-local-test-target.ts`, and the local E2E plan spawns `test-lanes/run-local-test-db.ts`, which resolves the target again (BUG-329).
 - **Most TypeScript entry points export their work as a function.** Some inject their dependencies; others call real infrastructure. Guarded entry points use `isMain` from `lib/entry-point.mts`, which compares real paths and resolves extensionless or `.js` entry spellings supported by the runtime. The shared check resolves symlinks; imports do not enter the guarded command body. `tests/script-entry-points.test.ts` exercises both runtimes and requires a top-level shared check in modules with executable entry signals; its bounded AST scan ignores comments and nested lookalikes and checks package-script entry points outside `scripts/` too. Pass arguments directly to package commands; strict parsers refuse the literal `--` separator that pnpm 11 forwards (#1567).
   - Error reporting varies: message, stack, or a sanitized diagnostic; most guards set `process.exitCode = 1` on failure. Many carry `/* v8 ignore */` comments.
   - Not every entry point follows this yet. `import-draft-questions.ts`, `seed-production.ts` and `seed-all-environments.ts` run unconditionally, and some guards neither catch nor carry the comments.
@@ -32,13 +32,24 @@ The non-content families are grouped below. BUG-351, which carried DEBT-531's de
   - `pnpm db:generate` is offline: it reads schema and snapshots with `drizzle.generate.config.ts`, without dotenv or credentials. Its thin wrapper selects the offline config, passes arguments unchanged and propagates failure.
   - The managed path in `database/managed/` takes no acknowledgment.
   - It is used by checked-in automation (CI, the Vercel build and the local test harness), and by the environment seeds after their own `DB_TARGET_ACK` check. The migration-ledger CLI uses the managed target authorizer directly.
-  - A second rule still exists. The E2E passthrough and integration setup accept a remote host with `ALLOW_NON_LOCAL_DATABASE_URL=true`, without `DB_TARGET_ACK`; their outer runners also require the corresponding `*_USE_EXISTING_DATABASE=true` switch. The integration session-proof suites still reject remote targets (DEBT-532).
+  - A second rule still exists, until BUG-360's fix removes it. The E2E passthrough and integration setup accept a remote host with `ALLOW_NON_LOCAL_DATABASE_URL=true`, without `DB_TARGET_ACK`; their outer runners also require the corresponding `*_USE_EXISTING_DATABASE=true` switch. The integration session-proof suites still reject remote targets.
 - **Tests sit beside their source** as `<name>.test.ts` and run in `pnpm test`.
   - A large suite splits into `<name>-<aspect>.test.ts`; shared test support is `<name>-test-helpers.ts`; data files go in `fixtures/`.
   - The directory leaves these out, because their names already say what they serve.
   - Database behavior is proved in `tests/integration/`.
-  - Not yet true everywhere (DEBT-532). `content-release/bootstrap-manifest.test.ts`, `content-release/release-command-args.test.ts`, `draft-question-body.test.ts` and `draft-question-split.test.ts` have no source file of those names. `seed.test.ts` tests `seed/question-parser.ts` and `seed/tag-manager.ts`, `seed-all-environments.test.ts` and `seed-production.test.ts` test `seed-environment-targets.ts`.
-- **A check of the whole repository is a policy test in `tests/`.** Script-specific workflow/package wiring checks stay beside the script whose deployment contract they prove. The rule-register and documentation-asset source checks live in `tests/`. The link audit in `records/documentation-archive.ts` also serves its operator CLI (DEBT-532).
+  - Content suites that test several commands keep their group names; a test file with no source of its name is not by itself a defect. `content-release/bootstrap-manifest.test.ts` tests `release-manifest.ts`, `content-release/release-command-args.test.ts` three release commands' parsers, and `draft-question-body.test.ts` and `draft-question-split.test.ts` `draft-question-import.ts`. `seed.test.ts` tests `seed/question-parser.ts` and `seed/tag-manager.ts`, and `seed-all-environments.test.ts` and `seed-production.test.ts` test `seed-environment-targets.ts`.
+- **A check of the whole repository is a policy test in `tests/`.** Script-specific workflow/package wiring checks stay beside the script whose deployment contract they prove. The rule-register and documentation-asset source checks live in `tests/`. The link audit in `records/documentation-archive.ts` also serves its operator CLI, `pnpm docs:audit`.
+- **Kept on purpose.** The owner's delegated decisions of 2026-10-19 (the first four) and the scripts audit's retained choices. Change one only by a new decision.
+  - `deploy/validate-header-safe-secret.ts` stays an operator preflight: it catches pasted whitespace, which generating a hex secret cannot prevent.
+  - Production seeding stays an operator command (`pnpm db:seed:prod`), not a protected Actions job, which would add production credentials without the content checks.
+  - The merge verdict stays a documented pre-merge command (`pnpm pr:merge-reviewed`), not a required status, which goes stale when reviews or threads change.
+  - The two scheduled `.mts` jobs stay zero-install, so their credential-bearing workflows install no dependencies.
+  - The standalone records audit (`pnpm docs:audit`) stays: it reports every blocking finding at once, and the advisory due dates.
+  - `test-lanes/run-stripe-provider-contracts.ts` stays: a reporter would still need an outer supervisor for its deadline, environment gate and sanitized summary.
+  - `watchers/upstream-fix-watch.ts` stays with no watch, for future workarounds (#1500).
+  - `E2E_INSTANCE` and `E2E_APP_PORT` stay as aliases: source cannot show whether an operator still sets them.
+  - The `E2E_PREFLIGHT:` codes in `database/migration-ledger.ts` are a contract that E2E output and runbooks search for.
+  - Test-lane tools may import `tests/shared/`: `ci/scan-playwright-output.ts` and `test-lanes/run-stripe-provider-contracts.ts` share credential shapes and case titles with the tests, so they cannot drift.
 
 ## Directory
 

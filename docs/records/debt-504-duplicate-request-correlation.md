@@ -1,6 +1,6 @@
 # DEBT-504: Request Correlation Duplicates the Hosting Platform
 
-**Status:** Open — folded into DEBT-528 as its step 1; close as Superseded
+**Status:** Open — closes as Superseded in this pull request: folded into DEBT-528 as its step 1
 **Priority:** P4
 **Date:** 2026-10-06
 
@@ -31,15 +31,15 @@ The extra ID adds wiring and suggests coverage it does not have. No lost data or
 
 ## Resolution (decided)
 
-Option 3, decided 2026-10-06. It now lives in DEBT-528 as step 1, beside the other entry-point copies, with its red test, the ADR-008 amendment and the log check. The earlier extra, routing `handleError` through each controller's resolved logger, is dropped: that logger is the same root logger `handleError` already uses, so it would add a hook for no change.
+Option 3, decided 2026-10-06. It now lives in DEBT-528 as step 1, beside the other entry-point copies, with the ADR-008 amendment and the log check. One part changed there: `ActionOptions.logger` stays, as the seam four tests use to observe a controller's error log, and production stops passing it. Routing `handleError` through each controller's resolved logger is dropped: that logger is the root logger `handleError` already uses, so it would add a hook for no change.
 
 ## Verification
 
-- [x] DEBT-528 step 1 carries the whole resolution and its checks (2026-11-15).
+- [x] DEBT-528 step 1 carries the whole resolution and its checks: folded 2026-11-15 by the reviewing session, at the owner's delegation of engineering calls for this review (records accuracy review, 2026-11-15).
 
 ## Related
 
 - DEBT-528, which supersedes this record.
 - BUG-324, which dropped the per-call option once as a stopgap.
 
-Corrected 2026-11-15: folded into DEBT-528 step 1; added ADR-008's request-ID decision, which the removal amends; dropped the resolved-logger hook as a no-op; the Drains API now answers 404 for this Hobby team, so the 2026-10-06 "no drains" reading could not be repeated; finished history is in git at `34d9aea0`.
+Corrected 2026-11-15: folded into DEBT-528 step 1; added ADR-008's request-ID decision, which the removal amends; dropped the resolved-logger hook as a no-op; the Drains API now answers 404 for this Hobby team, so the 2026-10-06 "no drains" reading could not be repeated; finished history is in git at `34d9aea0`; DEBT-528 keeps `ActionOptions.logger` as a test seam, so only production's per-call logger goes; the record closes as Superseded in this pull request.

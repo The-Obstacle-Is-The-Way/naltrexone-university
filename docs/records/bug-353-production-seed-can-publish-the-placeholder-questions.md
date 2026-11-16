@@ -1,6 +1,6 @@
 # BUG-353: The Production Seed Can Publish the Placeholder Questions
 
-**Status:** Verifying — every check is recorded below, and the SCHEMA.md copy moves to Waiting; the next records pull request closes it as Resolved; due 2026-11-08
+**Status:** Open — closes as Resolved in this pull request: the explicit seed flag shipped (#1583, #1590), and production had no published placeholder on 2026-11-11
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -33,7 +33,7 @@ The root cause was a hidden input: a switch meant for test databases, read from 
 
 ## Resolution (decided)
 
-Option 2, shipped in #1559 and #1584 and released in promotion #1590.
+Option 2, shipped in #1559 (released in promotion #1583, `ea8773fd`) and #1584 (promotion #1590, `4c84405e`).
 - `runSeed` takes `{ includePlaceholders }` and reads no environment. `parseSeedOptions` (`scripts/seed/seed-options.ts`) accepts only `--include-placeholders`, and refuses a set `SEED_INCLUDE_PLACEHOLDERS` before any database work, so a stale export stops the seed with a message. That makes option 1 unnecessary.
 - The managed seed and the human `db:seed` refuse `--include-placeholders` for any non-local target, the human seed before it asks for `DB_TARGET_ACK`.
 - The environment seeds spawn the managed seed with no arguments. CI, the hosted Checkout smoke and the local E2E plan pass the flag.
@@ -44,7 +44,7 @@ Option 2, shipped in #1559 and #1584 and released in promotion #1590.
 - [x] `scripts/seed-environment-runtime.test.ts` passes: an environment seed spawns the managed seed without the flag. `tests/ci-workflow.test.ts` passes: both seed steps pass the flag, and no workflow sets the old variable.
 - [x] The first scheduled hosted Checkout smoke after promotion #1590 (run 39796835565, 2026-10-22) passed its seed step.
 - [x] No placeholder is published in production. On 2026-11-11 the owner's read-only live-key comparison (BUG-351), against content commit `3281add20756c91648ca036a7fedc74c3d35e543`, found 948 published questions and 0 missing from that commit. That commit's `questions/` tree has no placeholder QID (`git grep`, 2026-11-15). Which placeholders exist unpublished was not established; only BUG-360's reset needed that.
-- [ ] Moved to Waiting: the owner copies the 2026-10-18 corrections in `content/drafts/questions/SCHEMA.md` into the content repository's `questions/SCHEMA.md`, where the file is edited, so the next copy does not undo them. On 2026-11-15 that repository's `main` still showed `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`. The seed now refuses that variable, so a stale copy fails loudly rather than publishing.
+- The SCHEMA.md copy is not part of this fix: the owner copies the 2026-10-18 corrections in `content/drafts/questions/SCHEMA.md` into the content repository's `questions/SCHEMA.md`. On 2026-11-15 that repository's `main` still showed `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`, which the seed now refuses loudly. The owner asked that day to be reminded after the session; the reminder is kept outside the repository, so there is no Waiting row.
 
 ## Related
 
@@ -59,4 +59,4 @@ Corrected 2026-10-20: update seed entry and test paths after DEBT-532’s moves,
 
 Corrected 2026-10-21: retain #1584’s human-seed remote-placeholder refusal and its verification at the moved test paths.
 
-Corrected 2026-11-15: the census is met by the owner's 2026-11-11 live-key comparison, so the lapsed 2026-11-08 check is done; the SCHEMA.md copy, still undone, moves to Waiting. Name the fix PRs, correct the syncer lines, and drop the finished build history, which is in git at 34d9aea0.
+Corrected 2026-11-15: the census is met by the owner's 2026-11-11 live-key comparison, so the lapsed 2026-11-08 check is done, and the record closes as Resolved. #1559 shipped in promotion #1583, not #1590. The SCHEMA.md copy, still undone, is an owner reminder kept outside the repository, not a Waiting row. Name the fix PRs, correct the syncer lines, and drop the finished build history, which is in git at 34d9aea0.
