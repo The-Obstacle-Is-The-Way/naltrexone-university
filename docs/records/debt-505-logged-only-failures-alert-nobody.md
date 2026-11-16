@@ -34,7 +34,7 @@ The product is pre-revenue, so nothing was missed. Once annual subscribers exist
 Option 2. The `OperationalAlerts` port raises a kind from a closed list, with a count only. The adapter sends at most one Sentry event per kind per six-hour window to the server project, whose own workflow emails the owner. A monthly drill proves the path, a daily watcher notices when it stops, and the renewal job checks that GitHub has not stopped the watcher. The drill and the watcher reached production with promotion #1439 on 2026-10-09. The design, its runbook and the Sentry settings made by hand are in `docs/architecture/observability.md`, "Operational alerts".
 
 Decisions:
-- Server events moved to their own Sentry project, `addiction-boards-server`, so the browser's public key cannot fake or flood an alert (2026-10-08, approved by the owner).
+- Server events moved to their own Sentry project, `addiction-boards-server`, so the browser's public key cannot fake an alert (2026-10-08, approved by the owner). Both projects share the plan's monthly error quota, so a browser flood that uses it up silences the alerts too, and Sentry drops them unseen (`docs/architecture/observability.md`, "Sentry flood or quota exhaustion").
 - The path is watched, not assumed, by the drill, the watcher and the owner's inbox filter (2026-10-08, AUDIT-015, the register audit the owner asked for).
 
 ## Verification

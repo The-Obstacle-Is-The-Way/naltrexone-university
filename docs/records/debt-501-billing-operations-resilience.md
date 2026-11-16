@@ -67,7 +67,7 @@ Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped wit
 ### 8. The checkout guard reads only the customer's first 10 subscriptions (P3) — Won't Fix
 
 - **Evidence.** `createStripeCheckoutSession` lists the customer's subscriptions with `status: 'all'` and `limit: SUBSCRIPTION_LIST_LIMIT` (10), with no paging (`stripe-checkout-sessions.ts:855-860`); BUG-321's sync lists the same page (`stripe-customer-subscriptions.ts:43-47`).
-- **Won't Fix,** decided by the reviewing session, 2026-11-15, at the owner's delegation. Stripe lists newest first, and the guard refuses every checkout while one blocking subscription exists, so ten newer ones need ten escapes of BUG-343's seconds-wide race, or subscriptions made outside the app, which item 3 covers.
+- **Won't Fix,** decided by the reviewing session, 2026-11-15, at the owner's delegation. Stripe lists newest first, and the guard refuses every checkout while a blocking subscription is among the customer's ten newest. Every subscription the app makes comes from a Checkout the guard passed, so pushing a blocking one past those ten needs ten escapes of BUG-343's seconds-wide race, or subscriptions made outside the app, which item 3 covers. The daily reconcile lists up to 100 per customer (`reconcile-stripe-subscriptions.ts:21`), so it still sees such a duplicate.
 
 ### 9. Nothing notices when the daily reconcile stops running (P3)
 
