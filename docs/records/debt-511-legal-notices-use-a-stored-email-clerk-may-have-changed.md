@@ -1,6 +1,6 @@
 # DEBT-511: Legal Notices Go to a Stored Email That Clerk May Have Changed
 
-**Status:** Open — refresh before queuing (option B), after DEBT-502 items 3 and 2; ships 39 days before the first real renewal or anniversary, dated from the owner's count
+**Status:** Open — refresh before queuing (option B), after DEBT-502 items 3 and 2; ships 39 days before the first real renewal; the owner's count due 2027-02-12
 **Priority:** P2
 **Date:** 2026-10-07
 
@@ -88,7 +88,7 @@ DEBT-503 item 1 (released 2026-10-08) widened the gap slightly. It stopped refre
 - [ ] DEBT-502 items 3 and 2 have shipped.
 - [ ] Clerk's address reaches the Stripe customer on every write, an older push landing after a newer one ends with Stripe holding the stored address, a push that fails or exhausts its three attempts is logged as a failed sync and corrected by the next write, and the portal no longer offers an email edit.
 - [x] DEBT-414 F19a no longer relies on Stripe's emails (2026-10-07: its Stripe path is recorded as closed).
-- [ ] The owner records a read-only count of real live subscriptions, and the earliest annual renewal or monthly subscription's yearly anniversary; that date minus 39 days becomes this record's due date.
+- [ ] The owner records a read-only count of real live subscriptions by the status's due date. With none, the count's due date moves up to 90 days on. With one or more, the earliest annual renewal or monthly subscription's yearly anniversary, minus 39 days, is the ship-by date; the status carries it as the due date once it is under 90 days away, and a count date before that. *Dated 2026-11-16 at the owner's request, so the weekly due check reminds the owner: an undated deadline reached only the weekly review.*
 
 ## Related
 

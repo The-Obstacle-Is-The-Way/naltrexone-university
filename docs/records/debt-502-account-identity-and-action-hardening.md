@@ -1,6 +1,6 @@
 # DEBT-502: Rare Account States Can Lock a Person Out, and Payment Actions Expose Test Seams
 
-**Status:** Open — items 3, 1, 2 by 39 days before the first real renewal or anniversary (dated from the owner's count); owner: Clerk's verify-at-sign-up setting
+**Status:** Open — items 3, 1, 2 by 39 days before the first real renewal or anniversary (dated from DEBT-511's count); owner: Clerk's verify-at-sign-up setting
 **Priority:** P3
 **Date:** 2026-10-05
 
