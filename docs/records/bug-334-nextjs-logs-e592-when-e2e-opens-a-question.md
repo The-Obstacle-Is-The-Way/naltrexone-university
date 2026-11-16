@@ -1,93 +1,81 @@
 # BUG-334: Next.js Logs Invariant E592 When E2E Opens a Question
 
-**Status:** Open — upstream Next.js bug (vercel/next.js#99500); no failed request found; the owner's production check and the Next.js fix remain
+**Status:** Verifying — E592 ended with Next.js 16.4.1; option 3 is declined; closes as Resolved in this pull request; due 2026-11-22
 **Priority:** P3
 **Date:** 2026-10-09
-**Resolved:** —
-**Verification receipts:** —
+
+---
 
 ## Summary
 
-During required E2E, the `next start` server logs this error twice per run,
-while `tests/e2e/cross-page-navigation.spec.ts` opens a question's detail page
-from Dashboard or History:
+On Next.js 16.3.6 and 16.3.8, the `next start` server in required E2E logged
+this error twice per run, while `tests/e2e/cross-page-navigation.spec.ts`
+opened a question's detail page from Dashboard or History:
 
 ```text
 Error [InvariantError]: Invariant: postponed state should not be provided when fallback params are provided. This is a bug in Next.js.
 ```
 
-The error is Next.js's E592, raised inside Next.js. In a traced run every request
-returned 200 and the browser navigated without a reload, so no failure reaches
-the test's user. Whether a real user can hit it on Vercel is not yet shown.
+The error is Next.js's E592, raised inside Next.js. In a traced run every
+request returned 200, so no failure reached the test's user. It stopped with
+the Next.js 16.4.1 upgrade (41809515, 2026-10-14), and no run since has logged it.
 
 ## Evidence
 
-- **How often.** Four of five local E2E runs in one clone from 2026-10-08 to
-  2026-10-09 logged it twice, on Next.js 16.3.6 and 16.3.8. Every run in
-  another clone on 16.3.8 did too. The suite passed each time.
-- **Traced run** (2026-10-09 21:30Z, Next.js 16.3.8, `next start`,
-  `cross-page-navigation.spec.ts` 5 of 5, six errors). Every `/app/questions/*`
-  request returned 200: the document requests, the segment prefetches
-  (`x-nextjs-cache: MISS`, `x-nextjs-postponed: 2`), the navigation's RSC
-  request and the Server Action posts. The browser made no document request
-  for the detail page and no retry. Which request throws is not proven: six
-  errors do not pair with about fifteen prefetch misses, and no server
-  timestamps were captured.
-- **The route.** `app/(app)/app/questions/[slug]` has no `generateStaticParams`.
-  With `cacheComponents: true`, the build emits it as a partial-prerender shell
-  with `slug` as a fallback parameter (`prerender-manifest.json`:
-  `routeType: "shell"`, `compute: "resuming"`).
-- **The code** (Next.js 16.3.8). `server/app-render/app-render.js` throws E592
-  when a render receives both a postponed state and fallback route parameters.
-  Outside minimal mode, `build/templates/app-page-runtime.js` loads the
-  postponed state from the incremental cache for a dynamic RSC request or a
-  Server Action. It also creates fallback route parameters when a request's
-  parameters are still placeholders.
-- **Upstream.** [vercel/next.js#99500](https://github.com/vercel/next.js/issues/99500),
-  open since 2026-09-30, reports E592 for RSC and form requests to a literal
-  `[slug]` URL under `next start`, still on 16.4.0-canary.53. The closed
-  [#98647](https://github.com/vercel/next.js/issues/98647) reports that on
-  Vercel, a resume of a fallback shell can arrive with the parameter still a
-  placeholder and fail with a 500.
-- **Production.** Vercel's runtime-error groups for the seven days to
-  2026-10-09 hold no E592: only a Clerk handshake 404 and one user-upsert
-  conflict. That is weak evidence, because production sees little `/app`
-  traffic, and the Hobby plan keeps request logs for an hour. Sentry was not
-  checked.
+- **Before.** CI logs of the push runs on `main` from 2026-10-08 to 2026-10-14:
+  15 of 28 runs on 16.3.6 and 16.3.8 logged E592, twice each. Local runs on
+  16.3.x logged it in most runs.
+- **After.** 0 of 30 push runs on `main` on 16.4.1 to 16.4.3 (2026-10-15 to
+  2026-11-08), and 0 of the 58 required E2E executions after them, to
+  2026-11-15, on 16.4.3 to 16.4.5. Five of the 16.4.1 runs predate
+  `partialPrefetching: false` (d97d2dcc, DEBT-522), so the upgrade, not that
+  setting, ended it. CI prints the server's output (`[WebServer]` lines), so an
+  E592 would show.
+- **The route.** `app/(app)/app/questions/[slug]` has no `generateStaticParams`;
+  with `cacheComponents: true` it is a partial-prerender shell with `slug` as a
+  fallback parameter.
+- **Upstream.** vercel/next.js#99500 (E592 for requests to a literal `[slug]`
+  URL under `next start`) is still open. A comment of 2026-11-04 says #101106
+  fixed that path by limiting placeholder detection to minimal mode. 16.4.5
+  ships the matching security fix (GHSA-vvgp-ww4w-46vf), and its
+  `app-page-runtime.js` gates that detection on minimal mode. vercel/next.js#101144
+  tracks a separate minimal-mode case with host rewrites, which this app does
+  not use.
+- **Production.** Vercel's runtime-error groups held no E592 for the seven days
+  to 2026-10-09, nor for the seven days to 2026-11-15 (three Clerk groups only).
+  A render error there would also reach Sentry through `onRequestError`
+  (`instrumentation.ts:28`).
 
 ## Impact
 
-- **Users:** none known. If #98647's resume path applied here, opening a
-  question on Vercel would fail, which the owner would likely have seen; the
-  production check below settles it.
-- **Tests:** the error is noise in every E2E run's server output. The suite
-  does not fail on server errors, so a real one in the same output would also
-  go unnoticed.
+None now. It was log noise in E2E; no user failure was found.
 
 ## Options
 
-1. **Change our route to avoid the path.** A sentinel `generateStaticParams`
-   (the #98647 reporter's workaround) or no `cacheComponents` would change how
-   every question page renders, to silence a log line. Not justified while no
-   request fails.
-2. **Wait for upstream.** Take the Next.js release that fixes #99500, then
-   confirm a local E2E run logs no E592.
-3. **Make server errors visible in E2E.** Fail the run, or list the errors in
-   its summary, when the web server logs an error not named in a short
-   known-noise list that links here.
+1. Change the route to avoid the path (a sentinel `generateStaticParams`, or no
+   `cacheComponents`). Not needed.
+2. Wait for upstream. The 16.4.1 upgrade ended it.
+3. Fail E2E, or list errors in its summary, when the web server logs an error
+   not on a known-noise list. Proposed for decline with this closure: it was
+   proposed to catch this error, which no longer occurs, and the list would need
+   upkeep for the errors E2E provokes on purpose.
 
-## Resolution (proposed)
+## Resolution (decided)
 
-Option 2, after the production check. Option 3 is an owner decision: it would
-have raised this error when it first appeared, at the cost of keeping the list.
+Option 2, done by the 16.4.1 upgrade. The owner's production check is no longer
+needed: the E2E signal that prompted it is gone, and production's error groups
+and Sentry would record a render failure.
 
-## Checklist
+## Verification
 
-- [ ] Owner: on production, open a question from Dashboard, then within the
-      hour search Vercel's runtime logs, and Sentry, for "postponed state".
-      For each hit, find the request that logged it and its status. A failed
-      response, or a page that did not load, raises this to P1. A hit on a
-      request that succeeded is the same noise as in E2E.
-- [ ] Owner decision: option 3.
-- [ ] A Next.js release fixes vercel/next.js#99500; after taking it, a local
-      E2E run logs no E592.
+- [x] CI E2E logs no E592 after the upgrade (2026-11-15: 0 in 88 runs on
+      16.4.1 to 16.4.5).
+- [x] Production's runtime-error groups hold no E592 (2026-11-15, seven days).
+- [x] Option 3 declined 2026-11-15 by the reviewing session, at the owner's delegation: the error it was meant to catch is gone, and its known-noise list would need upkeep.
+
+## Related
+
+- BUG-337: its 2026-10-11 server output held no E592 either.
+- DEBT-522: `partialPrefetching`.
+
+Corrected 2026-11-15: Next.js is 16.4.5; E592 ended with 16.4.1, per CI logs before and after; production checked again; the owner's production check is withdrawn; option 3 is proposed for decline. Finished investigation detail is in git at 34d9aea0.

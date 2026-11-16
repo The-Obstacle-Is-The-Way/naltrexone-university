@@ -1,79 +1,80 @@
 # BUG-329: Long Clone Names Change the Local Test Target in Child Commands
 
-**Status:** Open — canonicalize generated instance names before passing them to child commands
+**Status:** Open — cap the generated instance at 48 characters, keeping its full hash, red first in `resolve-local-test-target.test.ts`
 **Priority:** P4
 **Date:** 2026-10-06
-**Resolved:** —
-**Verification receipts:** —
+
+---
 
 ## Summary
 
 A long clone basename produces an instance name longer than the resolver accepts
 as an explicit instance. E2E passes that name to a child database command, which
 truncates it again. The child uses a different Docker project on the same port.
-If the clone's integration database is running, E2E stops at Docker startup.
-This was observed before Playwright or any provider test started.
+If the clone's integration database is running, E2E stops at Docker startup,
+before Playwright or any provider test starts. No current clone is affected:
+the longest clone basename on the owner's machine, `naltrexone-university-csp-privacy`,
+is 33 characters, and the failure starts at 40.
 
-## Evidence and reproduction
+## Evidence
 
-Inspected at `af21b710` (the code is unchanged from main `0f324edd`):
+Checked at `34d9aea0` (2026-11-15):
 
-- `deriveInstanceIdFromWorktree` (`scripts/resolve-local-test-target.ts:111`)
-  appends a nine-character suffix (`-` and an eight-character hash, :113-114)
-  after sanitizing the basename. The sanitizer caps its normalized output at 48
-  characters (:165). So a basename that sanitizes to 40 characters or more gives
-  an instance longer than 48: measured, 39 round-trips and 40 changes.
-- Explicit instances pass through that same 48-character cap. The generated
-  result can be longer than 48, so resolving it again changes the instance.
-- `scripts/e2e-local-orchestrator.ts:67` passes the resolved target environment
-  into `run-local-test-db.ts`, which resolves it again. The environment retains
-  the original database port while the second resolution changes the project.
+- `deriveInstanceIdFromWorktree`
+  (`scripts/test-lanes/resolve-local-test-target.ts:120`) appends `-` and an
+  eight-character hash (:122-123) to the sanitized basename. The sanitizer caps
+  its output at 48 characters (`.slice(0, 48)`, :174). So a basename that
+  sanitizes to 40 characters or more gives an instance longer than 48: 39
+  round-trips, 40 changes.
+- Explicit instances pass through the same 48-character cap
+  (`sanitizeExplicitInstanceId`, :179-187), so resolving a generated name again
+  changes it.
+- `scripts/test-lanes/e2e-local-orchestrator.ts:44-51` passes the resolved
+  target's environment to `run-local-test-db.ts`, which resolves it again
+  (`scripts/test-lanes/run-local-test-db.ts:33-34`). The environment keeps the
+  ports, while the second resolution changes the project (:73).
 
-From any clone, run this read-only probe with a fixed long-path fixture. The
-fixture directory need not exist; the resolver only uses the path string:
+This read-only probe uses a fixed long path, which need not exist:
 
 ```bash
 pnpm exec tsx -e "import {resolveLocalTestTarget,createLocalTestTargetEnv} from './scripts/test-lanes/resolve-local-test-target';const cwd='/tmp/naltrexone-university-external-audit-20261006';const a=resolveLocalTestTarget({env:{},cwd});const b=resolveLocalTestTarget({env:createLocalTestTargetEnv(a),cwd});console.log(JSON.stringify({firstLength:a.instanceId.length,secondLength:b.instanceId.length,sameInstance:a.instanceId===b.instanceId,sameProject:a.composeProjectName===b.composeProjectName,samePort:a.dbPort===b.dbPort}));"
 ```
 
-Output: `firstLength=54`, `secondLength=48`, `sameInstance=false`,
-`sameProject=false`, `samePort=true`. After `pnpm db:test:up`, migration,
-seed and a passing integration lane, `pnpm test:e2e` exited 1 with Docker's
-`port is already allocated` error. Docker listed the original full-name project
-on the resolver-selected port. No other clone's container was changed.
+Output, on 2026-10-06 and again on 2026-11-15: `firstLength=54`,
+`secondLength=48`, `sameInstance=false`, `sameProject=false`, `samePort=true`.
+On 2026-10-06, after `pnpm db:test:up` and a passing integration lane,
+`pnpm test:e2e` exited 1 with Docker's `port is already allocated`.
 
 ## Options
 
-1. Require short clone directory names. This hides a valid-input failure and
-   leaves the resolver's exported environment inconsistent with its own input.
+1. Require short clone directory names. This hides a valid-input failure.
 2. Widen only the explicit-name cap. That spreads the length policy across two
-   paths and can still change targets when future suffixes are added.
-3. Produce one canonical bounded instance name and preserve it on re-resolution.
-   Reserve space for the full hash suffix when shortening a generated basename.
+   paths.
+3. Produce one bounded instance name that re-resolves to itself.
 
 ## Resolution (decided)
 
-Option 3. Keep the existing mapping for names already within the accepted limit.
-For longer generated names, shorten the readable basename before appending the
-full suffix. Resolving `createLocalTestTargetEnv(target)` must preserve the
-instance, project, ports and URLs. Do not truncate away the disambiguating hash.
-Document the changed local target for affected long clone names and how to stop
-an old clone-owned project without deleting its volume.
+Option 3. In `deriveInstanceIdFromWorktree`, cut the sanitized basename to 39
+characters (48 less the nine-character suffix), strip trailing hyphens, then
+append the full suffix. Name the 48 and the suffix length as constants, shared
+with `sanitizeInstanceId`. Names that sanitize to 39 characters or fewer keep
+their current instance, project and ports.
 
-Until that code change ships, an operator can use a short explicit
-`LOCAL_TEST_INSTANCE` consistently for every local test command, resolving all
-ports through the existing script. This is a local workaround, not a shipped fix.
+Red first, in `scripts/test-lanes/resolve-local-test-target.test.ts`: for
+basenames of 39, 40, 48 and 60 characters, and one whose 39th character is a
+separator, resolving `createLocalTestTargetEnv(target)` returns `target`
+unchanged, and the instance ends with the full eight-character hash. A short
+name's instance stays `<sanitized basename>-<hash>`. Today the 40-character
+case and longer fail.
+
+No guide change is needed: no current clone's target changes.
 
 ## Verification
 
-- [x] Implementer reproduced the resolver mismatch with the read-only probe and
-  observed E2E's Docker startup failure on 2026-10-06.
-- [ ] Implementer adds red-first round-trip tests for ordinary, boundary-length,
-  long and explicitly named instances; every target field must be preserved.
-- [ ] Implementer proves ordinary existing clone targets remain unchanged and
-  long names retain their full hash suffix.
-- [ ] Implementer runs integration followed by E2E in one affected clone without
-  an explicit instance workaround; both use the same project and resolved port.
+- [x] The resolver mismatch is reproduced with the probe (2026-10-06, again
+  2026-11-15), and E2E's Docker startup failure observed (2026-10-06).
+- [ ] The round-trip test fails before the fix and passes after it.
+- [ ] A short clone's instance is unchanged.
 
 ## Related
 
@@ -81,3 +82,4 @@ ports through the existing script. This is a local workaround, not a shipped fix
 - AUDIT-014, the external record audit.
 
 Corrected 2026-10-19: update the executable reproduction import after DEBT-532 moved test-lane files; the cited baseline and E2E defect remain unchanged.
+Corrected 2026-11-15: line references moved with DEBT-532's move to `scripts/test-lanes/`; the Resolution names the files and the red test; dropped the guide change and the affected-clone E2E run, since no current clone is affected and the unit round-trip covers the child re-resolution.

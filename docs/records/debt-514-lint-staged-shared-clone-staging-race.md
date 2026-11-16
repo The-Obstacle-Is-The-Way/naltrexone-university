@@ -1,92 +1,97 @@
 # DEBT-514: lint-staged Can Stage Another Session's Work
 
-**Status:** Open — lint-staged held at 17.5.1; safe upgrade requires a tested safeguard or enforced worktree isolation
+**Status:** Open — replace lint-staged with a read-only `biome check --staged` pre-commit hook (option 5, owner 2026-11-15), red first; the 17.5.1 hold stays until it ships
 **Priority:** P2
 **Date:** 2026-10-06
-**Resolved:** —
-**Verification receipts:** [PR #1409](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1409)
 
 ---
 
 ## Summary
 
-lint-staged 17.6.0 stages changes to all tracked files modified while its tasks run, including paths that were not staged initially and do not match its task globs. In this repository, concurrent sessions share a clone. Another session's edit during the pre-commit hook can therefore enter the current commit without being selected or reviewed by its author.
+The pre-commit hook (`.husky/pre-commit:3`) runs lint-staged, whose one task
+(`package.json:59-63`) runs `biome check --write` on the staged files matching
+`*.{js,jsx,ts,tsx,mjs,mts,cjs,json}`, then stages the result. Sessions share
+clones here, so whatever lint-staged stages can include another session's edit:
 
-The existing Biome task only writes the supplied staged paths. That does not protect unrelated paths: lint-staged compares the working-tree diff before and after its tasks and stages every path whose diff changed.
+- **From 17.6.0** it stages every tracked file whose working-tree diff changed
+  while its tasks ran, even unstaged paths outside its globs. Another session's
+  edit made during the hook enters the commit.
+- **On 17.5.1 too,** it re-stages each initially staged file after its tasks,
+  so another session's concurrent edit to one of those files enters the commit.
+
+PR #1409 holds 17.5.1: `package.json:115` pins `~17.5.1`, and the `dev`
+version-updates entry in `.github/dependabot.yml:22-26` ignores `>=17.6.0`.
+Security updates use a separate entry and would still open.
 
 ## Evidence
 
-- Upstream: [lint-staged/lint-staged#1854](https://github.com/lint-staged/lint-staged/pull/1854), shipped in 17.6.0.
-- Repository entry point: `.husky/pre-commit` runs `pnpm exec lint-staged`.
-- Repository task: `*.{js,jsx,ts,tsx,mjs,cjs,json}` runs `biome check --write --no-errors-on-unmatched`.
-- Independent reproduction on 2026-10-06 used the published 17.5.1 and 17.6.0 packages in separate disposable Git repositories, with that exact task configuration and the installed Biome executable.
+- **Reproduction (2026-10-06 and 07),** in disposable repositories with this
+  task and the installed Biome, a wrapper pausing Biome while another process
+  edited a file:
 
-Reproduction sequence:
+  | Case | 17.5.1 | 17.6.0 |
+  |---|---|---|
+  | Unrelated `notes.md` edited during the hook | stays unstaged | staged, with an earlier unstaged edit too |
+  | Staged `a.ts` edited during the hook | concurrent edit staged | same |
 
-1. Commit `a.ts` and `notes.md` as fixture files, then stage a change only to `a.ts`.
-2. Leave an earlier unstaged edit in the tracked `notes.md`.
-3. Start lint-staged. A wrapper pauses the Biome command at task entry, then delegates its unchanged arguments to the real Biome executable.
-4. While the task is paused, a separate process appends another session's edit to `notes.md`, then releases Biome. The Biome task itself never writes that Markdown file.
-5. Compare `git diff --cached --name-only` and `git diff --cached -- notes.md` before and after the hook.
-
-| Version | Exit | Initially staged | Staged after completion | `notes.md` staged diff |
-|---|---:|---|---|---|
-| 17.5.1 | 0 | `a.ts` | `a.ts` | Empty |
-| 17.6.0 | 0 | `a.ts` | `a.ts`, `notes.md` | Both the earlier unstaged edit and the concurrent edit |
-
-The 17.6.0 receipt included:
-
-```diff
- base
-+pre-existing unstaged edit
-+concurrent session edit
-```
-
-This proves an unrelated-path regression. It does not establish that 17.5.1 makes concurrent edits to the same staged path safe.
-
-A follow-up reproduction on 2026-10-07 paused the same Biome task and appended a concurrent comment to the initially staged `a.ts`. It tested a fully staged file, a partially staged file with an earlier unstaged comment, and an unrelated-path control:
-
-| Case | 17.5.1 | 17.6.0 | Would a staged-path-set check abort? |
-|---|---|---|---|
-| Fully staged `a.ts` receives a concurrent edit | Concurrent edit staged; both edits preserved | Same | No, in either version |
-| Partially staged `a.ts` receives a concurrent edit | Concurrent edit staged; both edits and earlier unstaged comment preserved | Same | No, in either version |
-| Unrelated `notes.md` receives a concurrent edit | Edit stays unstaged and preserved | Edit staged and preserved | Only on 17.6.0 |
-
-All six runs exited 0. The two same-path cases produced identical staged and unstaged diffs across versions. These probes demonstrate a pre-existing same-path risk, not a guarantee that arbitrary concurrent writes are safe: preserving bytes does not mean the commit contains only its author's intended changes.
+  All runs exited 0, so nothing told the committer.
+- **Upstream.** lint-staged/lint-staged#1854 shipped the change in 17.6.0.
+  lint-staged/lint-staged#1865, open since 2026-10-30, reports this race; the
+  maintainer suggested staging only the originally staged files, as before
+  17.6.0. 17.6.1 (2026-11-15) changes only a warning (#1869); no release fixes it.
+- **A hook that cannot stage.** Biome 2.6.6, installed, has `check --staged`
+  ("Checks only staged files"), and `biome.json` enables Git integration. Run
+  without `--write`, it reads the staged files and changes neither the index nor
+  the working tree.
 
 ## Impact
 
-A commit can carry another session's unreviewed edit under the wrong author's message and review. The repository's merge discipline assumes each commit holds only its author's intended change, so such an edit could reach `dev` without anyone choosing it. The same-path risk in the second table exists on 17.5.1 too. Holding 17.5.1 removes only the unrelated-path regression that 17.6.0 adds.
+A commit can carry another session's unreviewed edit under the wrong author's
+message and review, and reach `dev` without anyone choosing it. The hold removes
+only the 17.6.0 regression; the same-file case remains.
 
 ## Options
 
-1. **Take 17.6.0 and run lint-staged with `--hide-unstaged`.** Upstream's release note offers it: "Use `--hide-unstaged` to hide your changes while tasks run." In a shared clone it would hide every session's unstaged edits from the working tree while the hook runs, not just the committer's. Whether it keeps a concurrent edit out of the commit was not tested. Not adopted.
-2. **Hold 17.5.1 until an exit path below is verified.** Chosen.
-3. **Build the pre-commit safeguard or enforce isolated worktrees first, then upgrade.** That is the exit, not something a dependency bundle can ship.
+1. **Take 17.6+ with `--hide-unstaged`.** It would hide every session's
+   unstaged edits from the working tree while the hook runs. Untested; not
+   adopted.
+2. **Hold 17.5.1.** In place since PR #1409. It keeps the same-file risk and
+   the version hold.
+3. **A path-set safeguard:** abort if lint-staged staged a path outside the
+   initial set. It covers unrelated paths only.
+4. **Isolated worktrees for every session.** Contradicts the shared-clone
+   practice in `AGENTS.md`.
+5. **Replace lint-staged with a read-only hook:**
+   `biome check --staged --no-errors-on-unmatched`. A hook that writes nothing
+   can stage nothing, on any version, so both cases close. A commit with Biome
+   errors still fails; its author runs `pnpm exec biome check --write --staged`
+   and stages their own paths. It deletes the dependency, its `package.json`
+   block, `tests/lint-staged-config.test.ts`, the Dependabot ignore, the line in
+   `docs/guides/dependencies/updating-dependencies.md:223` and the
+   `lint-staged` entry in `scripts/watchers/upstream-advisory-watch.mts:52`.
 
 ## Resolution (decided)
 
-Option 2. PR #1409 pins `package.json` to `~17.5.1`, so neither `pnpm update` nor a regenerated lockfile can resolve 17.6.0. The dev-targeted npm version-updates entry in `.github/dependabot.yml` ignores `lint-staged` versions `>=17.6.0`, so the weekly group update does not propose it. That ignore does not reach security updates, which use the separate entry that targets `main`. A `lint-staged` security PR would therefore still open and would change the pin visibly. Take it only with a verified exit path, or with a fixed 17.5.x release if one exists.
+Option 5, decided by the owner on 2026-11-15; option 2's hold stays until it
+ships. It removes the risk at its root, with less machinery than any other
+exit: a hook that writes nothing can stage nothing, on any version. Commits no
+longer auto-fix; authors run `biome check --write --staged` and stage their own
+paths. A test that
+reads `.husky/pre-commit` replaces the deleted config test and fails if the hook
+runs `lint-staged` or passes `--write`; it fails first against today's hook.
 
-The hold is temporary. This record implements no pre-commit safeguard and no repository-wide worktree isolation.
-
-## Exit Paths and Ignore Removal
-
-Complete either path before removing the Dependabot ignore:
-
-1. **A tested pre-commit safeguard.** Capture the staged paths before lint-staged runs and abort the commit if lint-staged stages a path outside that set. Reproduce the concurrent edit above, prove the commit fails, and prove both sessions' working changes are preserved. Include paths outside the task globs and partially staged files in the tests. This path addresses the unrelated-path regression only. A path-set check cannot protect concurrent writers to an initially staged file; do not accept it as the exit condition for workflows permitting those writers. Such workflows require a separately tested control that prevents same-path overlap and preserves both sessions' work, or the isolated-worktree path below.
-2. **Enforced isolated worktrees.** Every agent writes and commits in its own worktree; no concurrent sessions edit one worktree. Document and enforce that operating rule, including existing shared-clone workflows. An isolated worktree used for one upgrade is not sufficient evidence that all sessions are isolated.
-
-Once one path is verified, remove the `>=17.6.0` ignore and restore a caret range in the reviewed upgrade PR, regenerate the lockfile with pnpm under the unchanged release-age and trust policies, and pass the full local gate including E2E. Obtain exact-head CodeRabbit approval. Archive this record only after the chosen protection and upgrade are shipped and promoted, following the archive convention.
 
 ## Verification
 
-- [x] Two-version reproduction distinguishes the unrelated-path behavior.
-- [ ] One exit path is implemented and verified for all affected workflows.
-- [ ] The reviewed upgrade removes the ignore and passes the full gate.
-- [ ] The protection and upgrade are promoted to `main` with receipts.
+- [x] A two-version reproduction separates the unrelated-path behavior
+      (2026-10-06).
+- [x] The owner chose option 5 (2026-11-15).
+- [ ] Option 5: the hook test fails, then passes; a commit with a Biome error is
+      refused, and an edit made by another process during the hook stays
+      unstaged.
 
 ## Related
 
 - [Dependency update protocol](../guides/dependencies/updating-dependencies.md#dependabot-config-policy): the Dependabot ignore.
-- [lint-staged#1854](https://github.com/lint-staged/lint-staged/pull/1854): the upstream change.
+
+Corrected 2026-11-15: the task glob includes `mts`; 17.6.1 fixes nothing here, and upstream tracks the race as lint-staged#1865; added option 5, a read-only Biome hook; the retired archive step is gone. The full reproduction tables are in git at 34d9aea0.

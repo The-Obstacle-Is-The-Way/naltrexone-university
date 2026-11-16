@@ -1,6 +1,6 @@
 # DEBT-525: Performance Work Needs a Representative Baseline
 
-**Status:** Open — close as Reclassified once the owner agrees: a procedure, not a liability, and each deferred optimization's Waiting row already demands its measurement
+**Status:** Verifying — the owner agreed on 2026-11-15 to close it as Reclassified, in this pull request; due 2026-11-22
 **Priority:** P3
 **Date:** 2026-10-17
 
