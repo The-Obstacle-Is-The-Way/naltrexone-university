@@ -86,7 +86,8 @@ is in both `git diff --name-only` and `git diff --cached --name-only`, since
 `--staged` would check the working-tree copy rather than what is committed.
 Then it runs `biome check --staged --no-errors-on-unmatched`. The refusal
 cannot cover another process editing a staged file between it and Biome's
-read, the hook's own run time; CI's `pnpm lint` still checks every commit.
+read, the hook's own run time; CI's `pnpm lint:ci` checks the pull
+request's merge result, so such an error fails CI before it merges.
 Commits no longer auto-fix; authors run `biome check --write --staged` and stage their own
 paths. A test replaces the deleted config test and pins both behaviors: the
 hook refuses a staged path with unstaged changes before Biome runs, and it runs
@@ -101,6 +102,9 @@ first against today's hook.
 - [ ] Option 5: the hook test fails, then passes; a commit is refused when a
       staged path also has unstaged changes, and when a staged file has a Biome
       error; an edit made by another process during the hook stays unstaged.
+- [ ] The stated limit: a Biome error in a staged blob whose working copy
+      another process cleaned during the hook fails CI's `pnpm lint:ci` on the
+      pull request.
 
 ## Related
 
