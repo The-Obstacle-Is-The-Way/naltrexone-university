@@ -53,7 +53,7 @@ Clerk limits each production instance's Backend API calls, documented as 1,000 p
   - 30 days of `clerk_backend_call_usage` rows after the first real live subscription, from the owner's read-only count; DEBT-501 item 7's refunded purchase does not count.
 
   Then size the three limits from the rows' `busiest_minute` in `address`, `signed-in-address` and `call-failed`.
-- **The usage-row read.** Step 1 reached production on 2026-11-02. The owner reads `clerk_backend_call_usage` with the query in `docs/architecture/observability.md`: a row for each of the seven buckets, each starting where the one before it ended. An agent cannot, since it never connects to the production database. It was due 2026-11-08. No session held it and the queue review lapsed (due 2026-10-30), so it is re-dated 2026-11-22, to run with DEBT-505's manual renewal run, whose response reports `clerkBackendCallUsage`.
+- **The usage-row read.** Step 1 reached production on 2026-11-02. The owner reads `clerk_backend_call_usage` with the query in `docs/architecture/observability.md`: a row for each of the seven buckets, each starting where that bucket's previous row ended. An agent cannot, since it never connects to the production database. It was due 2026-11-08. No session held it and the queue review lapsed (due 2026-10-30), so it is re-dated 2026-11-22, to run with DEBT-505's manual renewal run, whose response reports `clerkBackendCallUsage`.
 
 ## Verification
 
