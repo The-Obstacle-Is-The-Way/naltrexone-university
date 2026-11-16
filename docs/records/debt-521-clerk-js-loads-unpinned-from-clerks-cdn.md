@@ -1,6 +1,6 @@
 # DEBT-521: Clerk JS Loads Unpinned From Clerk's CDN, So a Clerk Release Can Change Sign-In Without a Deploy
 
-**Status:** Verifying — closes as Accepted in this pull request; the Waiting row carries the pin trigger; due 2026-11-22
+**Status:** Open — closes as Accepted in this pull request: the owner keeps Clerk JS floating (2026-11-15); a Waiting row carries the pin trigger
 **Priority:** P3
 **Date:** 2026-10-12
 

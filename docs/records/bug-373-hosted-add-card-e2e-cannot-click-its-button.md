@@ -1,6 +1,6 @@
 # BUG-373: The Hosted Trial Add-Card E2E Cannot Click Its Add-Card Button
 
-**Status:** Verifying — traces gone, never seen in CI; closes as Accepted in this pull request; BUG-380 carries its history; due 2026-11-22
+**Status:** Open — closes as Accepted in this pull request: traces gone, never seen in CI; BUG-380 carries its history
 **Priority:** P3
 **Date:** 2026-11-02
 

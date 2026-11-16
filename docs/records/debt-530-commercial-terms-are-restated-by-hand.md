@@ -1,6 +1,6 @@
 # DEBT-530: Commercial Terms Are Restated by Hand in Each Place That Shows Them
 
-**Status:** Verifying — closes in this pull request; its Waiting row carries the work; due 2026-11-22
+**Status:** Open — closes as Reclassified in this pull request: the work waits for the next offer change, as a Waiting row
 **Priority:** P3
 **Date:** 2026-10-17
 

@@ -1,6 +1,6 @@
 # DEBT-533: The Weekly Queue Review Cannot Read Some Production Triggers
 
-**Status:** Verifying — closes as Resolved in this pull request, once its three rewritten Waiting rows land; due 2026-11-22
+**Status:** Open — closes as Resolved in this pull request: its three Waiting triggers are rewritten to evidence a session can read
 **Priority:** P3
 **Date:** 2026-10-23
 

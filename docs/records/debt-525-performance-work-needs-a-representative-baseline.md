@@ -1,6 +1,6 @@
 # DEBT-525: Performance Work Needs a Representative Baseline
 
-**Status:** Verifying — the owner agreed on 2026-11-15 to close it as Reclassified, in this pull request; due 2026-11-22
+**Status:** Open — closes as Reclassified in this pull request: a procedure, not a liability (owner, 2026-11-15)
 **Priority:** P3
 **Date:** 2026-10-17
 

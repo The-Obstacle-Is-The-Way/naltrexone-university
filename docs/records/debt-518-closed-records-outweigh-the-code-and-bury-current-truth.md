@@ -1,6 +1,6 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-**Status:** In Progress — the records step, the agent instructions, the layout and the archive's removal are done; the four splits and the three-record pilot follow
+**Status:** Open — closes as Resolved in this pull request: the model is in use (54 closures since 2026-10-14); the splits and re-measure are declined
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -246,8 +246,8 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
 - [x] The master spec: keep it whole and correct it in place, keeping its API contracts; remove nothing but its four navigation stubs (2026-10-11).
 - [x] Move `legal/` and `security/` under `policies/` (2026-10-13).
 - [x] Delete `docs/_archive/` and the asset folders only it links, after the lessons review (2026-10-13).
-- [ ] Drop the history sections the layout's rules exclude from living documents: question rendering's §12 changelog and the retry document's §8–10. They stay, under the preserve-content ruling, until the owner decides.
-- [ ] Optional: a CodeRabbit plan with a higher review limit, since that limit is now the bottleneck shared across repositories.
+- [x] Drop the history sections the layout's rules exclude from living documents: question rendering's §12 changelog and the retry document's §8–10. The owner chose to drop them (2026-11-15); this pull request removes them. The retry document's regression contract stays in the exam answer secrecy policy.
+- [x] Optional: a CodeRabbit plan with a higher review limit. The owner declined it (2026-11-15): draft-first pull requests and approval carry-over eased the limit.
 
 ## Verification
 
@@ -259,8 +259,8 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
 - [x] The temporary CodeRabbit filter over the four purged folders is removed, so files recreated there are reviewed again (2026-10-14).
 - [x] The records index describes delete-on-close, `AGENTS.md` and `CLAUDE.md` point to it, and the guard enforces it: no closed record stays live, and every closure from the cutover carries its receipt (#1467 and #1471).
 - [x] Step 6: the live documents follow the target layout, and no hard-coded path points to an old location (2026-10-13: the guard reports no broken live link and no file in a retired folder; old paths remain only in history, applied migrations and fixtures).
-- [ ] Three records are closed under the model, and the reviewing agent reports no lost knowledge.
-- [ ] A month later, these are re-measured against this record's table: the share of documentation-only PRs, the search-noise ratios, and the record lines in the tree.
+- [x] Three records are closed under the model, and the reviewing agent reports no lost knowledge. By 2026-11-15, 54 records had closed under it since 2026-10-14, each with a ledger receipt; this pull request's accuracy review challenged each closing record for lost knowledge.
+- [x] A month later, these are re-measured against this record's table. Declined 2026-11-15 by the reviewing session, at the owner's delegation: the archive is gone and a guard keeps it gone, so the measure would change no decision. This review more than halved the live records' text, from 94,246 words in 36 records.
 
 ## Related
 
@@ -269,3 +269,5 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
 - DEBT-515: CodeRabbit learned lasting rules from record text.
 
 Corrected 2026-10-19: update the current record-ID entry point after DEBT-532; the historical evidence census remains unchanged.
+
+Corrected 2026-11-15: the pilot is done, 54 closures since 2026-10-14. The four splits (content procedures, environment troubleshooting, the alert runbooks, the migration rules) are declined by the reviewing session, at the owner's delegation: each moves text with no change in what anyone does, and ADR-023's placement test still governs new documents. The owner dropped the two history sections and declined the CodeRabbit plan.

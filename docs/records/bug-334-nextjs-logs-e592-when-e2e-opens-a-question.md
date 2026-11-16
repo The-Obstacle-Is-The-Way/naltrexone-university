@@ -1,6 +1,6 @@
 # BUG-334: Next.js Logs Invariant E592 When E2E Opens a Question
 
-**Status:** Verifying — E592 ended with Next.js 16.4.1; option 3 is declined; closes as Resolved in this pull request; due 2026-11-22
+**Status:** Open — closes as Resolved in this pull request: E592 ended with Next.js 16.4.1, and option 3 is declined
 **Priority:** P3
 **Date:** 2026-10-09
 

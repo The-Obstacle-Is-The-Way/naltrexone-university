@@ -1,6 +1,6 @@
 # BUG-362: The Whole-Page-Scroll E2E Timed Out Before Its First Measurement
 
-**Status:** Verifying — no recurrence in 181 CI E2E executions since the diagnostic; closes as Accepted, cause unknown, in this pull request; due 2026-11-22
+**Status:** Open — closes as Accepted, cause unknown, in this pull request: no recurrence in 181 CI E2E executions since the diagnostic
 **Priority:** P3
 **Date:** 2026-10-20
 

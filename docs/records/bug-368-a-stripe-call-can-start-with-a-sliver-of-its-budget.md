@@ -1,6 +1,6 @@
 # BUG-368: A Stripe Call Can Start With Only a Sliver of Its Caller's Budget Left
 
-**Status:** Verifying — every check is recorded; closes as Resolved in this pull request; due 2026-11-22
+**Status:** Open — closes as Resolved in this pull request: two weeks of CI passed the call-budget refusal test
 **Priority:** P3
 **Date:** 2026-10-24
 
