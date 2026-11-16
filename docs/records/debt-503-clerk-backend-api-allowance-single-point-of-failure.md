@@ -49,7 +49,7 @@ Clerk limits each production instance's Backend API calls, documented as 1,000 p
 - **Decided 2026-11-15 by the reviewing session, at the owner's delegation: option 4, accepted.** Before launch there is no traffic to size against, and fellowship cohorts are small. The per-address limit keeps one address from taking a large share of the site-wide cap, which protects the allowance every signed-in page shares. Options 1 and 2 change a live firewall setting, and option 2 needs its own browser test, for a crowd not yet seen. A refused person waits at most a minute.
 - **Trigger** for the handshake limit and the retune. It must show real people: an address over its limit can be one bot, which is the limit working, so the `address` bucket's `windows_over_limit` alone does not count.
   - A support report of a sign-in refused or stalled on a shared network.
-  - `clerk_signed_in_limit_reached` fires: only sessions Clerk signed fill that bucket, each refused at its own six a minute before it counts there, so at least 34 real sessions shared one address.
+  - `clerk_signed_in_limit_reached` fires: only sessions Clerk signed fill that bucket, each refused at its own six a minute before it counts there, so at least 34 sessions Clerk signed shared one address. One account signed in many times can also do that, so first confirm distinct users in Clerk's dashboard, as the runbook row says.
   - 30 days of `clerk_backend_call_usage` rows after the first real live subscription, from the owner's read-only count; DEBT-501 item 7's refunded purchase does not count.
 
   Then size the three limits from the rows' `busiest_minute` in `address`, `signed-in-address` and `call-failed`.
