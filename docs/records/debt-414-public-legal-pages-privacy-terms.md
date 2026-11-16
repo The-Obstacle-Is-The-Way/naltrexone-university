@@ -37,7 +37,7 @@ The full history is in git at `34d9aea0`: the implementation spec, the stage rev
 
 ## Impact
 
-- **F21.** A failure report that beats the email-ID write leaves a notice `accepted`. It counts as sent, so the missed-deadline alert never fires. The window is milliseconds, and no case has been seen.
+- **F21.** A failure report that beats the email-ID write leaves a notice `accepted`. It counts as sent, so the missed-deadline alert never fires. An early delivery report is lost the same way, leaving the row `accepted` rather than `delivered`. The window is milliseconds, and no case has been seen.
 - **F07.** Until a real report arrives, the delivery-evidence path is proven only by tests and an unsigned probe.
 - **Massachusetts.** No annual notice lands in the 5–30-day window. Monthly plans rely on an unchecked Stripe receipt. The trial copy lacks calendar dates.
 - **Counsel and tax.** Without answers first, paid acquisition and the first taxable sale go ahead on non-lawyer analysis.
@@ -53,10 +53,10 @@ For F21, the early failure report:
 ## Resolution (decided)
 
 **Engineering: F21 (P4).** Option 1. Ship it before the first live sale.
-- Send the delivery row's ID as a tag. When a failure report's email ID is unknown, match it by that tag.
+- Send the delivery row's ID as a tag. When a failure or delivery report's email ID is unknown, match it by that tag. Confirm that `email.delivered` carries `data.tags` before relying on it.
 - `persistOutcome` never replaces a recorded failure. Untagged mail stays acknowledged and ignored. A lost send response stays `outcome_unknown`.
 - Files: `src/adapters/gateways/resend-transactional-email-gateway.ts`, `resend-webhook-controller.ts`, the delivery repository's port, fake and Drizzle adapter, and `dispatch-renewal-notice-delivery.ts`.
-- Red tests first: an early failure report matched by its tag; a duplicate report; reports before and after the ID is stored; untagged mail left unchanged.
+- Red tests first: an early failure report, and an early delivery report, matched by its tag; a duplicate report; reports before and after the ID is stored; untagged mail left unchanged.
 
 **Owner, counsel and tax.** Each item names who decides, when, and what closes it.
 - **F07, the first real report.** Owner. When the first acknowledgment is sent in production, at BUG-364's live trial check or the first live sale. Done when Resend's webhook log shows a 200 for a real report, and that notice's row reads `delivered` or `terminal_failure`.

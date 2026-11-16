@@ -41,7 +41,7 @@ docs/
   records/         open bug and debt records, one index, the closed ledger
 ```
 
-The folders above are the target; DEBT-518 moved documents into them in steps, and closed on 2026-11-15.
+The folders above are the target; DEBT-518 moves documents into them in steps.
 
 - **Agent instructions stay where the tools load them:**
   - `AGENTS.md` for universal rules;
@@ -118,7 +118,7 @@ Mechanical link repair is allowed. Implementation progress belongs in records an
 
 ## Alternatives Rejected
 
-- **Keep the archive, purge it once, hide it from search, or move it elsewhere.** DEBT-518 weighed each one.
+- **Keep the archive, purge it once, hide it from search, or move it elsewhere.** DEBT-518 weighs each one.
 - **Move records to GitHub Issues.** Every read and write spends the shared API allowance. Issue edits go unreviewed and are written as the owner, and an issue cannot be reviewed in the same diff as its fix.
 - **A `reference/` folder.** It would hold hand-kept inventories, which is what rotted. The code and `.env.example` are the reference. A register a test parses lives with its subject.
 - **A top-level `vendors/` folder.** It invites copied version tables, which drifted. An integration note explains a boundary, so it belongs in `architecture/integrations/`.

@@ -84,8 +84,10 @@ exit: a hook that writes nothing can stage nothing, on any version.
 `.husky/pre-commit` first refuses the commit, naming the paths, when any path
 is in both `git diff --name-only` and `git diff --cached --name-only`, since
 `--staged` would check the working-tree copy rather than what is committed.
-Then it runs `biome check --staged --no-errors-on-unmatched`. Commits no
-longer auto-fix; authors run `biome check --write --staged` and stage their own
+Then it runs `biome check --staged --no-errors-on-unmatched`. The refusal
+cannot cover another process editing a staged file between it and Biome's
+read, the hook's own run time; CI's `pnpm lint` still checks every commit.
+Commits no longer auto-fix; authors run `biome check --write --staged` and stage their own
 paths. A test replaces the deleted config test and pins both behaviors: the
 hook refuses a staged path with unstaged changes before Biome runs, and it runs
 `biome check --staged` without `--write` and never `lint-staged`. It fails

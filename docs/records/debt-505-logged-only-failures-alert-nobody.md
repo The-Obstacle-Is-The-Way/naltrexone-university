@@ -51,7 +51,7 @@ Every other check passed between 2026-10-08 and 2026-11-14. The drill's delivery
     https://addictionboards.com/api/cron/send-renewal-notices | jq .scheduledChecks
   ```
 
-  A fallback any session can do: read production's runtime logs within an hour of a run, since Vercel keeps them for an hour. In `src/adapters/jobs/scheduled-checks.ts`, `unreadable` and `stopped` log an error and `unavailable` a warning; only `running` logs nothing. So a run whose logs show none of `Scheduled checks unreadable`, `scheduled_checks_unavailable` or `Scheduled checks stopped` reported `running`. The 2026-11-05 date lapsed with the field unread.
+  A fallback any session can do: read production's runtime logs within an hour of a run, since Vercel keeps them for an hour. In `src/adapters/jobs/scheduled-checks.ts`, `unreadable` and `stopped` log an error and `unavailable` a warning; only `running` logs nothing. A run that stops before the check logs nothing either, so the logs can show a failure but never prove `running`; only a completed run's `scheduledChecks` field does. The 2026-11-05 date lapsed with the field unread.
 
 ## Related
 
