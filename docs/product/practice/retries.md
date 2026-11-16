@@ -104,6 +104,8 @@ Enforced by controller + use case + domain helper:
 
 These are fresh attempts, not parent-linked retries.
 
+Every submission with a `retryOrigin` logs `retry_submitted` with that origin and its correctness (`src/application/use-cases/submit-answer.ts`).
+
 ---
 
 ## 6. Session Review Inline Retry Contract
@@ -138,7 +140,7 @@ Question-page review state distinguishes:
 - `no_prior_attempt`
 - `hydration_error`
 
-`hydration_error` shows explicit UI with `Retry load` and `Answer as new`; there is no silent degrade-to-submit.
+`hydration_error` shows explicit UI with `Retry load` and `Answer as new`; there is no silent degrade-to-submit. The server logs each hydration's outcome as `review_hydration_outcome` (`src/adapters/controllers/question-view-controller.ts`).
 
 ### 7.2 Mixed `attemptId + sessionId`
 

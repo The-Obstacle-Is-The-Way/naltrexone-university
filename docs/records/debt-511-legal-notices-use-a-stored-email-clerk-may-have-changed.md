@@ -65,6 +65,7 @@ DEBT-503 item 1 (released 2026-10-08) widened the gap slightly. It stopped refre
    - The due-subscription reads (`:86-92`, `:210-217`) also return the user's Clerk ID. After them and before `sendDueRenewalNotices.execute` (`:463`), refresh each due user once per run, shared by all their notices, and queue each notice to the refreshed address: re-read it, or replace the email the due read returned with the refresh's result.
    - **Refreshed, and the stored address equals Clerk's:** queue to it, as today.
    - **Otherwise** (Clerk unavailable, a 404 or tombstone, no verified primary, an ownership conflict, or the guard keeping the old address): hold that user's notices for this run, both unqueued ones and any queued on an earlier run and now due for a retry (`findDue` returns those regardless of run, and dispatch would compare them only with the unrefreshed stored address), and raise an operational alert through DEBT-505's path (a kind in `src/application/ports/operational-alerts.ts`, with its runbook row in `docs/architecture/observability.md`). The next run tries again.
+   - **Held subscriptions do not starve later ones.** The due reads return the earliest 40 renewals still unqueued (`send-due-renewal-notices.ts:45`, ordered by renewal), so held ones would be selected again first. The job reads on past the subscriptions it held this run, excluding them, until it has queued its limit or none remain; a test with 41 due subscriptions, the first 40 held, queues the 41st.
    - **On a notice's last eligible run** (its send-by cutoff under 27 hours away, which covers the longest gap between two runs, each started up to 59 minutes off 09:00 UTC, plus a run's five minutes): queue or dispatch it to the stored address, and raise a second kind, so the owner can check that address.
    - **Residual, accepted with option B.** Dispatch compares only our stored copy (`destination_changed`); option A's send-time Clerk recheck, which the owner replaced, would have caught this. So an address changed in Clerk after this run's refresh, with its `user.updated` missed, still gets a notice already queued. Queue and dispatch run in the same job run (`send-due-renewal-notices.ts` use case: queue, then `findDue` and dispatch), so the window is normally seconds.
    - Logs and alerts carry IDs and a reason only, never an address, with Clerk errors passed through `projectSafeErrorDiagnostics`.
@@ -87,7 +88,7 @@ DEBT-503 item 1 (released 2026-10-08) widened the gap slightly. It stopped refre
 - [ ] DEBT-502 items 3 and 2 have shipped.
 - [ ] Clerk's address reaches the Stripe customer on every write, an older push landing after a newer one ends with Stripe holding the stored address, a push that fails or exhausts its three attempts is logged as a failed sync and corrected by the next write, and the portal no longer offers an email edit.
 - [x] DEBT-414 F19a no longer relies on Stripe's emails (2026-10-07: its Stripe path is recorded as closed).
-- [ ] The owner records a read-only count of real live subscriptions, and the earliest annual renewal or monthly anniversary; that date minus 39 days becomes this record's due date.
+- [ ] The owner records a read-only count of real live subscriptions, and the earliest annual renewal or monthly subscription's yearly anniversary; that date minus 39 days becomes this record's due date.
 
 ## Related
 
