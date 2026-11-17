@@ -101,8 +101,10 @@ Reporting this behavior to Clerk is the owner's call; for BUG-333 the owner chos
     nor reset it: skipped, canceled and local runs, any whose signed-in
     tests did not run, and any whose specs that call `startSession`
     (`tests/e2e/helpers/session.ts:302`) failed before getting past it.
-  - A recurrence resets the count, and its trace is the next action. An aborted
-    read without the page error does not reset it.
+  - A recurrence resets the count, and its trace is the next action, even when
+    it stopped `startSession`: that page error is this record's failure, so it
+    takes precedence over the exclusion above, which covers other failures. An
+    aborted read without the page error does not reset it.
   - **Closing:** close as Resolved, and say that **the cause was never found**.
     The count cannot separate the keeper from Clerk JS's releases since 6.41.0
     (6.42.0 to 6.43.1 by 2026-11-15), which the app loads from Clerk's CDN as
