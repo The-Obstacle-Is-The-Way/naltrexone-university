@@ -91,9 +91,11 @@ The example bundles #826, #827 and #828, which is how #829 was built.
 6. Verify, and paste the printed table into the PR body:
 
    ```sh
-   pnpm install --frozen-lockfile
+   pnpm install --frozen-lockfile --config.optimistic-repeat-install=false
    node --import tsx scripts/dependencies/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
    ```
+
+   Keep `--config.optimistic-repeat-install=false` on every local lockfile check. Without it, a repeat install whose `node_modules` state looks unchanged prints "Already up to date" and exits 0 without comparing the lockfile with `package.json` or `pnpm-workspace.yaml`. On #1702, a lockfile still carrying a removed override passed that way; with the flag, it failed with `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`.
 
    The verifier accepts one or more sources. For a single-source PR, pass only `--source refs/pr/N` with `--base 'refs/pr/N^'`. List every source the bundle is intended to include: the verifier cannot infer an omitted source from a correct union of the supplied inputs.
 
@@ -122,6 +124,28 @@ A correct bundle can still report missing when the sources overlap. For example,
 Peer suffixes overlap in the same way. pnpm writes a package's resolved peers into its key, as in `stripe@22.5.0(@types/node@24.13.4)`. If one source bumps `@types/node` and another bumps `stripe`, a correct bundle has a key that neither source has. It then reports that key as extra, the sources' own keys as missing, and the importer entry as a conflict. Regenerating or recreating the sources does not clear it, because the sources already share a base. Confirm that every unexpected key combines versions the sources chose, then record the overlap in the PR. The report shortens long values, so compare the full entries in the lockfiles themselves. The verifier has no override flag.
 
 Receipt, 2026-10-05: starting from the sources' parent, steps 3 to 5 reproduced #829's lockfile byte for byte, with `package.json` identical to #826's. The verifier printed #829's hand-built counts: packages 54 / 23 / 7 into a union of 74, snapshots 72 / 38 / 22 into 92, importer entries 10 / 5 / 5 into 12, and 72 / 86 key deltas, all matched. The same steps without the cutoff exited 28, with 385 extra, 18 missing and 14 unmatched entries.
+
+### Updates added beyond the sources
+
+A bundle can also take updates that no Dependabot PR proposes, such as a release that cleared the 7-day gate after Dependabot's weekly run: #1702 added Tailwind, Vitest and Biome patches. No automated check covers their scope:
+
+- The verifier compares the candidate with the Dependabot sources only. Pass the bundle commit, before any added update, as `--candidate`.
+- The frozen install checks the manifest, the release age and trust, not which entries changed.
+- CodeRabbit skips `pnpm-lock.yaml` (`path_filters` in `.coderabbit.yaml`), so its approval covers `package.json` alone. On #1702 it read two version lines, while the lockfile's 443 changed lines went unread.
+
+No script checks an added update's scope yet, so check it by hand:
+
+1. Give each added update its own commit after the bundle commit, so it can be dropped alone.
+2. Look for drift. A scoped `pnpm update` can move packages outside its family onto newer duplicate copies that nothing requires. On #1702, the Vitest 5.1.0 update moved eight Babel 8 consumers from `@babel/types` 8.0.8 to a new 8.1.0 copy, and `estree-walker` from `@types/estree` 1.0.9 to a new 1.0.10 copy. Both copies were old enough and trusted, so CI passed. Compare every `snapshots` entry that exists in both `dev`'s lockfile and the candidate: outside the updated packages and their own dependencies, no entry's dependencies may change. The one exception is a move onto a copy the lockfile already had, which removes a duplicate; record each one in the PR.
+3. Remove drift by regenerating, never by editing the lockfile. Add a temporary entry under `overrides:` in `pnpm-workspace.yaml` that pins the old version, and regenerate. Then remove the entry and regenerate again with `--config.optimistic-repeat-install=false`; without the flag, pnpm can keep the removed override in the lockfile's `overrides` block.
+4. Prove the result is stable. Both commands must pass, and the regeneration must change nothing:
+
+   ```sh
+   pnpm install --frozen-lockfile --config.optimistic-repeat-install=false
+   pnpm install --lockfile-only --config.optimistic-repeat-install=false && git diff --exit-code -- pnpm-lock.yaml
+   ```
+
+5. Ask an independent reviewer to read the lockfile diff, and say in the PR that CodeRabbit skipped it. On #1702, that review found the Babel drift.
 
 ## Runtime-Contract Majors
 
