@@ -33,7 +33,7 @@ Shipped: 2 (re-check before handing back a Session), 3 (sweep on completion), 5 
 
 - **Option 4: correct a duplicate within seconds.** On `customer.subscription.created`, cancel the second-ranked live subscription, refund its charge, mark its consent terminated and keep collecting the kept subscription's invoices. It adds a webhook handler, a refund gateway method with its fake and contract scenario, and real-Stripe and Postgres proofs.
 - **Option 4a: refund in the reconcile's existing cancel.** A keyed refund of the duplicate's paid invoice beside the reconcile's cancel, which must also resume collection of the kept subscription's invoices. No new handler; the correction still takes up to a day.
-- **Option 7: shorten Session lifetime** with `expires_at`. Option 3's sweep already ends the 24-hour tail when a Checkout completes, and this does nothing for the residual.
+- **Option 7: shorten Session lifetime** with `expires_at`, to as little as 30 minutes. It caps the tail only while the completion webhook is delayed or failing; once it arrives, option 3's sweep ends the other pages.
 - **Option 8: make the app the only writer of subscriptions.** Closes the race completely, but changes the purchase page, disclosures and consent.
 
 ## Resolution (decided)
@@ -41,7 +41,7 @@ Shipped: 2 (re-check before handing back a Session), 3 (sweep on completion), 5 
 Options 2, 3, 5 and 6, decided 2026-10-14, each for the case the one before cannot close. Rules R24 and R25 state options 2 and 3.
 
 - **Automatic refunds (options 4 and 4a): declined** by the owner, 2026-11-15. On `stripe_duplicate_subscription`, the owner refunds the duplicate by hand in Stripe's Dashboard, cancels it if the reconcile has not, and checks that the kept subscription's open invoices still collect, resuming automatic collection on any the cancel stopped. When this record closes, it leaves a Waiting row that revisits option 4a the first time a charged duplicate happens in production.
-- **Option 7: declined** by the reviewing session, 2026-11-15, at the owner's delegation: option 3's sweep ends the tail. Option 8 is not taken.
+- **Option 7: declined** by the reviewing session, 2026-11-15, at the owner's delegation. It helps only while our webhook is failing and a second page is completed in that time, the daily reconcile cancels the duplicate either way, and a short lifetime also expires pages people are still filling in. *Corrected 2026-11-17: the first reason, that option 3's sweep ends the tail, missed a delayed webhook.* Option 8 is not taken.
 - **The hold on inviting former trial users back** "until the fix ships" was lifted by its own condition on 2026-10-14, when #1493 and #1495 released options 2 and 3.
 - **The Dashboard checks are kept** (reviewing session, 2026-11-15), in the owner's pre-sale Stripe session: in live and test mode, whether "limit customers to one subscription" is on with the portal's login link enabled; which portal configuration that link uses, and whether a card added there becomes the customer's default; and whether the former live trials ended `canceled` with no payment method. Keep the setting on, as `docs/architecture/integrations/stripe.md` says.
 
