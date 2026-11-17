@@ -37,7 +37,7 @@ No deployed failure. The guard mismatch shows only in a local production build w
 
 Option 1, decided 2026-11-15 by the reviewing session, at the owner's delegation, red first:
 
-1. **Delete the instance check.** Remove `lib/env.ts:12-36` and `:198-209`, and the synthetic test. The prefix check (`:187-196`) and its tests stay.
+1. **Delete the instance check.** Remove `lib/env.ts:12-36` and `:198-209`, and the synthetic test. The prefix check (`:187-196`) and its tests stay. A source-scan test keeps it deleted: it fails while `lib/env.ts` decodes a key (`decodeBase64Utf8`, `getClerkInstanceSlug`, or a `'base64'` decode), red first on today's file.
 2. **One production rule.** Export one predicate, `isVercelProduction()`, from a small `lib/` module (not `lib/env.ts`, which validates on import), and call it from both `lib/env.ts:163` and `proxy.ts:168-170`. Red tests: the predicate is false with `VERCEL_ENV` unset and `NODE_ENV=production`, and in that case the proxy honors the bypass. That is the one behavior change: off Vercel, a production build with the bypass on no longer enforces Clerk in the proxy. It is acceptable because a bypassed visitor is treated as signed out (`lib/container.ts:73,82`). The same pull request adds a comment at `lib/request-ip.ts:3` saying why it reads `NODE_ENV`, so nobody aligns it.
 3. **Redact `SENTRY_DSN`.** Add it to `SECRET_ENV_NAMES`. Extend the coverage test to root `*.ts` files and add `DSN` to its pattern; `NEXT_PUBLIC_` names stay excluded, and the public `CLERK_JWT_KEY` (`proxy.ts:192`) is an explicit, commented exception. Red test: the extended test fails on `SENTRY_DSN` until the name is added.
 4. **Tie the origins.** On Vercel production, `lib/env.ts` refuses a `NEXT_PUBLIC_APP_URL` whose origin is not `PUBLIC_SITE_ORIGIN`. Red test in `lib/env.test.ts`. Before merging, the owner confirms production's value in Vercel.
@@ -46,7 +46,7 @@ Option 1, decided 2026-11-15 by the reviewing session, at the owner's delegation
 
 ## Verification
 
-- [ ] `lib/env.ts` has no instance decoder, and its prefix tests pass.
+- [ ] `lib/env.ts` has no instance decoder, its source-scan guard red then green, and its prefix tests pass.
 - [ ] The proxy and `lib/env.ts` call one production predicate, with the red tests above, and `lib/request-ip.ts:3` says why it keeps `NODE_ENV`.
 - [ ] `SENTRY_DSN` is redacted, and the coverage test, now reading root files, would catch another server DSN.
 - [ ] A production build refuses an app URL off the public origin.
