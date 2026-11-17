@@ -127,10 +127,10 @@ Receipt, 2026-10-05: starting from the sources' parent, steps 3 to 5 reproduced 
 
 ### Updates added beyond the sources
 
-A bundle can also take updates that no Dependabot PR proposes, such as a release that cleared the 7-day gate after Dependabot's weekly run: #1702 added Tailwind, Vitest and Biome patches. No automated check covers their scope:
+A bundle can also take updates that no Dependabot PR proposes, such as a release that cleared the 7-day gate after Dependabot's weekly run: #1702 added Tailwind, Vitest and Biome updates. No automated check covers their scope:
 
 - The verifier compares the candidate with the Dependabot sources only. Pass the bundle commit, before any added update, as `--candidate`.
-- The frozen install checks the manifest, the release age and trust, not which entries changed.
+- The frozen install checks the lockfile against `package.json` and `pnpm-workspace.yaml`, and each entry's release age and trust, not which entries changed.
 - CodeRabbit skips `pnpm-lock.yaml` (`path_filters` in `.coderabbit.yaml`), so its approval covers `package.json` alone. On #1702 it read two version lines, while the lockfile's 443 changed lines went unread.
 
 No script checks an added update's scope yet, so check it by hand:
