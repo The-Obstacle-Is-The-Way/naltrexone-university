@@ -104,7 +104,7 @@ Enforced by controller + use case + domain helper:
 
 These are fresh attempts, not parent-linked retries.
 
-Every submission with a `retryOrigin` logs `retry_submitted` with that origin and its correctness (`src/application/use-cases/submit-answer.ts`).
+Every accepted submission with a `retryOrigin` logs `retry_submitted` with that origin and its correctness, after its attempt is stored (`src/application/use-cases/submit-answer.ts`); a retry its provenance check rejects logs none.
 
 ---
 

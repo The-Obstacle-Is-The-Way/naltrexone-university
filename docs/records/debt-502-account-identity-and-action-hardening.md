@@ -43,7 +43,7 @@ None of the following is built. Both paths are to take only Clerk's verified pri
 - **Evidence.** With no address, the sign-in path throws `INTERNAL_ERROR` (`ClerkAuthGateway.provisionFromClerk`, "User has no email address", `clerk-auth-gateway.ts:104`), and the webhook skips the user (`clerk-webhook-controller.ts:264-272`). With only an unverified address, both selectors return it, since they fall back to the first address (`clerk-user-provisioner.ts:54-64`; the webhook's `getPrimaryEmailOrNull`, `clerk-webhook-controller.ts:125`), and the row is created with it.
 - **Decided.**
   - The owner confirms in the Clerk dashboard that a verified email is required for every sign-up method, in both instances ("Verify at sign-up"), and the setting is recorded here.
-  - Both selectors take only a verified primary address. Checkout and add-card refuse an unverified refreshed primary, and the Billing page tells the user to verify their address, which is their recovery path.
+  - Both selectors take only a verified primary address. Checkout and add-card refuse an unverified refreshed primary, and the Billing page tells the user to verify their address, which is their recovery path. A user with no row and no verified address cannot be provisioned, so that provisioning failure is a distinct error, not `INTERNAL_ERROR` (`clerk-auth-gateway.ts:103-105`), which the signed-in pages show as the same verify-address prompt; a test covers it.
 
 ### 4 and 5. Moved
 
