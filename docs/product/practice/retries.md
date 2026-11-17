@@ -140,7 +140,7 @@ Question-page review state distinguishes:
 - `no_prior_attempt`
 - `hydration_error`
 
-`hydration_error` shows explicit UI with `Retry load` and `Answer as new`; there is no silent degrade-to-submit. The server logs each hydration's outcome as `review_hydration_outcome` (`src/adapters/controllers/question-view-controller.ts`).
+`hydration_error` shows explicit UI with `Retry load` and `Answer as new`; there is no silent degrade-to-submit. Once the entitlement check passes, the server logs each hydration's outcome as `review_hydration_outcome` (`src/adapters/controllers/question-view-controller.ts`); an unauthenticated or unsubscribed request throws before it and logs none.
 
 ### 7.2 Mixed `attemptId + sessionId`
 
