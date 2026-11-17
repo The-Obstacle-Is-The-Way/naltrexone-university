@@ -251,6 +251,9 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/adapters/controllers/stripe-webhook-controller-completion-sweep.test.ts`: `fails the delivery when the sweep fails, and sweeps again when Stripe sends the event again`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `keeps a Session created after the completion's event, which belongs to a later checkout`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `logs an error, and goes on, when another Session completed too`
+- `src/domain/services/subscription-canonicalization.test.ts`: `sorts entitled candidates ahead of later non-entitled candidates`
+- `src/domain/services/subscription-canonicalization.test.ts`: `sorts by later period end within the same entitlement tier`
+- `src/adapters/jobs/reconcile-stripe-subscriptions-duplicates.test.ts`: `cancels duplicate blocking subscriptions when dryRun is disabled`
 
 ### R30. The first observed subscription termination starts the retention clock; a replay changes no consent record. Consent evidence is kept for at least three UTC calendar years after acceptance or one year after that termination, whichever is later. A longer stored floor is preserved. February 29 plus one year is March 1.
 
