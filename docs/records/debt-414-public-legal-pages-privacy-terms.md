@@ -54,9 +54,9 @@ For F21, the early failure report:
 
 **Engineering: F21 (P4).** Option 1. Ship it before the first live sale.
 - Send the delivery row's ID as a tag. When a failure or delivery report's email ID is unknown, match it by that tag. Confirm that `email.delivered` carries `data.tags` before relying on it.
-- `persistOutcome` never replaces a recorded failure or delivery. Untagged mail stays acknowledged and ignored. A lost send response stays `outcome_unknown`.
+- `persistOutcome` never replaces a recorded failure or delivery. An untagged report whose email ID is unknown stays acknowledged and ignored; one whose ID is stored still matches by it. A lost send response stays `outcome_unknown`.
 - Files: `src/adapters/gateways/resend-transactional-email-gateway.ts`, `resend-webhook-controller.ts`, the delivery repository's port, fake and Drizzle adapter, and `dispatch-renewal-notice-delivery.ts`.
-- Red tests first: an early failure report, and an early delivery report, matched by its tag, each still recorded after the send's own outcome is stored; a duplicate report; reports before and after the ID is stored; untagged mail left unchanged.
+- Red tests first: an early failure report, and an early delivery report, matched by its tag, each still recorded after the send's own outcome is stored; a duplicate report; reports before and after the ID is stored; an untagged report with an unknown ID left unchanged, and one whose ID is stored still matched.
 
 **Owner, counsel and tax.** Each item names who decides, when, and what closes it.
 - **F07, the first real report.** Owner. When the first acknowledgment is sent in production, at BUG-364's live trial check or the first live sale. Done when Resend's webhook log shows a 200 for a real report, and that notice's row reads `delivered` or `terminal_failure`.
