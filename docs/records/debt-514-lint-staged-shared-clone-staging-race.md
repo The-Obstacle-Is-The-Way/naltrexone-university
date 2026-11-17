@@ -70,8 +70,9 @@ only the 17.6.0 regression; the same-file case remains.
    with unstaged changes, then runs
    `biome check --staged --no-errors-on-unmatched`. A hook that writes nothing
    can stage nothing, on any version, so both cases close. A commit with Biome
-   errors still fails; its author runs `pnpm exec biome check --write --staged`
-   only on paths no other session is editing, and stages their own paths. A
+   errors still fails; its author runs `pnpm exec biome check --write` on their
+   own paths, named explicitly, since `--staged` would also rewrite paths
+   another session staged, and stages those paths. A
    path the hook refused for someone else's unstaged edits waits for that
    session (AGENTS.md rule 3), since `--write` rewrites the working tree. It deletes the dependency, its `package.json`
    block, `tests/lint-staged-config.test.ts`, the Dependabot ignore, the line in
@@ -90,8 +91,8 @@ Then it runs `biome check --staged --no-errors-on-unmatched`. The refusal
 cannot cover another process editing a staged file between it and Biome's
 read, the hook's own run time; CI's `pnpm lint:ci` checks the pull
 request's merge result, so such an error fails CI before it merges.
-Commits no longer auto-fix; authors run `biome check --write --staged` and stage their own
-paths. A test replaces the deleted config test and pins both behaviors: the
+Commits no longer auto-fix; authors run `biome check --write` on their own named paths and
+stage them. A test replaces the deleted config test and pins both behaviors: the
 hook refuses a staged path with unstaged changes before Biome runs, and it runs
 `biome check --staged` without `--write` and never `lint-staged`. It fails
 first against today's hook.
