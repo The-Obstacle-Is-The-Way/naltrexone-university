@@ -36,7 +36,7 @@ None of the following is built. Both paths are to take only Clerk's verified pri
 - **Impact.** The deleted person's email also stays in our database, a privacy residue.
 - **Decided, not built.**
   - The sign-in path and the billing refresh, which both provision through `provisionFromClerk` and `ensureClerkUser`, take the existing Clerk tombstone lock, check the tombstone and provision in the same short transaction, using transaction-bound repositories. A separate preflight check still races deletion. Preserve the deletion path's lock order; provider reads happen outside the transaction and their result is revalidated under the lock. Prove both interleavings, for sign-in and for the refresh, against real Postgres. (`DrizzleDeletedClerkUserRepository.lock` and `clerk-webhook-controller.ts:257` already define that lock.)
-  - An operator command, with a runbook, deletes a row whose Clerk user is confirmed gone, under the same locks as the webhook.
+  - An operator command, with a runbook, deletes a row whose Clerk user is confirmed gone, under the same locks as the webhook. In the same transaction it schedules the row's Stripe customer for deletion, as the webhook does (`pendingStripeCustomerCleanups.schedule`, `clerk-webhook-controller.ts:387`), so the reconcile's cleanup drain (`drain-pending-stripe-customer-cleanups.ts`) deletes the customer and with it any live subscription. A customer already gone counts as done (`stripe-customer-deleter.ts:57-62`), so the command and a late webhook retry cannot conflict. A Postgres test shows the command leaves a pending cleanup that the drain completes.
 
 ### 3. A Clerk user with no email gets no app row, and an unverified one is accepted (P3, depends on Clerk settings)
 
@@ -62,7 +62,7 @@ Criteria to meet before closing: each item shipped with red-first tests, or left
 
 - [ ] Item 3: the owner's Clerk setting is recorded; both selectors refuse an unverified address; checkout and add-card refuse an unverified refreshed primary; and the Billing page tells the user to verify their address.
 - [ ] Item 1: a refresh, and a `user.updated`, whose address a stale owner held succeeds once Clerk confirms that owner moved, and still refuses when Clerk cannot.
-- [ ] Item 2: both interleavings of provisioning and deletion leave no row, for sign-in and for the billing refresh, proven against real Postgres; the operator command and its runbook ship.
+- [ ] Item 2: both interleavings of provisioning and deletion leave no row, for sign-in and for the billing refresh, proven against real Postgres; the operator command and its runbook ship, and the command leaves a pending Stripe customer cleanup that the drain completes.
 - [ ] Item 6: the sign-in URL, the add-card return path and the E2E seed ship.
 - [x] Item 6: trial re-use is Won't Fix (2026-11-15).
 
