@@ -98,8 +98,9 @@ Reporting this behavior to Clerk is the owner's call; for BUG-333 the owner chos
       a day, 178 arrives around 2026-11-30.
   - Count only `CI` workflow executions whose E2E step ran and whose tested
     revision contains the keeper (a5795c0f). Others neither advance the count
-    nor reset it: skipped, canceled and local runs, and any whose signed-in
-    tests did not run.
+    nor reset it: skipped, canceled and local runs, any whose signed-in
+    tests did not run, and any whose specs that call `startSession`
+    (`tests/e2e/helpers/session.ts:302`) failed before getting past it.
   - A recurrence resets the count, and its trace is the next action. An aborted
     read without the page error does not reset it.
   - **Closing:** close as Resolved, and say that **the cause was never found**.

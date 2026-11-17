@@ -1,6 +1,6 @@
 # DEBT-519: The Fake-Contract Register Misses Adapter-Owned Fakes
 
-**Status:** Open — scan every non-test `.ts` file under `src/adapters/**/test-helpers/` for exported `Fake*` classes, red first, and give `FakeStripePortalConfigurations` its own row
+**Status:** Open — scan every non-test `.ts` file under `src/adapters/**/test-helpers/` for exported `Fake*` bindings, red first, and give `FakeStripePortalConfigurations` its own row
 **Priority:** P4
 **Date:** 2026-10-11
 
@@ -22,12 +22,12 @@ None today. The next adapter-owned fake could go unrecorded, the drift the regis
 
 ## Options
 
-1. **Discover adapter-owned fakes,** and require a row for each exported `Fake*` class. *Chosen:* what DEBT-472 decided; a few lines replace the hand list.
+1. **Discover adapter-owned fakes,** and require a row for each exported `Fake*` binding. *Chosen:* what DEBT-472 decided; a few lines replace the hand list.
 2. **Add the name to the hand list.** The next one must then be remembered.
 
 ## Resolution (decided)
 
-Option 1. In `tests/fake-contract-register-source-scan.ts`, replace `ADAPTER_OWNED_FAKE_NAMES` with a scan of every `.ts` file under `src/adapters/**/test-helpers/` except `*.test.ts`, whatever its name, that collects exported `Fake*` classes with the parser the file already uses. Red first in `tests/fake-contract-register.test.ts`: a synthetic adapter source exporting `FakeX`, in a file not named `fake-*.ts`, yields `FakeX`; a `*.test.ts` source is skipped; and the live check fails while `FakeStripePortalConfigurations` has no row. Then move the portal-configuration clarification out of `FakeStripeCheckoutClient`'s row into its own row. Done when `pnpm test --run tests/fake-contract-register.test.ts` passes with no hand list and no file-name pattern.
+Option 1. In `tests/fake-contract-register-source-scan.ts`, replace `ADAPTER_OWNED_FAKE_NAMES` with a scan of every `.ts` file under `src/adapters/**/test-helpers/` except `*.test.ts`, whatever its name, that collects exported `Fake*` bindings, whether a class, a constant or a function, with the parser the file already uses. Red first in `tests/fake-contract-register.test.ts`: a synthetic adapter source exporting `FakeX`, in a file not named `fake-*.ts`, yields `FakeX`; a non-class export `FakeY` is found too; a `*.test.ts` source is skipped; and the live check fails while `FakeStripePortalConfigurations` has no row. Then move the portal-configuration clarification out of `FakeStripeCheckoutClient`'s row into its own row. Done when `pnpm test --run tests/fake-contract-register.test.ts` passes with no hand list and no file-name pattern.
 
 ## Verification
 

@@ -71,7 +71,9 @@ only the 17.6.0 regression; the same-file case remains.
    `biome check --staged --no-errors-on-unmatched`. A hook that writes nothing
    can stage nothing, on any version, so both cases close. A commit with Biome
    errors still fails; its author runs `pnpm exec biome check --write --staged`
-   and stages their own paths. It deletes the dependency, its `package.json`
+   only on paths no other session is editing, and stages their own paths. A
+   path the hook refused for someone else's unstaged edits waits for that
+   session (AGENTS.md rule 3), since `--write` rewrites the working tree. It deletes the dependency, its `package.json`
    block, `tests/lint-staged-config.test.ts`, the Dependabot ignore, the line in
    `docs/guides/dependencies/updating-dependencies.md:223` and the
    `lint-staged` entry in `scripts/watchers/upstream-advisory-watch.mts:52`.
