@@ -76,11 +76,14 @@ short name's instance stays `<sanitized basename>-<hash>`. Today the
 40-character case and longer, and the explicit case, fail.
 
 No guide change is needed: no current clone's target changes. A clone whose
-basename sanitizes to 40 characters or more gets a new instance, project and
-ports, since the ports derive from the instance (`derivePortOffset`, :126-131,
-one of 10,000 slots). A test database it started before the fix therefore does
-not block the new one, but `pnpm db:test:down` no longer reaches it:
-`docker compose -p <old project> down -v` removes it.
+basename sanitizes to 40 characters or more, and an explicit
+`LOCAL_TEST_INSTANCE` whose 48th character is a separator, get a new instance,
+project and ports, since the ports derive from the instance
+(`derivePortOffset`, :126-131, one of 10,000 slots). A test database started
+under the old name therefore does not block the new one unless an override
+such as `DB_TEST_PORT` pins its port, but `pnpm db:test:down` no longer reaches
+it: find the old project with `docker ps` and remove it with
+`docker compose -p <old project> down -v`.
 
 ## Verification
 
