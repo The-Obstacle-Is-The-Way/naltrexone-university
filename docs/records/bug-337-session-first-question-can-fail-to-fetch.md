@@ -78,8 +78,10 @@ keeps its old value until its token expires, and the server then answers
 **Reading a recurrence.** On a page error, the E2E trace prints
 `[E2E_CLERK_AUTH_TRACE]` (`tests/e2e/helpers/clerk-auth-trace.ts`) with each
 failed request, redirect status, Clerk reason and numeric `__client_uat`;
-`startSession`'s error names the failed actions. A "0" means another writer; a
-numeric value with `session-token-but-no-client-uat` means another trigger;
+`startSession`'s error names the failed actions. A "0" means another writer, or
+one written before the session cookie appeared, which the keeper lets through
+and which stays until a numeric write replaces it; a numeric value with
+`session-token-but-no-client-uat` means another trigger;
 `session-token-expired-*` may be this trigger, held by the keeper. A failed
 request's cookie fields can be unavailable, which proves nothing; only its
 redirect's response line shows what was sent.
