@@ -114,7 +114,7 @@ Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_
 - the reconcile job fails its row;
 - the success page sends its buyer to an error.
 
-A Session keeps the price it was created with (`line_items`, `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1368`) and stays completable until Stripe's default expiry, 24 hours after creation, since the create sets no `expires_at`, and the live deployment keeps creating Sessions on the old IDs until the new ones are deployed. So no check made before the deploy settles it. After the deploy, expire every subscription Session still open on an old ID (`checkout.sessions.expire`), then check Stripe again for subscriptions on the old IDs: one completed in between fails as above, and the owner decides its remedy.
+A Session keeps the price it was created with (`line_items`, `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1368`) and stays completable until Stripe's default expiry, 24 hours after creation, since the create sets no `expires_at`, and the live deployment keeps creating Sessions on the old IDs until the new ones are deployed. So no check made before the deploy settles it. After the deploy, expire every subscription Session still open on an old ID (`checkout.sessions.expire`), then check Stripe again for subscriptions on the old IDs: one completed in between fails as above, and the owner decides its remedy. DEBT-501 item 2 removes that race, for Prices of our product: it takes a subscription's plan from its Stripe Price, not the ID.
 
 A new price for new customers waits for DEBT-501 item 2's recorded-plan design. Nothing enforces this rule yet.
 
