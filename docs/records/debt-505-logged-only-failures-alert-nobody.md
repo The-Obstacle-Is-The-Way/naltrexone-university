@@ -46,10 +46,14 @@ Every other check passed between 2026-10-08 and 2026-11-14. The drill's delivery
   The owner decided on 2026-11-15 to run the job once by hand by 2026-11-22 and read the field. The call is step 4 of `docs/guides/operations/requeue-renewal-notice.md`, so its warnings apply: it runs the whole job, the route admits five requests a minute, and a call that timed out must not be blindly retried.
 
   ```bash
-  curl --fail-with-body --silent --show-error --request POST \
-    --header "Authorization: Bearer ${CRON_SECRET:?}" \
-    https://addictionboards.com/api/cron/send-renewal-notices | jq .scheduledChecks
+  ( set -o pipefail
+    curl --fail-with-body --silent --show-error --request POST \
+      --header "Authorization: Bearer ${CRON_SECRET:?}" \
+      https://addictionboards.com/api/cron/send-renewal-notices |
+      jq -e '.scheduledChecks == "running"' )
   ```
+
+  It prints `true` and succeeds only when the field is `running`; an HTTP error or any other value fails it.
 
   A fallback any session can do: read production's runtime logs within an hour of a run, since Vercel keeps them for an hour. In `src/adapters/jobs/scheduled-checks.ts`, `unreadable` and `stopped` log an error and `unavailable` a warning; only `running` logs nothing. A run that stops before the check logs nothing either, so the logs can show a failure but never prove `running`; only a completed run's `scheduledChecks` field does. The 2026-11-05 date lapsed with the field unread.
 
