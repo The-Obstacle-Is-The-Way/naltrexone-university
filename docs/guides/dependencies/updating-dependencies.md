@@ -129,22 +129,29 @@ Receipt, 2026-10-05: starting from the sources' parent, steps 3 to 5 reproduced 
 
 A bundle can also take updates that no Dependabot PR proposes, such as a release that cleared the 7-day gate after Dependabot's weekly run: #1702 added Tailwind, Vitest and Biome updates. No automated check covers their scope:
 
-- The verifier compares the candidate with the Dependabot sources only. Pass the bundle commit, before any added update, as `--candidate`.
+- The verifier compares the candidate with the Dependabot sources only, so it proves the bundle commit alone. Pass that commit, before any added update, as `--candidate`.
 - The frozen install checks the lockfile against `package.json` and `pnpm-workspace.yaml`, and each entry's release age and trust, not which entries changed.
-- CodeRabbit skips `pnpm-lock.yaml` (`path_filters` in `.coderabbit.yaml`), so its approval covers `package.json` alone. On #1702 it read two version lines, while the lockfile's 443 changed lines went unread.
+- CodeRabbit skips `pnpm-lock.yaml` (`path_filters` in `.coderabbit.yaml`), so it cannot see an update that changes only the lockfile. On #1702 it read the two Tailwind version lines in `package.json`; the Vitest and Biome updates, and the lockfile's 443 changed lines, went unread.
 
-No script checks an added update's scope yet, so check it by hand:
+No script checks an added update's scope yet, so check it by hand. Finish steps 1 to 4 for each update before you add the next one:
 
-1. Give each added update its own commit after the bundle commit, so it can be dropped alone.
-2. Look for drift. A scoped `pnpm update` can move packages outside its family onto newer duplicate copies that nothing requires. On #1702, the Vitest 5.1.0 update moved eight Babel 8 consumers from `@babel/types` 8.0.8 to a new 8.1.0 copy, and `estree-walker` from `@types/estree` 1.0.9 to a new 1.0.10 copy. Both copies were old enough and trusted, so CI passed. For each added update, compare the `snapshots` section of its commit's lockfile with the previous commit's. Outside the updated packages and their own dependencies, no entry that exists in both may change its dependencies, and no key may appear or disappear. A changed peer suffix (see above) turns one package into a removed key and an added key, so compare those two entries as a pair. Two kinds of change are allowed there, and each one goes in the PR:
-   - a move onto a copy the lockfile already had, which removes a duplicate;
-   - a peer suffix, and the matching dependency, that change only to name an updated package's new version, as when an `@types/node` update renames `stripe@22.5.0(@types/node@24.13.4)`.
-3. Remove drift by regenerating, never by editing the lockfile. Add a temporary entry under `overrides:` in `pnpm-workspace.yaml` that pins the old version, and regenerate. If an updated package needs the new copy, scope the entry to the drifted consumer, as in `'estree-walker>@types/estree': 1.0.9`. Then remove the entry, so that `pnpm-workspace.yaml` matches `dev`'s again, and regenerate with `--config.optimistic-repeat-install=false`; without the flag, pnpm can keep the removed override in the lockfile's `overrides` block. Repeat step 2, then commit the corrected lockfile.
-4. Prove the result is stable. From the committed lockfile, both commands must pass, and the regeneration must change nothing:
+1. Add the update in its own commit after the bundle commit. After a scoped `pnpm update`, restore `package.json`'s ranges and resynchronize, as step 5 does for the sources, unless the update raises an exact pin.
+2. Look for drift: entries moved onto newer duplicate copies that nothing requires. On #1702, the Vitest 5.1.0 update moved eight Babel 8 consumers from `@babel/types` 8.0.8 to a new 8.1.0 copy, and `estree-walker` from `@types/estree` 1.0.9 to a new 1.0.10 copy. Both copies were old enough and trusted, so CI passed. Compare the `snapshots` section of the update's lockfile with its parent commit's, and apply two rules to every entry, the updated packages' own dependencies included:
+   - No new key may sit beside an older copy of the same package, unless an updated package's new version requires it. `pnpm why <package>` shows what requires each copy.
+   - No entry that exists in both may move a dependency onto a copy the parent lacked, unless an updated package's new version requires that copy.
+
+   A changed peer suffix (see above) renames an entry, so compare the old and new keys as a pair. A rename that only names an updated package's new version is required, as when an `@types/node` update renames `stripe@22.5.0(@types/node@24.13.4)`. A move onto a copy the parent already had removes a duplicate, and is allowed. Record each rename and move in the PR.
+3. Remove drift by regenerating, never by editing the lockfile.
+   - Add a temporary entry under `overrides:` in `pnpm-workspace.yaml` that pins the old version. When the package has several major lines, use a version selector, as in `'@babel/types@8': 8.0.8`. When an updated package needs the new copy, scope the entry to the drifted consumer, as in `'estree-walker>@types/estree': 1.0.9`.
+   - Regenerate with `pnpm install --lockfile-only --config.optimistic-repeat-install=false`.
+   - Remove the entry, so that `pnpm-workspace.yaml` is back to its committed state, and regenerate the same way. Without the flag, pnpm can keep the removed override in the lockfile's `overrides` block.
+   - Repeat step 2 on the regenerated lockfile, then fold it into the update's commit with `git commit --amend --no-edit`. If that commit is already pushed, add a correction commit instead, because a force push can spend a CodeRabbit review ([Review and Merge](../release/review-and-merge.md#the-review-allowance)), and say in the PR that the update and its correction drop together.
+4. Prove the result is stable. Nothing may be left uncommitted, both installs must pass, and the regeneration must change nothing:
 
    ```sh
+   git diff --quiet HEAD -- package.json pnpm-workspace.yaml pnpm-lock.yaml
    pnpm install --frozen-lockfile --config.optimistic-repeat-install=false
-   pnpm install --lockfile-only --config.optimistic-repeat-install=false && git diff --exit-code -- pnpm-lock.yaml
+   pnpm install --lockfile-only --config.optimistic-repeat-install=false && git diff --exit-code HEAD -- pnpm-lock.yaml
    ```
 
 5. Ask an independent reviewer to read the lockfile diff, and say in the PR that CodeRabbit skipped it. On #1702, that review found the Babel drift.
