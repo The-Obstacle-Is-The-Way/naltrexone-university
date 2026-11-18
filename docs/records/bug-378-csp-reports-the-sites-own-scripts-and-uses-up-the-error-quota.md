@@ -8,7 +8,7 @@
 
 ## Summary
 
-The Content Security Policy is report-only, and no page can satisfy its script rule. The rule accepts only scripts that carry the request's nonce, and the prerendered pages' scripts cannot carry one (DEBT-420). So every page view reports the site's own scripts, about 17 reports a view, and Sentry counts each report as an error. In the 30 days to 2026-11-14 these reports were 4,363 of the organization's 4,371 accepted errors. The plan allows 5,000 a month; once they run out, Sentry drops the server's errors too, operational alerts included.
+Until the 2026-11-15 release (promotion #1694), the report-only Content Security Policy had a script rule no page could satisfy. The rule accepted only scripts that carry the request's nonce, and the prerendered pages' scripts cannot carry one (DEBT-420). So every page view reported the site's own scripts, about 17 reports a view, and Sentry counted each report as an error. In the 30 days to 2026-11-14 these reports were 4,363 of the organization's 4,371 accepted errors. The plan allows 5,000 a month; once they run out, Sentry drops the server's errors too, operational alerts included. The release's policy accepts the site's own scripts, and normal page views now send no report (Verification); the signed-in spec's recorder and the watcher's quota finding remain.
 
 ## Evidence
 
@@ -74,3 +74,5 @@ Option 1.
 - BUG-379: from this fix's adversarial review. Native CSP reports bypass the SDK's redaction, so credential-bearing documents send none; it also added the CSP spec's foreign-script positive control.
 
 *Corrected 2026-11-15 (adversarial review of #1693): the 66 filtered reports were ignored-source matches, not invalid reports; option 4's filter cannot keep foreign-script reports; option 6's cap is not on the current plan; option 1's "a report" meant a script report. Records review: the resolved issues and the period's remaining quota are past tense, and the remaining check dates the finding's clearing from reconstructed hourly usage, with the run hours it assumes and the range new errors would move it to.*
+
+*Corrected 2026-11-18: the summary puts the policy before the 2026-11-15 release in the past tense.*
