@@ -96,11 +96,12 @@ Reporting this behavior to Clerk is the owner's call; for BUG-333 the owner chos
       58 clean executions from 2026-11-08 23:22Z, all passed, with no "Failed
       to fetch" and no `[E2E_CLERK_AUTH_TRACE]` in their logs. At about eight
       a day, 178 arrives around 2026-11-30.
-  - Count only `CI` workflow executions whose E2E step ran and whose tested
-    revision contains the keeper (a5795c0f). Others neither advance the count
-    nor reset it: skipped, canceled and local runs, any whose signed-in
-    tests did not run, and any whose specs that call `startSession`
-    (`tests/e2e/helpers/session.ts:302`) failed before getting past it.
+  - Count only `CI` workflow executions whose E2E step ran, whose tested
+    revision contains the keeper (a5795c0f), and in which every spec that
+    calls `startSession` (`tests/e2e/helpers/session.ts:302`) got past it.
+    Others neither advance the count nor reset it: skipped, canceled and
+    local runs, and any that stopped or failed before every such spec got
+    past `startSession`.
   - A recurrence resets the count, and its trace is the next action, even when
     it stopped `startSession`: that page error is this record's failure, so it
     takes precedence over the exclusion above, which covers other failures. An
