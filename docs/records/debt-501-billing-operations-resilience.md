@@ -84,6 +84,8 @@ Before closing: item 9 built with red-first tests; item 7's live purchase and Li
 
 Corrected 2026-11-15: items 5 and 6, item 4's completion recheck (BUG-364) and item 7's endpoint census are done, so their build history is in git at 34d9aea0. Line references drifted and are corrected. Item 7's live purchase is the owner's own check, not the test-mode QA procedure's, and live price IDs stay out of the repository. Item 2 moved to Waiting (owner); its premise is corrected, since the former live trials' rows already exist. Item 3 moves to Waiting; item 4's expiry bound is declined, with the path it leaves stated; item 8 is Won't Fix; item 9 keeps option 2 and is re-dated (all by the reviewing session). Item 1's decided design and the shared contract's scope limits are restored.
 
+Corrected 2026-11-18: item 9's watch checks every unreported unfinished run instead of the 2026-10-30 rule that no run finished in the past 26 hours, which a killed run followed by a good one passes (the reviewing session, 2026-11-16). An alert marks runs reported only once sent, and a run counts as stopped only when it repaired nothing, with `stripe_reconcile_row_failing` for a row that keeps failing (2026-11-18, at the owner's delegation).
+
 ## Related
 
 - BUG-321, BUG-343, DEBT-502: the same hunt.
