@@ -114,6 +114,8 @@ Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_
 - the reconcile job fails its row;
 - the success page sends its buyer to an error.
 
+Where a change is allowed, a subscription Checkout Session still open on an old ID can still create such a subscription. A Session keeps the price it was created with (`line_items`, `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1368`), and it stays completable until Stripe's default expiry, 24 hours after creation, since the create sets no `expires_at`. So once the new IDs are deployed, expire every subscription Session still open on an old ID (`checkout.sessions.expire`).
+
 A new price for new customers waits for DEBT-501 item 2's recorded-plan design. Nothing enforces this rule yet.
 
 ### Clerk key pairing rule
