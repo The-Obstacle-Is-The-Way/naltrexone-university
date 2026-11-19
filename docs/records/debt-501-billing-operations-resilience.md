@@ -45,7 +45,7 @@ Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped wit
   2. Reads use the stored plan. Only Checkout creation reads the configured price IDs.
   3. Renewal notices and reminders select by stored plan, and state the stored amount and currency.
   4. An unknown product or interval refuses the write, leaves the event retryable, and raises an unknown-price alert through DEBT-505's path.
-  5. Checkout refuses a configured price whose Stripe amount or interval differs from `lib/pricing-data.ts`, and alerts.
+  5. Checkout refuses a configured price whose Stripe amount, currency or interval differs from `lib/pricing-data.ts`, and alerts (currency added by the owner, 2026-11-19).
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3) — waits for its trigger
 
