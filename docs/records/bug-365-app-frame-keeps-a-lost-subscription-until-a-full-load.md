@@ -34,7 +34,7 @@ Option 1, chosen by the owner on 2026-10-22, released in promotion #1613 (2026-1
 
 - [x] Red first, for the server pages and the browser pages, including the import scan.
 - [x] Dev preview on `5c8c9f2b` (2026-10-28 and 10-29), the tree released in #1613: after an immediate sandbox cancel with the app open, navigating to the dashboard landed on `/pricing?reason=subscription_required`, and **Try again** in an open practice question replaced the page with Pricing.
-- [ ] Production, carried by BUG-364's combined check: the owner's one no-card live trial checks both records. This record's half: with the app open, an immediate live Dashboard cancel, then navigating in the app lands on Pricing. When BUG-364 records it, this record closes as Resolved.
+- [ ] Production, carried by BUG-364's combined check: the owner's one no-card live trial checks both records. This record's half: with the app open, an immediate live Dashboard cancel, then navigating to the app's dashboard lands on Pricing. When BUG-364 records it, this record closes as Resolved.
 
 Corrected 2026-11-15: the production check, this record's only open item, is run once with BUG-364's and recorded there; this record stays Verifying until then and closes as Resolved, not Superseded (reviewing session). Re-dated from 2026-11-08, when the check had not been run. Finished build history is in git at 34d9aea0.
 
