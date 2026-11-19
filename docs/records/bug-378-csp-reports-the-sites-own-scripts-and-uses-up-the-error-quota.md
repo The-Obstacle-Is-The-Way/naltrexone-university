@@ -1,6 +1,6 @@
 # BUG-378: The CSP Reports the Site's Own Scripts and Uses Up Sentry's Error Quota
 
-**Status:** Open — view a signed-in production page; the signed-in CSP spec records only after sign-in, red first; the quota finding leaves #1610 as reports age out; due 2026-11-24
+**Status:** Open — check two more page views; the signed-in CSP spec records only after sign-in, red first; the quota finding leaves #1610 as reports age out; due 2026-11-24
 **Priority:** P2
 **Date:** 2026-11-14
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-Until the 2026-11-15 release (promotion #1694), the report-only Content Security Policy had a script rule no page could satisfy. The rule accepted only scripts that carry the request's nonce, and the prerendered pages' scripts cannot carry one (DEBT-420). So every page view reported the site's own scripts, about 17 reports a view, and Sentry counted each report as an error. In the 30 days to 2026-11-14 these reports were 4,363 of the organization's 4,371 accepted errors. The plan allows 5,000 a month; once they run out, Sentry drops the server's errors too, operational alerts included. The release's policy accepts the site's own scripts, and the page views checked after it sent no report (Verification); a signed-in production view, the signed-in spec's recorder and the watcher's quota finding remain.
+Until the 2026-11-15 release (promotion #1694), the report-only Content Security Policy had a script rule no page could satisfy. The rule accepted only scripts that carry the request's nonce, and the prerendered pages' scripts cannot carry one (DEBT-420). So every page view reported the site's own scripts, about 17 reports a view, and Sentry counted each report as an error. In the 30 days to 2026-11-14 these reports were 4,363 of the organization's 4,371 accepted errors. The plan allows 5,000 a month; once they run out, Sentry drops the server's errors too, operational alerts included. The release's policy accepts the site's own scripts, and the page views checked after it sent no report (Verification); two more page views, the signed-in spec's recorder and the watcher's quota finding remain.
 
 ## Evidence
 
@@ -55,12 +55,12 @@ Option 1.
 - [x] Red first: the new E2E test fails on the strict policy and passes on the new one. *Done 2026-11-14:* on the strict policy all five pages reported their own chunks and inline scripts; on the new one, none did.
 - [x] After promotion:
   - production's and the dev Preview's `/sign-up` still send the report-only policy with `report-uri`, `report-to` and `Reporting-Endpoints`;
-  - a view of `/sign-up` on each, and of a signed-in page on the Preview, adds no CSP event to the web project;
+  - a view of `/sign-up` on production, and of a signed-in page on the Preview, adds no CSP event to the web project;
   - a script from a host the site does not use, added by hand to a production page, reaches the web project as a CSP report, so reports still arrive. Its issue is then resolved.
 
   *Done 2026-11-15, after promotion #1694:* both `/sign-up`s sent the policy with all three reporting headers and no nonce. Views of production's `/`, `/pricing` and `/sign-up` and of the Preview's `/` and signed-in `/app/dashboard` added no CSP event; the old policy sent 16 to 18 a view. A hand-added `example.com` script on production's `/sign-up` arrived as ADDICTION-BOARDS-WEB-2H, and the web project's high-priority workflow emailed the owner.
 - [x] The web project's CSP issues, the archived ones included, are resolved, with the owner's approval. *Done 2026-11-15:* all eleven, WEB-F, -G, -H and -2H included; none is unresolved or archived.
-- [ ] A view of a signed-in page on production adds no CSP event to the web project. The 2026-11-15 checks viewed a signed-in page only on the Preview (#1694).
+- [ ] A view of a signed-in page on production, and of `/sign-up` on the Preview, adds no CSP event to the web project. The 2026-11-15 checks viewed neither; the Preview's `/sign-up` was checked for headers only (#1694).
 - [ ] The signed-in spec (`tests/e2e/content-security-policy.spec.ts:177`) records violations only after `signInWithClerkPassword` and `ensureSubscribed`. Its recorder starts before sign-in (`:180`), so one local run on 2026-11-16 failed on a report the sign-in caused: a `connect-src` report for an RSC prefetch of `/app/dashboard`, which the server answered with a cross-origin Clerk sign-in redirect because the stored session token had expired (`session-token-expired-refresh-non-eligible-no-refresh-cookie`). The re-run passed. Red first: a test that expires only the stored session token (the `__session` cookie) before the spec signs in, leaving the Clerk session active. The helper only restores the stored session, and a failed restore fails every later signed-in test (`tests/e2e/helpers/clerk-auth.ts:137-167`), so the test must still restore it and reach the CSP assertion.
 - [ ] The watcher's quota finding leaves #1610 as the old reports age out of its 30-day window; due 2026-11-24.
 
@@ -78,4 +78,4 @@ Option 1.
 
 *Corrected 2026-11-18: the summary puts the policy before the 2026-11-15 release in the past tense.*
 
-*Corrected 2026-11-19: the post-release check viewed a signed-in page only on the Preview, so the production view is open.*
+*Corrected 2026-11-19: the post-release check viewed a signed-in page only on the Preview and `/sign-up` only on production, so the other two views are open.*
