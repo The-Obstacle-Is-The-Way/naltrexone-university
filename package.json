@@ -87,7 +87,7 @@
     "remark-gfm": "^4.0.1",
     "resend": "6.37.0",
     "server-only": "^0.0.1",
-    "stripe": "^23.0.0",
+    "stripe": "^23.1.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "4.3.5",
     "tinyglobby": "^0.2.17",

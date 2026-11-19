@@ -39,7 +39,7 @@ export function createStripeClient(
      * - Verifying webhooks + checkout flows in a staging environment
      *
      * Reference: https://stripe.com/docs/upgrades#api-versions
-     * Last reviewed: 2026-10-13
+     * Last reviewed: 2026-11-19
      */
     apiVersion: STRIPE_API_VERSION,
     typescript: true,
