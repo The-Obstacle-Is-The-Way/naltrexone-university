@@ -76,7 +76,7 @@ A major release can also remove a request field, and the SDK release that pins i
 ### Checkout Rules
 
 - **Stripe's public details carry the Terms and Privacy URLs.** Checkout's required Terms consent (`consent_collection: { terms_of_service: 'required' }`) depends on the live Terms URL, and test mode cannot show a missing live one. Treat any edit to Stripe's public details as release-blocking.
-- **No out-of-band subscription Checkout Sessions.** Subscription activation does not depend on consent evidence. A Session created outside the app, without our consent metadata, still activates the subscription, but records no consent (`getInitialSubscriptionConsent` in `src/adapters/gateways/stripe/stripe-webhook-processor.ts`). Create subscription Sessions only through the app.
+- **No out-of-band subscription Checkout Sessions.** A Session created outside the app activates nothing unless it sets the subscription's `metadata.user_id`, as the app's do (`subscription_data`, `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1376-1380`). Without it, the webhook fails each event that carries that subscription, logging "Stripe subscription metadata.user_id is required" (`src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:38-55`), so the customer pays without access. With it but without our consent metadata, the subscription activates but records no consent, since activation does not depend on consent evidence (`getInitialSubscriptionConsent` in `src/adapters/gateways/stripe/stripe-webhook-processor.ts`). Create subscription Sessions only through the app.
 
 ## Idempotent Requests
 
