@@ -20,7 +20,7 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 
 | Vendor | Package version | API version |
 |--------|-----------------|-------------|
-| Stripe | `stripe` in `package.json` | Pinned in `lib/stripe-api-version.ts` and read by `lib/stripe.ts` |
+| Stripe | `stripe` in `package.json` | Pinned in `lib/stripe-api-version.ts` and read by `lib/stripe-client.ts` |
 | Clerk | `@clerk/nextjs` in `package.json` | Chosen by the SDK (`SUPPORTED_BAPI_VERSION` in `@clerk/backend`), not pinned in code ([clerk.md](./clerk.md#api-version)) |
 | Postgres | `postgres` in `package.json` | None (driver) |
 | Drizzle | `drizzle-orm` and `drizzle-kit` in `package.json` | None |

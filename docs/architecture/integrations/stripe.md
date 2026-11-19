@@ -1,7 +1,7 @@
 # Stripe Vendor Documentation
 
 **Package:** `stripe` (version: `package.json`)
-**API Version:** `2026-09-30.endive`, pinned in `lib/stripe-api-version.ts` (outbound SDK requests only; webhook endpoints carry their own versions, see [Webhook Endpoint API Versions](#webhook-endpoint-api-versions))
+**API Version:** `2026-10-28.endive`, pinned in `lib/stripe-api-version.ts` (outbound SDK requests only; webhook endpoints carry their own versions, see [Webhook Endpoint API Versions](#webhook-endpoint-api-versions))
 **Dashboard:** https://dashboard.stripe.com
 **Docs:** https://docs.stripe.com
 **Changelog:** https://docs.stripe.com/changelog
@@ -12,6 +12,7 @@
 
 | Date | API Version | Impact | Notes |
 |------|-------------|--------|-------|
+| 2026-10-28 | `2026-10-28.endive` | Non-breaking | Pinned 2026-11-19 with SDK 23.1.0 (PR #1711, superseding Dependabot's #1659). Stripe's changelog marks all 38 entries in this version non-breaking. The ones near this app's surfaces are optional and opt-in: Checkout `subscription_data.invoice_settings` fields and `payment_intent_data` on Session update, customer-portal `subscription_pause` and `after_expiration`, card-on-file usage fields, the `sequra` payment method, new tax ID types and error codes, and semantic thin events. None of the added fields are read or sent by this app. The new error code `subscription_update_trial_after_billing_cycle_anchor` applies to a Subscription update or invoice preview that sets `billing_cycle_anchor`; the app never sends that field and calls no invoice preview. The live and test webhook endpoints stay at `2026-09-30.endive`, per the [decision](#decision). |
 | 2026-09-30 | `2026-09-30.endive` | **BREAKING** | Endive cutover, pinned 2026-10-13 with SDK 23.0.0 (PR #1483, issue #1479). Checkout Session create no longer accepts `payment_method_types` and answers it with a 400, so the add-card session sends `allowed_payment_method_types: ['card']` instead. Every other Endive breaking change was checked against what the app sends and reads, and none applies. The test endpoint and the enabled live endpoint use Endive; the legacy Dahlia live endpoint is disabled, per [Endive migration](#endive-migration-2026-10). |
 | 2026-08-26 | `2026-08-26.dahlia` | Non-breaking | Pinned 2026-09-16 with SDK 22.6.1. Additive GA release: card funding-type restrictions in Checkout, Customer Session entitlement/portal components, Billie for invoices and subscriptions, standardized payment-method error codes. None of the added fields are read or sent by this app. |
 | 2026-07-29 | `2026-07-29.dahlia` | Non-breaking | Pinned 2026-08-08 (PR #758, SDK 22.4.0). That upgrade introduced the `known \| OtherString` response-enum modelling described below. |
@@ -35,7 +36,7 @@ git --no-pager show HEAD:lib/stripe-api-version.ts
 
 ## SDK Pin Coupling and Response-Enum Widening
 
-`stripe-node` types its `apiVersion` constructor option as the exact string the SDK release pins. A minor SDK bump that advances the pinned version fails `pnpm typecheck` with `Type '"<old pin>"' is not assignable to type '"<new pin>"'` at `lib/stripe.ts` until `lib/stripe-api-version.ts` is advanced with it. The two move together in one PR; never cast around the mismatch (DEBT-404, PR #758).
+`stripe-node` types its `apiVersion` constructor option as the exact string the SDK release pins. A minor SDK bump that advances the pinned version fails `pnpm typecheck` with `Type '"<old pin>"' is not assignable to type '"<new pin>"'` at `lib/stripe-client.ts` and at each test client built with the pin, until `lib/stripe-api-version.ts` is advanced with it. The two move together in one PR; never cast around the mismatch (DEBT-404, PR #758).
 
 Since SDK 22.4.0 Stripe types response enums as `'known' | 'values' | OtherString` (`OtherString = string & Record<never, never>`) so integrations handle values that exist in the API before they exist in the SDK. The client-owned port in `src/adapters/shared/stripe-types.ts` mirrors that split:
 
@@ -147,7 +148,7 @@ Stripe renders each event payload at the receiving endpoint's API version. An en
 
 | Surface | API version | Evidence |
 |---------|-------------|----------|
-| Code client pin | `2026-08-26.dahlia`; `2026-09-30.endive` from #1483 | `lib/stripe-api-version.ts`; `stripe@22.6.2` resolved in `pnpm-lock.yaml` (range `^22.6.1`), then `stripe@23.0.0` |
+| Code client pin | `2026-08-26.dahlia`; `2026-09-30.endive` from #1483; `2026-10-28.endive` from #1711 | `lib/stripe-api-version.ts`; `stripe@22.6.2` resolved in `pnpm-lock.yaml` (range `^22.6.1`), then `stripe@23.0.0`, then `stripe@23.1.0` (range `^23.1.0`) |
 | Live endpoint `we_1Tejqg…` (`https://addictionboards.com/api/stripe/webhook`) | `2026-05-27.dahlia`, explicit | Disabled, not deleted, so a compatible rollback target below the [rollback floor](../../guides/release/promote-to-production.md#keyed-action-output-compatibility) can use it again. Delete it at the next major-release migration |
 | Live endpoint `we_1UQ8O6…` (same URL) | `2026-09-30.endive`, explicit | The only enabled live endpoint, subscribed to all 13 handled events; see [Endive migration](#endive-migration-2026-10) |
 | Test endpoint (the `dev` branch preview alias) | Found `null`, so the account default; `2026-05-27.dahlia`, explicit, from 2026-10-11; now `2026-09-30.endive`, explicit | `we_1T19r…` (created 2026-02-15) had no version. It was replaced on 2026-10-11 by `we_1UPPK…`, see [Test endpoint rotation](#test-endpoint-rotation-2026-10-11), and on 2026-10-13 by `we_1UQ2wp…` at `2026-09-30.endive`, see [Endive migration](#endive-migration-2026-10). The only test endpoint |
@@ -165,7 +166,7 @@ Delivery receipts:
 
 Endpoints follow the code pin's **major release** (Dahlia, Endive, …), not each monthly version.
 
-- **Within a major release, the endpoints stay.** Stripe documents that monthly versions add and never break, and that an endpoint can move to any version in the same major release without code changes. Under Dahlia, the live endpoint therefore stayed at `2026-05-27.dahlia` while the client moved to `2026-08-26.dahlia`. Recreating it each month would rotate production's signing secret and redeploy, now under live traffic, for no difference the parser can see. `stripe-webhook-schemas.ts` reads only fields that are stable within a major release and passes the rest through.
+- **Within a major release, the endpoints stay.** Stripe documents that monthly versions add and never break, and that an endpoint can move to any version in the same major release without code changes. Under Dahlia, the live endpoint therefore stayed at `2026-05-27.dahlia` while the client moved to `2026-08-26.dahlia`. Under Endive, the live and test endpoints stay at `2026-09-30.endive` while the client moves to `2026-10-28.endive`. Recreating the live endpoint each month would rotate production's signing secret and redeploy, now under live traffic, for no difference the parser can see. `stripe-webhook-schemas.ts` reads only fields that are stable within a major release and passes the rest through.
 - **At a major release, the endpoints move,** following [Major-release migration](#major-release-migration). The test endpoint goes first.
 - **The test endpoint mirrors the live endpoint's version, explicitly,** except while a major-release migration has moved it first. Preview then receives production's payload shape. An endpoint without a version follows the account default (`2026-01-28.clover`, before Dahlia), which is how Preview came to receive Clover payloads while production received Dahlia ones. Do not align them by upgrading the account default. That also changes how the Events API renders events, and every other caller that relies on the default.
 
@@ -320,7 +321,7 @@ When upgrading Stripe SDK or API version:
 
 - [ ] Read the [changelog](https://docs.stripe.com/changelog) entry for the new API version and the [stripe-node release notes](https://github.com/stripe/stripe-node/releases); grep the codebase for every field or enum the notes mark `⚠️`
 - [ ] Search codebase for deprecated fields: `current_period_start`, `current_period_end` at subscription level
-- [ ] Advance `lib/stripe-api-version.ts` in the same PR as the SDK bump; update the "Last reviewed" date in `lib/stripe.ts`
+- [ ] Advance `lib/stripe-api-version.ts` in the same PR as the SDK bump; update the "Last reviewed" date in `lib/stripe-client.ts`
 - [ ] Run `pnpm typecheck` — a `Stripe` → `StripeClient` assignability error means a response enum widened; widen the matching response type in `src/adapters/shared/stripe-types.ts` (never the request filter) and extend `stripe-types.test.ts`. A failure in "sends only request fields the pinned API version accepts" means the SDK removed a field the port sends; move the port to the replacement the changelog names
 - [ ] Run the full gate including `pnpm test:e2e` — the required Checkout contract proves real TEST-mode Sessions and the success-sync path. `tests/integration/webhook-signature-ingress.integration.test.ts` separately verifies signed webhook ingress through the route handlers; neither contract proves live delivery from Stripe to a deployed endpoint.
 - [ ] Run the read-only [webhook endpoint census](#census-commands) in live and test mode and put it in the PR: each endpoint's `api_version` (null means the account default), its enabled events against [Webhooks We Handle](#webhooks-we-handle), and `pending_webhooks` on recent events. An SDK or pin change never moves an endpoint, so this is the only check on the version payloads actually arrive at

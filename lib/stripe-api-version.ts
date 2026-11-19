@@ -1,1 +1,1 @@
-export const STRIPE_API_VERSION = '2026-09-30.endive';
+export const STRIPE_API_VERSION = '2026-10-28.endive';
