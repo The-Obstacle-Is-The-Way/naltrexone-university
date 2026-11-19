@@ -61,14 +61,15 @@ it.each(KNOWN_LEGACY_MIGRATION_HASH_DRIFTS)(
         (entry) => entry.tag === drift.repairMigrationTag,
       );
       const original = journal.entries.find((entry) => entry.tag === drift.tag);
-      expect(original?.when).toBe(drift.when);
-      expect(repair?.idx).toBeGreaterThan(original?.idx ?? Infinity);
-      const canonicalSql = readFileSync(join(folder, drift.tag + '.sql'));
+      if (!original || !repair)
+        throw new Error(`Missing migration or repair for ${drift.tag}`);
+      expect(original.when).toBe(drift.when);
+      expect(repair.idx).toBeGreaterThan(original.idx);
+      const file = `${drift.tag}.sql`;
+      const canonicalSql = readFileSync(join(folder, file));
       expect(createHash('sha256').update(canonicalSql).digest('hex')).toBe(
         drift.expectedHash,
       );
-      if (!repair)
-        throw new Error(`Missing repair migration ${drift.repairMigrationTag}`);
       writeFileSync(
         join(folder, 'meta/_journal.json'),
         JSON.stringify({
@@ -81,12 +82,12 @@ it.each(KNOWN_LEGACY_MIGRATION_HASH_DRIFTS)(
       });
       databases.push(canonical);
       const draft = readFileSync(
-        join('tests/fixtures/legacy-migrations', drift.tag + '.sql'),
+        join('tests/fixtures/legacy-migrations', file),
       );
       expect(createHash('sha256').update(draft).digest('hex')).toBe(
         drift.appliedHash,
       );
-      writeFileSync(join(folder, drift.tag + '.sql'), draft);
+      writeFileSync(join(folder, file), draft);
       const legacy = await createDisposableDatabase({
         migrationsFolder: folder,
       });
