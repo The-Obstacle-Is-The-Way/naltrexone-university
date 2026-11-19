@@ -1,6 +1,6 @@
 # BUG-378: The CSP Reports the Site's Own Scripts and Uses Up Sentry's Error Quota
 
-**Status:** Open — record the signed-in CSP spec's violations only after sign-in, red first; the watcher's quota finding leaves #1610 as old reports age out; due 2026-11-24
+**Status:** Open — view a signed-in production page; the signed-in CSP spec records only after sign-in, red first; the quota finding leaves #1610 as reports age out; due 2026-11-24
 **Priority:** P2
 **Date:** 2026-11-14
 
