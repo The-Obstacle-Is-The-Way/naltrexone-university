@@ -1,6 +1,6 @@
 # BUG-382: Preview checkout cannot persist renewal consent on the draft 0033 schema
 
-**Status:** In Progress — verify the approved preview repair and a test-mode consent delivery; due 2026-11-20
+**Status:** Blocked — the owner verifies a test-mode consent delivery on the repaired preview; due 2026-11-20
 **Priority:** P1
 **Date:** 2026-11-19
 
@@ -13,6 +13,7 @@ The shared preview database applied the first version of migration 0033 from #74
 ## Evidence
 
 - The original 0033 in #743 hashes to `d3cefbfc623b5a0c`. Its final version hashes to `d465645a2e64ad9d`. Preview records the former and production the latter.
+- Before 0055 on November 19, a verified read-only transaction on the shared preview measured 0 total rows in `public.renewal_consent_records` and 0 rows with `consent_source = 'application'`. The second count bounds the legacy rows that could fail the new validated check.
 - In verified read-only transactions, preview lacked the nullable `application_source_id varchar(255)` column and its partial unique index. Its source-session check omitted the application-source conditions. Production matched the final 0033 for all three definitions.
 - A test-mode subscription Checkout completion on November 19 returned HTTP 500. The preview webhook log and the event's persisted error both identify PostgreSQL `42703`. The controller passes an explicit null application source to the consent repository, which names the column in its insert and return projection. Read-only EXPLAIN of that generated statement names the missing column on preview and succeeds on production.
 
@@ -34,7 +35,7 @@ Corrected 2026-11-19: the failed review build contained the regenerated SQL. The
 ## Verification
 
 - [x] Disposable PostgreSQL reproduced the old verifier’s false acceptance and the three differences after 0034. Both paths converge after 0055. A managed rehearsal preserved the canonical index and constraint identities and rolled back an incompatible legacy row.
-- [ ] After the approved repair, compare the column, validated check and valid unique partial index to the canonical definitions. Preserve ledger history.
+- [x] After the approved preview repair, a read-only comparison matched the column, validated check and valid unique partial index to production. The ledger kept all 55 earlier entries and appended the checked-in 0055 hash. The previously failing consent insert passed EXPLAIN.
 - [ ] Verify a test-mode checkout delivery and its committed consent and acknowledgment on the repaired preview before resuming billing QA.
 
 ## Related
