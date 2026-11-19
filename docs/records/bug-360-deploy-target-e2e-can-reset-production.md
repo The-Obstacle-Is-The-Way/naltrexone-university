@@ -55,7 +55,7 @@ Option 1, decided 2026-11-15 by the reviewing session, at the owner's delegation
 - [ ] Red first: the server-start check refuses an unset or remote `DATABASE_URL`, and `playwright.config.test.ts` pins that the server command runs it before `pnpm build` and `pnpm start`.
 - [ ] Local and CI E2E and integration still pass.
 - [x] Declined 2026-11-15 by the reviewing session, at the owner's delegation of engineering calls for this review: the owner's check for the two fixture rows. None was published on 2026-11-11 (BUG-353), which does not show they are absent, since the reset publishes both if both exist; the decline accepts that uncertainty, because once option 1 ships no E2E run can target a remote host. A host check cannot see through a tunnel: a loopback URL forwarded to production still passes, and only deliberate setup makes one.
-- [ ] The owner runs a read-only check in production for a `users` row with the shared E2E email, and for any `stripe_customers` or `stripe_subscriptions` rows linked to it, and records the result here. It shows only whether past harm happened, so it rides on the owner's pre-sale production reads and does not block the fix.
+- [ ] The owner runs a read-only check in production for a `users` row with the shared E2E email, and for any `stripe_customers` or `stripe_subscriptions` rows linked to it, and records the result here. It shows only whether such rows exist now, not whether a reset happened, so it rides on the owner's pre-sale production reads and does not block the fix.
 
 ## Related
 
