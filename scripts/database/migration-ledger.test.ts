@@ -158,51 +158,62 @@ describe('migration ledger schema-drift preflight', () => {
     });
   });
 
-  it('allows the measured legacy 0027 dev hash repaired by 0028', async () => {
-    const measuredEarly0027Hash =
-      '15124dc7eab8b5ab3e239d13ee1011ea515b96567771270658b47de84b9faf3c';
-    const current0027Hash =
-      '983c3458e8aadd6acaddbce0b514321f0cec4f0a2767b3a74b6442e9f0d4d35d';
-    const sql = createMigrationLedgerSql(async () => [
-      {
-        createdAt: 1783355955875,
-        hash: measuredEarly0027Hash,
-      },
-    ]);
+  const early0027 = {
+    createdAt: 1783355955875,
+    hash: '15124dc7eab8b5ab3e239d13ee1011ea515b96567771270658b47de84b9faf3c',
+  };
+  const migration0027 = {
+    idx: 27,
+    tag: '0027_early_wallow',
+    when: early0027.createdAt,
+    hash: '983c3458e8aadd6acaddbce0b514321f0cec4f0a2767b3a74b6442e9f0d4d35d',
+  };
+  const repair0028 = {
+    idx: 28,
+    tag: '0028_repair_attempts_selected_choice_index',
+    when: early0027.createdAt + 1,
+    hash: hashB,
+  };
+  const later = {
+    idx: 29,
+    tag: '0029_later',
+    when: repair0028.when + 1,
+    hash: hashC,
+  };
 
+  it('refuses a legacy hash when its repair is absent from the journal', async () => {
+    const sql = createMigrationLedgerSql(async () => [early0027]);
     await expect(
-      verifyMigrationLedger(sql, [
-        {
-          idx: 27,
-          tag: '0027_early_wallow',
-          when: 1783355955875,
-          hash: current0027Hash,
-        },
-      ]),
-    ).resolves.toBeUndefined();
+      verifyMigrationLedger(sql, [migration0027]),
+    ).rejects.toMatchObject({
+      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+    });
   });
 
-  it('allows the measured Preview 0033 hash repaired by generated 0034', async () => {
-    const appliedUnsafe0033Hash =
-      'd3cefbfc623b5a0c8b9b8a58555daab98ac8dde8007aa7bffb1ff6f4dddc8608';
-    const currentBackfilled0033Hash =
-      'd465645a2e64ad9dbae398d8256ed02c73ec60bd4439a66480c47210b4478d2c';
-    const sql = createMigrationLedgerSql(async () => [
-      {
-        createdAt: 1786051636812,
-        hash: appliedUnsafe0033Hash,
-      },
-    ]);
-
+  it('allows an outstanding legacy repair only while the migrator can still apply it', async () => {
+    const entries = [migration0027, repair0028, later];
+    const sql = createMigrationLedgerSql(async () => [early0027]);
     await expect(
-      verifyMigrationLedgerBeforeMigration(sql, [
-        {
-          idx: 33,
-          tag: '0033_small_wrecker',
-          when: 1786051636812,
-          hash: currentBackfilled0033Hash,
-        },
-      ]),
+      verifyMigrationLedgerBeforeMigration(sql, entries),
+    ).resolves.toBeUndefined();
+    const skipped = createMigrationLedgerSql(async () => [
+      early0027,
+      { createdAt: later.when, hash: later.hash },
+    ]);
+    await expect(
+      verifyMigrationLedgerBeforeMigration(skipped, entries),
+    ).rejects.toMatchObject({
+      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+    });
+  });
+
+  it('accepts a legacy hash with its measured repair present', async () => {
+    const sql = createMigrationLedgerSql(async () => [
+      early0027,
+      { createdAt: repair0028.when, hash: repair0028.hash },
+    ]);
+    await expect(
+      verifyMigrationLedger(sql, [migration0027, repair0028]),
     ).resolves.toBeUndefined();
   });
 

@@ -1,6 +1,6 @@
 # BUG-382: Preview checkout cannot persist renewal consent on the draft 0033 schema
 
-**Status:** Blocked — the repository owner must approve the shared preview repair and verify a test-mode consent delivery; due 2026-11-20
+**Status:** In Progress — verify the approved preview repair and a test-mode consent delivery; due 2026-11-20
 **Priority:** P1
 **Date:** 2026-11-19
 
@@ -8,13 +8,13 @@
 
 ## Summary
 
-The shared preview database applied the first version of migration 0033 from #743. Migration 0034 removes the temporary cancellation-method default. It leaves three differences in the renewal consent table. The migration verifier accepts that draft's hash even when those differences persist.
+The shared preview database applied the first version of migration 0033 from #743. Migration 0034 removes the temporary cancellation-method default. It leaves three logical differences in the renewal consent table. The migration verifier accepts that draft's hash even when those differences persist.
 
 ## Evidence
 
 - The original 0033 in #743 hashes to `d3cefbfc623b5a0c`. Its final version hashes to `d465645a2e64ad9d`. Preview records the former and production the latter.
 - In verified read-only transactions, preview lacked the nullable `application_source_id varchar(255)` column and its partial unique index. Its source-session check omitted the application-source conditions. Production matched the final 0033 for all three definitions.
-- A test-mode subscription Checkout completion on November 19 returned HTTP 500. The preview webhook log and the event's persisted error both identify PostgreSQL `42703`. The controller passes an explicit null application source to the consent repository, which names the column in its insert and return projection.
+- A test-mode subscription Checkout completion on November 19 returned HTTP 500. The preview webhook log and the event's persisted error both identify PostgreSQL `42703`. The controller passes an explicit null application source to the consent repository, which names the column in its insert and return projection. Read-only EXPLAIN of that generated statement names the missing column on preview and succeeds on production.
 
 ## Impact
 
@@ -27,11 +27,13 @@ Preview cannot record consent through that insert or queue its acknowledgment. T
 
 ## Resolution (decided)
 
-Keep applied migrations immutable. Require evidence that each accepted legacy path reaches the expected catalog. The owner controls the shared database write.
+Migration 0055 repairs the measured draft in one transaction. On the canonical path it leaves the consent table untouched. A legacy application consent lacking a recoverable source ID stops validation and rolls back. The ledger checks the repair timestamp and hash. The integration suite replays each allowlisted draft against the canonical SQL and compares column, constraint, index and enum definitions at its claimed repair.
+
+Corrected 2026-11-19: the failed review build contained the regenerated SQL. The earlier successful preview contained the draft. The source establishes which bytes each built.
 
 ## Verification
 
-- [ ] Prove that a missing repair fails verification and that both historical paths can reach the expected catalog in disposable PostgreSQL.
+- [x] Disposable PostgreSQL reproduced the old verifier’s false acceptance and the three differences after 0034. Both paths converge after 0055. A managed rehearsal preserved the canonical index and constraint identities and rolled back an incompatible legacy row.
 - [ ] After the approved repair, compare the column, validated check and valid unique partial index to the canonical definitions. Preserve ledger history.
 - [ ] Verify a test-mode checkout delivery and its committed consent and acknowledgment on the repaired preview before resuming billing QA.
 

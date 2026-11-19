@@ -48,7 +48,7 @@ const SCHEMA_DRIFT_MIGRATION_CONTENT_FIX =
   'Do not amend applied migrations. Restore the migration file to the applied content or add a new forward repair migration; update the legacy allowlist only for a measured repaired drift.';
 const HASH_PREFIX_LENGTH = 16;
 
-const KNOWN_LEGACY_MIGRATION_HASH_DRIFTS: readonly KnownLegacyMigrationHashDrift[] =
+export const KNOWN_LEGACY_MIGRATION_HASH_DRIFTS: readonly KnownLegacyMigrationHashDrift[] =
   [
     {
       tag: '0027_early_wallow',
@@ -60,16 +60,15 @@ const KNOWN_LEGACY_MIGRATION_HASH_DRIFTS: readonly KnownLegacyMigrationHashDrift
       repairMigrationTag: '0028_repair_attempts_selected_choice_index',
     },
     {
-      // Preview deployment dpl_B7JHk99ojtC7SajwPDFCtUxjeWE4 applied the
-      // first 0033 before review regenerated it with an existing-row backfill.
-      // Generated 0034 removes the temporary default so both paths converge.
+      // The first 0033 in #743 lacked the application-source column, check
+      // terms and index. 0034 removes only the cancellation-method default.
       tag: '0033_small_wrecker',
       when: 1786051636812,
       expectedHash:
         'd465645a2e64ad9dbae398d8256ed02c73ec60bd4439a66480c47210b4478d2c',
       appliedHash:
         'd3cefbfc623b5a0c8b9b8a58555daab98ac8dde8007aa7bffb1ff6f4dddc8608',
-      repairMigrationTag: '0034_remove_setup_cancellation_default',
+      repairMigrationTag: '0055_repair_renewal_consent_application_source',
     },
   ] as const;
 
@@ -200,30 +199,31 @@ function withMigrationFileHashes(
   }));
 }
 
-function isAllowedLegacyMigrationHashDrift(
-  journalEntry: MigrationJournalHashEntry,
-  appliedHash: MigrationLedgerHash,
-  allowlist: readonly KnownLegacyMigrationHashDrift[],
-): boolean {
-  if (typeof appliedHash !== 'string') return false;
-
-  return allowlist.some(
-    (allowed) =>
-      allowed.tag === journalEntry.tag &&
-      allowed.when === journalEntry.when &&
-      allowed.expectedHash === journalEntry.hash &&
-      allowed.appliedHash === appliedHash,
-  );
-}
-
 export function computeMigrationContentDrift(
   journalEntries: readonly MigrationJournalHashEntry[],
   appliedMigrations: readonly MigrationLedgerRow[],
-  allowlist: readonly KnownLegacyMigrationHashDrift[] = KNOWN_LEGACY_MIGRATION_HASH_DRIFTS,
+  allowPendingRepairs = false,
 ): MigrationContentDrift[] {
   const journalByCreatedAt = new Map(
     journalEntries.map((entry) => [String(entry.when), entry]),
   );
+  // Drizzle migrates only entries newer than the latest ledger timestamp.
+  const lastApplied = Math.max(
+    ...appliedMigrations.map((row) => Number(row.createdAt)),
+  );
+  const acceptedRepairs = KNOWN_LEGACY_MIGRATION_HASH_DRIFTS.filter((drift) => {
+    const repair = journalEntries.find(
+      (entry) => entry.tag === drift.repairMigrationTag,
+    );
+    if (!repair || repair.when <= drift.when) return false;
+    return (
+      (allowPendingRepairs && repair.when > lastApplied) ||
+      appliedMigrations.some(
+        (row) =>
+          Number(row.createdAt) === repair.when && row.hash === repair.hash,
+      )
+    );
+  });
   const contentDrifts: MigrationContentDrift[] = [];
 
   for (const migration of appliedMigrations) {
@@ -237,7 +237,13 @@ export function computeMigrationContentDrift(
 
     if (journalEntry.hash === migration.hash) continue;
     if (
-      isAllowedLegacyMigrationHashDrift(journalEntry, migration.hash, allowlist)
+      acceptedRepairs.some(
+        (drift) =>
+          drift.tag === journalEntry.tag &&
+          drift.when === journalEntry.when &&
+          drift.expectedHash === journalEntry.hash &&
+          drift.appliedHash === migration.hash,
+      )
     ) {
       continue;
     }
@@ -262,7 +268,7 @@ export async function verifyMigrationLedgerBeforeMigration(
     journalEntries,
     true,
   );
-  verifyAppliedMigrationContent(journalEntries, appliedMigrations);
+  verifyAppliedMigrationContent(journalEntries, appliedMigrations, true);
 }
 
 export async function verifyMigrationLedger(
@@ -323,10 +329,12 @@ export function createPostgresMigrationLedgerQuery(
 function verifyAppliedMigrationContent(
   journalEntries: readonly MigrationJournalEntry[],
   appliedMigrations: readonly MigrationLedgerRow[],
+  allowPendingRepairs = false,
 ): void {
   const contentDrifts = computeMigrationContentDrift(
     withMigrationFileHashes(journalEntries),
     appliedMigrations,
+    allowPendingRepairs,
   );
   if (contentDrifts.length > 0) {
     throw createMigrationContentDriftError(contentDrifts);
