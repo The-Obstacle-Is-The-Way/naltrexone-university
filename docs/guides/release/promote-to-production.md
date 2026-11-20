@@ -289,7 +289,11 @@ If you are using Neon, fetch the connection string for the intended branch first
 
 **The Vercel CLI version.** `pnpm db:seed:all` and `pnpm db:seed:prod`, `--plan` included, run the `vercel` on your `PATH`. They refuse, before pulling anything, unless the trimmed `vercel --version` output equals `REQUIRED_VERCEL_CLI_VERSION`, defined in `scripts/seed-environment-runtime.ts`. The pin is deliberate, by the owner's 2026-09-20 ruling: the CLI is not a repository dependency, and is never fetched with `npx` or `pnpm dlx`. Install that exact version before seeding, or change the pin in a reviewed pull request. A newer CLI is refused too.
 
-Normal local authenticated E2E uses the resolver-scoped Docker database and runs migrations automatically through `pnpm test:e2e`. For an intentional non-production deploy-target E2E check, confirm the host without printing credentials, migrate that target deliberately, then run the suite with both explicit opt-ins:
+Normal local authenticated E2E uses the resolver-scoped Docker database and runs migrations automatically through `pnpm test:e2e`.
+
+Never use the deploy-target E2E command below against Production. Its opt-ins do not identify Production or prevent mutation: once preflight succeeds, setup upserts the `users` row with the shared test user's email, rebinding its `clerk_user_id` to the test Clerk user, and writes that user's subscription rows; both stay even if the reset then stops. The reset then checks that both placeholder fixture rows exist, and stops if either is missing; otherwise it republishes them, deletes that user's practice data, then rebuilds it, so a failure between the two leaves it deleted (BUG-360). The target must therefore already hold both fixtures. This path does not seed, and no seed command adds them to a remote database: `pnpm db:seed --include-placeholders` refuses one (BUG-353). BUG-360's decided fix (2026-11-15) removes this check: E2E and integration will refuse every non-local target.
+
+For an intentional non-production deploy-target E2E check, confirm the host without printing credentials, migrate that target deliberately, then run the suite with both explicit opt-ins:
 
 ```bash
 LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
@@ -297,8 +301,6 @@ node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2
 DATABASE_URL="$LOCAL_E2E_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
-
-Never use that E2E command against Production. Its opt-ins do not identify Production or prevent mutation: once preflight succeeds, setup upserts the `users` row with the shared test user's email, rebinding its `clerk_user_id` to the test Clerk user, and writes that user's subscription rows; both stay even if the reset then stops. The reset then checks that both placeholder fixture rows exist, and stops if either is missing; otherwise it republishes them, deletes that user's practice data, then rebuilds it, so a failure between the two leaves it deleted (BUG-360). The target must therefore already hold both fixtures. This path does not seed, and no seed command adds them to a remote database: `pnpm db:seed --include-placeholders` refuses one (BUG-353). BUG-360's decided fix (2026-11-15) removes this check: E2E and integration will refuse every non-local target.
 
 Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.
 

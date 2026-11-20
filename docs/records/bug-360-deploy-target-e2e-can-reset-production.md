@@ -25,7 +25,7 @@ Without the opt-in, the E2E code's own connections refuse a non-local host (#158
 - **The integration opt-in.** `ALLOW_NON_LOCAL_DATABASE_URL=true` also admits any host in `tests/integration/setup.ts:46,61`, `tests/integration/helpers.ts:24-31`, `tests/integration/tag-taxonomy-census.integration.test.ts:17-24`, `tests/integration/actions.stripe.integration.test.ts:48-55` and `tests/integration/db.integration.test.ts:12-18`. `tests/shared/integration-database-host.ts:6-15` takes it as `allowNonLocal`. `docs/guides/testing/integration-tests.md:150-162` and `scripts/README.md:35` document it.
 - **Nothing uses the remote mode.**
   - CI runs E2E and integration, and the hosted Checkout smoke runs E2E, against `localhost` (`.github/workflows/ci.yml:37,147,219`, `.github/workflows/stripe-hosted-checkout-smoke.yml:25,99`), and `pnpm test:e2e` resolves `127.0.0.1`. No workflow, package script or QA procedure sets the opt-in.
-  - Only guide passages describe it, as an optional manual check: `docs/guides/testing/e2e-tests.md:231,239-249,504,520`, `docs/guides/release/promote-to-production.md:292-301` and `docs/architecture/environments.md:30,231-246`.
+  - Only guide passages describe it, as an optional manual check: `docs/guides/testing/e2e-tests.md:231,239-249,504,520`, `docs/guides/release/promote-to-production.md:292-303` and `docs/architecture/environments.md:30,231-246`.
   - Its old purpose, catching a deployed database behind the migrations, is gone: deploys now migrate before they build.
   - A remote target must already hold both fixtures, and no seed can add them to a remote database since BUG-353's fix.
 - **Not checked:** whether production holds the E2E email. No placeholder was published there on 2026-11-11 (BUG-353).
