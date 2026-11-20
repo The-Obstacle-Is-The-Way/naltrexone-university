@@ -46,7 +46,7 @@ Corrected 2026-11-19: the failed review build contained the regenerated SQL. The
 
 - [x] Disposable PostgreSQL reproduced the old verifier’s false acceptance and the three differences after 0034. Both paths converge after 0055. A managed rehearsal preserved the canonical index and constraint identities and rolled back an incompatible legacy row.
 - [x] After the approved preview repair, a read-only comparison matched the column, validated check and valid unique partial index to production. The ledger kept all 55 earlier entries and appended the checked-in 0055 hash. The previously failing consent insert passed EXPLAIN.
-- [ ] Verify a test-mode checkout delivery and its committed consent and acknowledgment on the repaired preview before resuming billing QA.
+- [ ] On the repaired preview, the owner saves test card `4242 4242 4242 4242` through **Add a card to keep access** (QA step 10a). Its `checkout.session.completed` event is processed with no `error`, `renewal_consent_records` holds the `stripe_setup` row for its `setup_session_id`, and `renewal_notice_deliveries` holds that row's `acknowledgment`. Billing QA resumes only after this check.
 - [ ] After promotion, production's ledger records 0055, and its column, validated check and unique partial index are unchanged.
 
 ## Related
