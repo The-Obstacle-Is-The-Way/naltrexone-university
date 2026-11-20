@@ -655,4 +655,62 @@ describe('merge command', () => {
   it('keeps the receipt unchanged when CodeRabbit recorded no learning', () => {
     expect(fixture().run(['987'], () => {})).not.toHaveProperty('learnings');
   });
+  // GraphQL returns at most 100 threads or comments per page, and a PR
+  // reviewed many times has more, so the guard reads every page.
+  describe('a PR with more than one page of threads or comments', () => {
+    const thread = (isResolved: boolean) => ({
+      isResolved,
+      comments: commentPage(),
+    });
+    const page = (nodes: unknown[], hasNextPage: boolean) => ({
+      nodes,
+      pageInfo: { hasNextPage, endCursor: hasNextPage ? 'next' : null },
+    });
+    function withMoreThreads() {
+      const pr = pullRequest();
+      pr.reviewThreads = {
+        nodes: [thread(true)],
+        pageInfo: { hasNextPage: true },
+      };
+      return pr;
+    }
+    it('reads every page of review threads before deciding', () => {
+      const { host, run } = fixture(withMoreThreads());
+      host.connectionPages.set('987:reviewThreads', [
+        page([thread(true)], true),
+        page([thread(true)], false),
+      ]);
+      expect(run(['987'], () => {})).toMatchObject({ head: HEAD });
+    });
+    it('refuses an unresolved thread on a later page', () => {
+      const { host, run } = fixture(withMoreThreads());
+      host.connectionPages.set('987:reviewThreads', [
+        page([thread(true)], true),
+        page([thread(false)], false),
+      ]);
+      expect(() => run(['987'], () => {})).toThrow(
+        'PR has unresolved review threads',
+      );
+    });
+    it('refuses an unlinked learning on a later page of PR comments', () => {
+      const pr = pullRequest();
+      pr.comments = { ...commentPage(), pageInfo: { hasNextPage: true } };
+      const { host, run } = fixture(pr);
+      host.connectionPages.set('987:comments', [
+        page([], true),
+        page([learningReply(CHAT_REPLY)], false),
+      ]);
+      expect(() => run(['987', '--merge'], () => {})).toThrow('does not link');
+      expect(host.merges).toEqual([]);
+    });
+    it('still fails closed when the last page read says more remain', () => {
+      const { host, run } = fixture(withMoreThreads());
+      host.connectionPages.set('987:reviewThreads', [
+        page([thread(true)], true),
+      ]);
+      expect(() => run(['987'], () => {})).toThrow(
+        'Incomplete GitHub checks or threads',
+      );
+    });
+  });
 });
