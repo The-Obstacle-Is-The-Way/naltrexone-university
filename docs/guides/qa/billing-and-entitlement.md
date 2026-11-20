@@ -54,10 +54,10 @@ Known environment quirk (not a bug): in Clerk development mode, the redirect bac
 
 ## Webhook outcomes (agent, read-only)
 
-The screens cannot show whether the app processed Stripe's webhook. Stripe creates the subscription and saves the card even when the app's handler fails, so the steps above passed on the preview while every consent write failed (BUG-382). After steps 8, 10a and 12, read the preview's database inside a read-only transaction, with its URL set explicitly, and check that:
+The screens cannot show whether the app processed Stripe's webhook. Stripe creates the subscription and saves the card even when the app's handler fails, so the steps above passed on the preview while every consent write failed (BUG-382). After steps 9, 10a and 12, read the database that the app under test uses inside a read-only transaction, with its URL set explicitly, and check that:
 
 - the step's `checkout.session.completed` event (the Stripe test dashboard or `stripe events list --type checkout.session.completed` gives its ID) has `processed_at` set and no `error` in `stripe_events`;
-- `renewal_consent_records` holds a row for the step's Checkout Session: `consent_source = 'stripe_checkout'` with that `checkout_session_id` after steps 8 and 12, and `consent_source = 'stripe_setup'` with that `setup_session_id` after step 10a;
+- `renewal_consent_records` holds a row for the step's Checkout Session: `consent_source = 'stripe_checkout'` with that `checkout_session_id` after steps 9 and 12, and `consent_source = 'stripe_setup'` with that `setup_session_id` after step 10a;
 - `renewal_notice_deliveries` holds the `acknowledgment` row for that consent record.
 
 A missing row or an unprocessed event fails the step, even when its screen passed.
