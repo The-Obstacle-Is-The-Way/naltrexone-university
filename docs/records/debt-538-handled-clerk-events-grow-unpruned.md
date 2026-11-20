@@ -8,11 +8,11 @@
 
 ## Summary
 
-`clerk_events` keeps every handled `user.updated` and `user.deleted` delivery. Nothing prunes the table, so it grows with no sale needed. DEBT-449 deferred a prune to a trigger, and that trigger rests on a census of the table that only the owner can run. No census has been recorded. The records rules make a trigger that needs external data no session can check a Blocked record with a dated follow-up, so DEBT-449's Waiting row is carried here.
+`clerk_events` keeps every handled `user.updated` and `user.deleted` delivery: the webhook ignores every other type (`src/adapters/controllers/clerk-webhook-controller.ts:220-222`). No production code prunes the table, so it grows with no sale needed. DEBT-449 parked automatic pruning until two consecutive monthly production censuses show it is needed. Only the owner can run that census, and none has been recorded. The records rules make a trigger that needs external data no session can check a Blocked record with a dated follow-up, so DEBT-449's Waiting row is carried here.
 
 ## Evidence
 
-- No code deletes from `clerk_events`: its repository only inserts and updates rows (`src/adapters/repositories/drizzle-clerk-event-repository.ts:15`, `:63`, `:75`).
+- No production code deletes from `clerk_events`: its repository only inserts and updates rows (`src/adapters/repositories/drizzle-clerk-event-repository.ts:15`, `:63`, `:75`).
 - `pending_stripe_cancellations` references `clerk_events.id` with `onDelete: 'cascade'` (`db/schema.ts:595`), so deleting an event also deletes its pending cancellation.
 - The 2026-11-15 queue review (#1704) could not check the census: no session can read the table, and no census is recorded. That day, Vercel's storage API reported `naltrexone-db` on Neon's Free plan with `usageQuotaExceeded: false` (DEBT-534).
 
@@ -22,22 +22,28 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
 
 ## Options
 
-1. **A monthly owner census, with the prune built when the trigger below fires.** Chosen: this is DEBT-449's decided trigger.
-2. Build the prune now. Not chosen: DEBT-449 deferred it to the trigger.
+1. **Monthly owner censuses until DEBT-449's trigger fires.** Chosen: DEBT-449 parked the prune on this trigger.
+2. Build the prune now. Not chosen: DEBT-449 parked it.
 
 ## Resolution (decided)
 
-- The owner runs this read-only query against production, then records both numbers and the date here: `SELECT count(*) FILTER (WHERE processed_at IS NOT NULL), pg_total_relation_size('clerk_events') FROM clerk_events`. The next census is due a month later.
-- Build the prune when either of these holds:
-  - two monthly censuses show at least 1,000,000 processed rows or 1 GiB;
-  - Neon's storage page or spend alert (DEBT-534) attributes growth to the table.
-- The prune must skip events that still own a `pending_stripe_cancellations` row.
+- The census is the owner's, since no session can read the table, and the records rules give it a due date. The owner runs this read-only query against production, then records both numbers and the date here: `SELECT count(*) FILTER (WHERE processed_at IS NOT NULL), pg_total_relation_size('clerk_events') FROM clerk_events`. Each census sets the next one's due date, a month later, in the status.
+- DEBT-449's trigger fires when either holds:
+  - two consecutive monthly censuses show at least 1,000,000 handled rows (the query's first count) or 1 GiB for the table and its indexes;
+  - Neon reports backup, storage or latency impact attributable to the table. #1704 (DEBT-533) named Neon's storage page and spend alert (DEBT-534) as where that shows.
+- When it fires, the prune goes back to direction review before it is built (DEBT-449). A revived design must:
+  - preserve unresolved outcomes;
+  - exclude any event with an outstanding `pending_stripe_cancellations` child;
+  - not age-delete a customer-cleanup obligation;
+  - respect BUG-246's cascade and prune-horizon constraint.
 
 ## Verification
 
-- [ ] The first census's two counts and date are recorded here.
+- [ ] The trigger fires, and the prune's direction review opens as its own record; or the owner declines further censuses.
 
 ## Related
 
-- DEBT-449 (closed): the deferred prune and its trigger, carried here from its Waiting row.
+- DEBT-449 (closed): parked the prune on this trigger. Its final text, reached through its ledger line, holds the full constraints.
+- DEBT-533 (closed in #1704): added Neon's storage page and spend alert as evidence.
 - DEBT-534: Neon's plan, storage page and spend alert.
+- BUG-246 (closed): the cascade and prune-horizon constraint.
