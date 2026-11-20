@@ -52,6 +52,16 @@ Known environment quirk (not a bug): in Clerk development mode, the redirect bac
 | 17 | ⚠ Re-enter the portal and undo the cancellation | After the update webhook is delivered, the banner clears on return/refresh |
 | 18 | ⚠ Optional deep variant | Drive a subscription to `past_due` with a Stripe test clock + failing card (recipe: attach the customer to a test clock **before** creating the subscription; start its trial, since a first checkout is always one, and save test card `4000 0000 0000 0341` through **Add a card to keep access** — it attaches but its charges fail; advance the clock between one and 24 hours past the trial's end, since Stripe finalizes and charges a subscription invoice about an hour after creating it and a longer advance can exhaust its retries, and wait for it to leave the advancing state; poll the subscription until `status = past_due`; allow webhook delivery to sync the app before checking): while its recorded period end is still in the future, the app shell shows the `PastDueBanner` ("Your payment failed…") and access continues. The app compares that period end with real time, which a test clock cannot advance, so the unit test `returns false for pastDue with expired period` (`src/domain/services/entitlement.test.ts`) proves instead that the same status is not entitled at or after period end |
 
+## Webhook outcomes (agent, read-only)
+
+The screens cannot show whether the app processed Stripe's webhook. Stripe creates the subscription and saves the card even when the app's handler fails, so the steps above passed on the preview while every consent write failed (BUG-382). After steps 8, 10a and 12, read the preview's database inside a read-only transaction, with its URL set explicitly, and check that:
+
+- the step's `checkout.session.completed` event (the Stripe test dashboard or `stripe events list --type checkout.session.completed` gives its ID) has `processed_at` set and no `error` in `stripe_events`;
+- `renewal_consent_records` holds a row for the step's Checkout Session: `consent_source = 'stripe_checkout'` with that `checkout_session_id` after steps 8 and 12, and `consent_source = 'stripe_setup'` with that `setup_session_id` after step 10a;
+- `renewal_notice_deliveries` holds the `acknowledgment` row for that consent record.
+
+A missing row or an unprocessed event fails the step, even when its screen passed.
+
 ## Visual checks
 
 - [ ] Reason and checkout banners use semantic status tokens (no raw palette) — `docs/design-system/pattern-registry.md` feedback patterns

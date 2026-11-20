@@ -1,6 +1,6 @@
 # BUG-382: Preview checkout cannot persist renewal consent on the draft 0033 schema
 
-**Status:** Blocked — the owner verifies a test-mode consent delivery on the repaired preview; due 2026-11-20
+**Status:** Blocked — owner saves a test card on the repaired preview (QA step 10a); agent checks consent; due 2026-11-20
 **Priority:** P1
 **Date:** 2026-11-19
 
@@ -19,7 +19,17 @@ The shared preview database applied the first version of migration 0033 from #74
 
 ## Impact
 
-Preview cannot record consent through that insert or queue its acknowledgment. The current table contents do not establish how many historical writes failed. Production has the required objects.
+Preview cannot record consent through that insert or queue its acknowledgment, and it never could. The schema #743 merged on August 6 already declared the column, and Drizzle's insert names every column of the table, so every consent write on the preview has failed since.
+
+On November 20, a verified read-only transaction on the shared preview found nine `checkout.session.completed` events stored unprocessed with SQLSTATE `42703`, dated August 12 to November 19.
+- Stripe still returns the eight newest. All eight come from manual QA accounts, including the permanent QA account: six subscription checkouts and two card saves.
+- The August event is past Stripe's 30-day event retention.
+- Stripe retries a sandbox delivery only three times over a few hours, so it will not deliver the seven older events again.
+- The only delete path prunes a record a year after its subscription ends, so the table is empty because of these failures, not a removal.
+
+Those accounts have no consent or acknowledgment on the preview. Do not resend their events: a replayed card save re-checks its subscription, and if that subscription has moved on, the handler ends the setup and detaches the card.
+
+The billing QA screens passed throughout, because Stripe creates the subscription and saves the card even when the webhook fails. Production has the required objects.
 
 ## Options
 
@@ -28,7 +38,7 @@ Preview cannot record consent through that insert or queue its acknowledgment. T
 
 ## Resolution (decided)
 
-Migration 0055 repairs the measured draft in one transaction. On the canonical path it leaves the consent table untouched. A legacy application consent lacking a recoverable source ID stops validation and rolls back. The ledger checks the repair timestamp and hash. The integration suite replays each allowlisted draft against the canonical SQL and compares column, constraint, index and enum definitions at its claimed repair.
+Migration 0055 repairs the measured draft in one transaction. On the canonical path it leaves the consent table untouched. A legacy application consent lacking a recoverable source ID stops validation and rolls back. The ledger checks the repair timestamp and hash. The integration suite replays each allowlisted draft against the canonical SQL and compares column, constraint, index and enum definitions at its claimed repair. Billing & Entitlement now checks, read-only, that each Checkout step's webhook was processed and recorded its consent and acknowledgment.
 
 Corrected 2026-11-19: the failed review build contained the regenerated SQL. The earlier successful preview contained the draft. The source establishes which bytes each built.
 
@@ -37,6 +47,7 @@ Corrected 2026-11-19: the failed review build contained the regenerated SQL. The
 - [x] Disposable PostgreSQL reproduced the old verifier’s false acceptance and the three differences after 0034. Both paths converge after 0055. A managed rehearsal preserved the canonical index and constraint identities and rolled back an incompatible legacy row.
 - [x] After the approved preview repair, a read-only comparison matched the column, validated check and valid unique partial index to production. The ledger kept all 55 earlier entries and appended the checked-in 0055 hash. The previously failing consent insert passed EXPLAIN.
 - [ ] Verify a test-mode checkout delivery and its committed consent and acknowledgment on the repaired preview before resuming billing QA.
+- [ ] After promotion, production's ledger records 0055, and its column, validated check and unique partial index are unchanged.
 
 ## Related
 
