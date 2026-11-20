@@ -7,6 +7,19 @@ describe('review command doubles refuse unplanned calls', () => {
   it.each([
     [['api', 'graphql', '-F', 'number=9'], 'Unexpected PR read: 9'],
     [['api', 'repos/o/r/pulls/9'], 'Unexpected API request: repos/o/r/pulls/9'],
+    [
+      [
+        'api',
+        'graphql',
+        '--paginate',
+        '--slurp',
+        '-f',
+        'query=x { reviewThreads(first:100, after:$endCursor) }',
+        '-F',
+        'number=9',
+      ],
+      'Unexpected paginated read: 9:reviewThreads',
+    ],
     [['issue', 'list'], 'Unexpected command: issue list'],
     [['pr', 'close', '9'], 'Unexpected command: pr close 9'],
   ])('gh %j', (args, message) => {
