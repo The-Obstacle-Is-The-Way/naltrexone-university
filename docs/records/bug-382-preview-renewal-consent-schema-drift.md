@@ -1,6 +1,6 @@
 # BUG-382: Preview checkout cannot persist renewal consent on the draft 0033 schema
 
-**Status:** Blocked — owner saves a test card on the repaired preview (QA step 10a); agent checks consent; due 2026-11-20
+**Status:** Verifying — owner's preview test card (QA 10a), then production's ledger records 0055 after promotion; due 2026-11-20
 **Priority:** P1
 **Date:** 2026-11-19
 

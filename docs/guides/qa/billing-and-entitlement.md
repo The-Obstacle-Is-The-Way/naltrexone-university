@@ -60,7 +60,7 @@ The screens cannot show whether the app processed Stripe's webhook. Stripe creat
 - `renewal_consent_records` holds a row for the step's Checkout Session: `consent_source = 'stripe_checkout'` with that `checkout_session_id` after steps 9 and 12, and `consent_source = 'stripe_setup'` with that `setup_session_id` after step 10a;
 - `renewal_notice_deliveries` holds the `acknowledgment` row for that consent record.
 
-A missing row or an unprocessed event fails the step, even when its screen passed.
+Delivery can trail the screen, so re-read the rows for up to five minutes. The step fails if its event is stored with an `error`, or if the processed event or any row is still missing after five minutes, even when its screen passed.
 
 ## Visual checks
 
