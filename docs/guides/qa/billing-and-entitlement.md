@@ -11,6 +11,8 @@
 
 Known environment quirk (not a bug): in Clerk development mode, the redirect back from Stripe Checkout can land on a sign-in screen on dev/preview — `docs/architecture/environments.md`.
 
+On the dev preview, run every step at the `dev` branch alias, the `naltrexone-university-git-dev-….vercel.app` address in the latest `dev` deployment's domains, never at a deployment's own address. The app builds Stripe's success, cancel, add-card and portal return URLs from `NEXT_PUBLIC_APP_URL`, which on the dev preview is that alias, and each `vercel.app` address keeps its own Clerk sign-in. So a checkout started elsewhere returns to the alias, where the paying account may not be signed in: the success page then asks for sign-in, or refuses the purchase as another account's.
+
 ---
 
 ## Section A — Signed out (production-safe)
@@ -61,6 +63,8 @@ The screens cannot show whether the app processed Stripe's webhook. Stripe creat
 - `renewal_notice_deliveries` holds the `acknowledgment` row for that consent record.
 
 Delivery can trail the screen, so re-read the rows for up to five minutes. The step fails if its event is stored with an `error`, or if the processed event or any row is still missing after five minutes, even when its screen passed.
+
+Never resend a failed event to make a step pass. A resent card save re-checks the account's billing, and the handler detaches the saved card once the account has no subscription, its subscription, plan or Stripe customer differs from the ones the card was saved for, its subscription is no longer entitled, or a cancellation is scheduled (`endTrialPaymentMethodSetup` in `src/adapters/controllers/stripe-webhook-controller.ts`). Record the failure instead.
 
 ## Visual checks
 

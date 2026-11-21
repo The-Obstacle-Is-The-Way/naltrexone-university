@@ -1,6 +1,6 @@
 # BUG-382: Preview checkout cannot persist renewal consent on the draft 0033 schema
 
-**Status:** Verifying — owner's preview test card (QA 10a), then production's ledger records 0055 after promotion; due 2026-11-20
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-11-20
 **Priority:** P1
 **Date:** 2026-11-19
 
@@ -46,8 +46,10 @@ Corrected 2026-11-19: the failed review build contained the regenerated SQL. The
 
 - [x] Disposable PostgreSQL reproduced the old verifier’s false acceptance and the three differences after 0034. Both paths converge after 0055. A managed rehearsal preserved the canonical index and constraint identities and rolled back an incompatible legacy row.
 - [x] After the approved preview repair, a read-only comparison matched the column, validated check and valid unique partial index to production. The ledger kept all 55 earlier entries and appended the checked-in 0055 hash. The previously failing consent insert passed EXPLAIN.
-- [ ] On the repaired preview, the owner saves test card `4242 4242 4242 4242` through **Add a card to keep access** (QA step 10a). Its `checkout.session.completed` event is processed with no `error`, `renewal_consent_records` holds the `stripe_setup` row for its `setup_session_id`, and `renewal_notice_deliveries` holds that row's `acknowledgment`. Billing QA resumes only after this check.
-- [ ] After promotion, production's ledger records 0055, and its column, validated check and unique partial index are unchanged.
+- [x] On the repaired preview, the owner saves test card `4242 4242 4242 4242` through **Add a card to keep access** (QA step 10a). Its `checkout.session.completed` event is processed with no `error`, `renewal_consent_records` holds the `stripe_setup` row for its `setup_session_id`, and `renewal_notice_deliveries` holds that row's `acknowledgment`. Billing QA resumes only after this check. Passed on 2026-11-20, and step 12's paid checkout then recorded its `stripe_checkout` row and `acknowledgment` the same way. #1715 records both, with the rest of Billing & Entitlement.
+- [x] After promotion, production's ledger records 0055, and its column, validated check and unique partial index are unchanged. Passed on 2026-11-21 after promotion #1715: in a verified read-only transaction, production's ledger matched all 56 checked-in hashes, and its schema catalog was identical to the read from before the promotion.
+
+Corrected 2026-11-21: recorded the last two checks. The nine events from before the fix stay unprocessed on the preview, on purpose: they are test data, and a resend can detach a card. Billing & Entitlement's Webhook outcomes section now carries that warning.
 
 ## Related
 
