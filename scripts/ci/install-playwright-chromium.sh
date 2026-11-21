@@ -25,8 +25,8 @@ find_apt_source_files() {
 }
 
 # GitHub's Ubuntu runners name their mirrors in a list that each source
-# reaches through `mirror+file:`, so the Azure archive is named there, not in
-# a source file (BUG-366). Print each list a source names that exists.
+# reaches through `mirror+file:`, so the regional archive is named there, not
+# in a source file (BUG-366). Print each list a source names that exists.
 find_apt_mirror_lists() {
   local mirror_list
   while IFS= read -r -d '' source_file; do
@@ -53,18 +53,25 @@ remove_microsoft_sources() {
   done < <(find_apt_source_files)
 }
 
-fail_over_azure_archive_sources() {
+# The runner's regional archive mirror: Azure's (`azure.archive.ubuntu.com`)
+# or, on AWS runners since 2026-11-15, an EC2 mirror
+# (`us-east-2.ec2.archive.ubuntu.com`, whatever the runner's own region). The
+# match starts at the URI's `//`, so plain `archive.ubuntu.com`, with no label
+# before it, never matches, and a host it cannot match whole is left alone.
+regional_archive_pattern='//([a-z0-9-]+\.)+archive\.ubuntu\.com'
+
+fail_over_regional_archive_sources() {
   local rewrote_source=false
   local replacement_file
   local staged_file
   while IFS= read -r -d '' source_file; do
-    if ! grep -q 'azure\.archive\.ubuntu\.com' "$source_file"; then
+    if ! grep -qE "$regional_archive_pattern" "$source_file"; then
       continue
     fi
 
     replacement_file="$(mktemp)"
-    sed \
-      's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' \
+    sed -E \
+      "s#$regional_archive_pattern#//archive.ubuntu.com#g" \
       "$source_file" > "$replacement_file"
     # Stage the rewrite beside the file, with the file's mode and owner, and
     # rename it into place only once it is complete: a copy that fails partway,
@@ -91,7 +98,7 @@ fail_over_azure_archive_sources() {
   if [[ "$rewrote_source" == true ]]; then
     echo '[playwright-install] Retrying apt dependencies through archive.ubuntu.com.'
   else
-    echo '[playwright-install] No Azure Ubuntu source was present; retrying the bounded apt phase once.'
+    echo '[playwright-install] No regional Ubuntu mirror was present; retrying the bounded apt phase once.'
   fi
 }
 
@@ -132,7 +139,7 @@ if ! run_bounded \
   pnpm exec playwright install-deps chromium; then
   echo '[playwright-install] Primary apt phase failed or timed out.'
   stop_leftover_apt_get
-  fail_over_azure_archive_sources
+  fail_over_regional_archive_sources
   run_bounded \
     "$fallback_timeout_seconds" \
     pnpm exec playwright install-deps chromium
