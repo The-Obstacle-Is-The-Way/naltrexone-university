@@ -45,7 +45,7 @@ Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped wit
   2. Reads use the stored plan. Only Checkout creation reads the configured price IDs.
   3. Renewal notices and reminders select by stored plan, and state the stored amount and currency.
   4. An unknown product, or a Price step 1 does not accept, refuses the write, leaves the event retryable, and raises an unknown-price alert through DEBT-505's path.
-  5. Checkout refuses a configured price whose Stripe amount, currency or interval differs from `lib/pricing-data.ts`, or whose `interval_count` is not 1 or `recurring.usage_type` is not `licensed`, and alerts (currency, and `interval_count` here and in step 1, added by the owner, 2026-11-19; `usage_type` in both, added by the owner, 2026-11-20, since a metered Price charges its amount per unit of usage).
+  5. Checkout refuses a configured price that step 1 would not accept, or whose Stripe amount, currency or interval differs from `lib/pricing-data.ts`, or whose `interval_count` is not 1 or `recurring.usage_type` is not `licensed`, and alerts (currency, and `interval_count` here and in step 1, added by the owner, 2026-11-19; `usage_type` in both, added by the owner, 2026-11-20, since a metered Price charges its amount per unit of usage; step 1's whole check, product included, added by the owner, 2026-11-21, so a buyer is not charged for a subscription step 4 would refuse).
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3) — waits for its trigger
 
