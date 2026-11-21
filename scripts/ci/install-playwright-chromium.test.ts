@@ -256,23 +256,30 @@ describe('install-playwright-chromium.sh', () => {
     },
   );
 
-  it('leaves a host it cannot match whole unchanged, and still retries', async () => {
-    // A host the runner never writes, with a letter outside the pattern: a
-    // match that began mid-label would turn it into an unresolvable host.
-    const harness = await createHarness(true, {
-      regionalArchive: 'Azure.archive.ubuntu.com',
-    });
-    const listBefore = await readFile(harness.mirrorList, 'utf8');
+  // Hosts the runner never writes. A match that began mid-label, or ended
+  // before the host does, would rewrite part of the host into another one.
+  it.each([
+    ['a letter outside the pattern', 'Azure.archive.ubuntu.com'],
+    [
+      'a domain after the archive name',
+      'us-east-2.ec2.archive.ubuntu.com.example.org',
+    ],
+  ])(
+    'leaves a host with %s unchanged, and still retries',
+    async (_why, regionalArchive) => {
+      const harness = await createHarness(true, { regionalArchive });
+      const listBefore = await readFile(harness.mirrorList, 'utf8');
 
-    const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
-      env: harness.env,
-    });
+      const { stdout } = await execFileAsync('bash', [INSTALL_SCRIPT], {
+        env: harness.env,
+      });
 
-    expect(stdout).toContain(
-      '[playwright-install] No regional Ubuntu mirror was present; retrying the bounded apt phase once.',
-    );
-    expect(await readFile(harness.mirrorList, 'utf8')).toBe(listBefore);
-  });
+      expect(stdout).toContain(
+        '[playwright-install] No regional Ubuntu mirror was present; retrying the bounded apt phase once.',
+      );
+      expect(await readFile(harness.mirrorList, 'utf8')).toBe(listBefore);
+    },
+  );
 
   it('still retries and installs Chromium when a source names a missing mirror list', async () => {
     const harness = await createHarness(true);
