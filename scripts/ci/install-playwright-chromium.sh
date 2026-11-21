@@ -54,10 +54,11 @@ remove_microsoft_sources() {
 }
 
 # The runner's regional archive mirror: Azure's (`azure.archive.ubuntu.com`)
-# or, on AWS runners since 2026-11-15, the EC2 region's
-# (`us-east-2.ec2.archive.ubuntu.com`). Plain `archive.ubuntu.com` has no
-# label before it, so it never matches.
-regional_archive_pattern='([a-z0-9-]+\.)+archive\.ubuntu\.com'
+# or, on AWS runners since 2026-11-15, an EC2 mirror
+# (`us-east-2.ec2.archive.ubuntu.com`, whatever the runner's own region). The
+# match starts at the URI's `//`, so plain `archive.ubuntu.com`, with no label
+# before it, never matches, and a host it cannot match whole is left alone.
+regional_archive_pattern='//([a-z0-9-]+\.)+archive\.ubuntu\.com'
 
 fail_over_regional_archive_sources() {
   local rewrote_source=false
@@ -70,7 +71,7 @@ fail_over_regional_archive_sources() {
 
     replacement_file="$(mktemp)"
     sed -E \
-      "s/$regional_archive_pattern/archive.ubuntu.com/g" \
+      "s#$regional_archive_pattern#//archive.ubuntu.com#g" \
       "$source_file" > "$replacement_file"
     # Stage the rewrite beside the file, with the file's mode and owner, and
     # rename it into place only once it is complete: a copy that fails partway,
