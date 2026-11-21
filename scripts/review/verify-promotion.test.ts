@@ -11,6 +11,11 @@ import {
   withPromotionReceipt,
 } from './verify-promotion';
 
+// Long enough for `node --import tsx` to start under a full gate's parallel
+// workers, where loading the script can take seconds; under Vitest's 10-second
+// test timeout.
+const TSX_START_LIMIT_MS = 8000;
+
 const HEAD = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
 const MERGE = 'c'.repeat(40);
@@ -565,7 +570,7 @@ describe('promotion proof command', () => {
     const result = spawnSync(
       process.execPath,
       ['--import', 'tsx', 'scripts/review/verify-promotion.ts', '--merge'],
-      { encoding: 'utf8', timeout: 2_000 },
+      { encoding: 'utf8', timeout: TSX_START_LIMIT_MS },
     );
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
