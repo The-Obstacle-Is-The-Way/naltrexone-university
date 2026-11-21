@@ -6,6 +6,11 @@ import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createGhRunner, withGhFailureReason } from './github-cli.mts';
 
+// A limit for a fake gh expected to exit on its own. A full gate starts
+// every test file at once, and Node's own startup can then take over a
+// second; the timeout tests pass their own short limits.
+const EXIT_LIMIT_MS = 5000;
+
 let directory: string;
 let executable: string;
 beforeEach(() => {
@@ -33,7 +38,10 @@ afterEach(() => rmSync(directory, { recursive: true, force: true }));
 
 describe('GitHub CLI transport', () => {
   it('preserves argv, UTF-8 stdout and stdin without shell interpretation', () => {
-    const gh = createGhRunner({ timeout: 1000, maxBuffer: 8192 }, executable);
+    const gh = createGhRunner(
+      { timeout: EXIT_LIMIT_MS, maxBuffer: 8192 },
+      executable,
+    );
     expect(
       JSON.parse(gh(['api', 'literal $(text)', 'two words'], 'body\n')),
     ).toEqual({
@@ -44,7 +52,7 @@ describe('GitHub CLI transport', () => {
   });
   it('captures stderr without publishing it and preserves the original exit evidence', () => {
     const source = `import { createGhRunner } from ${JSON.stringify(pathToFileURL(join(process.cwd(), 'scripts/lib/github-cli.mts')).href)};
-try { createGhRunner({timeout:1000}, ${JSON.stringify(executable)})(['fail']); }
+try { createGhRunner({timeout:${EXIT_LIMIT_MS}}, ${JSON.stringify(executable)})(['fail']); }
 catch (error) { console.log(JSON.stringify({status:error.status,stderr:error.stderr})); }`;
     const result = spawnSync(
       process.execPath,
@@ -66,7 +74,7 @@ catch (error) { console.log(JSON.stringify({status:error.status,stderr:error.std
   it('enforces the caller output bound', () => {
     expect(() =>
       createGhRunner(
-        { timeout: 1000, maxBuffer: 1024 },
+        { timeout: EXIT_LIMIT_MS, maxBuffer: 1024 },
         executable,
       )(['overflow']),
     ).toThrow(/ENOBUFS/);
@@ -77,7 +85,7 @@ describe('withGhFailureReason', () => {
   const line = 'Job failed; inspect GitHub issue access.';
   const failure = (
     args: string[],
-    limits: Parameters<typeof createGhRunner>[0] = { timeout: 1000 },
+    limits: Parameters<typeof createGhRunner>[0] = { timeout: EXIT_LIMIT_MS },
   ) => {
     try {
       createGhRunner(limits, executable)(args);
@@ -118,14 +126,17 @@ describe('withGhFailureReason', () => {
     ['a timeout', () => failure(['wait'], { timeout: 100 }), 'ETIMEDOUT'],
     [
       'an output overflow',
-      () => failure(['overflow'], { timeout: 1000, maxBuffer: 1024 }),
+      () => failure(['overflow'], { timeout: EXIT_LIMIT_MS, maxBuffer: 1024 }),
       'ENOBUFS',
     ],
     [
       'a missing executable',
       () => {
         try {
-          createGhRunner({ timeout: 1000 }, join(directory, 'missing'))([]);
+          createGhRunner(
+            { timeout: EXIT_LIMIT_MS },
+            join(directory, 'missing'),
+          )([]);
         } catch (error) {
           return error;
         }
