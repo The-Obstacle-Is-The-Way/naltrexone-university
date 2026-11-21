@@ -75,6 +75,8 @@ Never resend a failed event to make a step pass. A resent card save re-checks th
 - [ ] Pricing legal-consent links carry the canonical focus ring — `docs/design-system/standards.md` §3
 - [ ] `/pricing` at 390×844: plan cards stack without overflow; CTAs full-width tappable
 
+A Stripe-version run that runs only Section A and steps 13–15 does the last two checks. It never shows the reason, checkout or cancellation banners, and a change that qualifies for that run alters no screen ([QA method](method.md#when-procedures-run) item 2).
+
 ## Evidence
 
 Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellation banner). A Stripe-version run that runs only Section A and steps 13–15 takes step 14 (plan and status on `/app/billing`) and step 15 (the Stripe portal open) instead. Attach representative screenshots to the pull request or the run's report.
