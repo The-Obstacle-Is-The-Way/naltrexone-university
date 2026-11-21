@@ -109,7 +109,7 @@ Rejected alternatives: retain 35 (valid within the reviewed overlap, but sacrifi
 
 ### Mitigations
 
-- The fixes are decided. F21 tags each send (2026-10-06), with its claim's attempt ID rather than its row ID since 2026-11-20 (DEBT-414), and F22 hides the add-card dialog once cancellation is scheduled and rechecks at completion (both 2026-10-06). DEBT-511 reads the verified address from Clerk before sending (2026-10-07). DEBT-501 stores each subscription's plan and amount, and selects and words notices by them (2026-10-10). Until then, [the price ID rule](../architecture/environments.md#stripe-price-id-rule) forbids changing a price ID while there are subscribers.
+- The fixes are decided. F21 tags each send with its row ID, and F22 hides the add-card dialog once cancellation is scheduled and rechecks at completion (both 2026-10-06). DEBT-511 reads the verified address from Clerk before sending (2026-10-07). DEBT-501 stores each subscription's plan and amount, and selects and words notices by them (2026-10-10). Until then, [the price ID rule](../architecture/environments.md#stripe-price-id-rule) forbids changing a price ID while there are subscribers.
 - The daily job re-checks deadlines after every dispatch, so an alert recurs while a gap stands.
 - Price-change machinery is deferred, and no existing subscriber's price may change until it ships (owner, 2026-08-06). The `material_change` and `fee_change` notice kinds exist, but nothing schedules them.
 
