@@ -73,8 +73,8 @@ Rules of engagement (restating the standing mandates):
 2. **Gated runs:** the procedures under `docs/guides/qa/` whose header says `Promotion gate: yes`, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them (DEBT-465, 2026-10-03).
    - **A Stripe API version change** changes the billing flows unless the pull request that makes it shows all four of these:
      - the new version stays within the same major release: its suffix is unchanged, as from `2026-09-30.endive` to `2026-10-28.endive`;
-     - Stripe's changelog marks every entry for it non-breaking;
-     - no entry changes a request field the app sends or a response field it reads;
+     - Stripe's changelog marks every entry from the current pin up to the new version non-breaking, including any monthly versions it skips;
+     - no entry in that range changes a request field the app sends or a response field it reads;
      - the pull request changes no billing code, route or screen.
 
      Such a change runs only Billing & Entitlement's Section A and steps 13–15 against the dev preview. Step 15 opens a real portal session under the new version, and none of these steps enters a card. The required E2E creates real test-mode Checkout Sessions under the new version, and `pnpm typecheck`'s SDK-to-port contracts cover the rest of what it changes ([Stripe upgrade checklist](../../architecture/integrations/stripe.md#upgrade-checklist)). Any other Stripe version change runs the whole procedure, card steps included (owner, 2026-11-19).

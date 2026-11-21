@@ -77,7 +77,7 @@ Never resend a failed event to make a step pass. A resent card save re-checks th
 
 ## Evidence
 
-Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellation banner). Attach representative screenshots to the pull request or the run's report.
+Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellation banner). A Stripe-version run that runs only Section A and steps 13–15 takes step 14 (plan and status on `/app/billing`) and step 15 (the Stripe portal open) instead. Attach representative screenshots to the pull request or the run's report.
 
 ## On failure
 
