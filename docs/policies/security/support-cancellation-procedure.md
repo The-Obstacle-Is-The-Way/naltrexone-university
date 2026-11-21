@@ -1,6 +1,6 @@
 # Support Cancellation Procedure
 
-**Status:** Adopted 2026-09-28 (DEBT-414 F04)
+**Status:** Adopted 2026-09-28 (DEBT-414 F04); § 5 added 2026-11-21 at the owner's delegation (DEBT-414)
 **Owner:** the support coordinator named in the [information security program](./information-security-program.md)
 **Applies to:** requests to cancel a subscription sent to support@addictionboards.com
 
@@ -48,6 +48,12 @@ For every request, keep a note of:
 - when the confirmation was sent.
 
 Keep these notes for as long as renewal-consent evidence is kept (at least three years).
+
+## 5. Coverage
+
+- The support coordinator covers the mailbox.
+- An always-on auto-reply acknowledges every message and links the Billing page, where a learner can cancel at once.
+- While the coordinator is away, § 1's one-business-day step waits for their return. § 3 still dates a verified request from when it was received.
 
 ## Related
 

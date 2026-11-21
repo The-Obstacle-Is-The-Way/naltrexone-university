@@ -1,6 +1,6 @@
 # DEBT-539: Production Content Is Not Yet Bootstrapped as Release One
 
-**Status:** Blocked — the owner runs the content bootstrap before the first live sale
+**Status:** Blocked — a session runs the practice QA guide on a preview, then the owner runs the content bootstrap, before the first live sale
 **Priority:** P2
 **Date:** 2026-11-21
 
