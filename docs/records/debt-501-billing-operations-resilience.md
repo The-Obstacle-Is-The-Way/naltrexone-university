@@ -44,7 +44,7 @@ Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped wit
   1. When the webhook, the reconcile or the success sync learns of a subscription, take the plan from Stripe's Price (`recurring.interval` with `interval_count` 1 and `recurring.usage_type` `licensed`, accepted only for our product) and store plan, amount and currency, in nullable columns filled by every write and by the reconcile. Reads fall back to today's mapping until production has no empty row; a second migration then makes them required and removes the fallback.
   2. Reads use the stored plan. Only Checkout creation reads the configured price IDs.
   3. Renewal notices and reminders select by stored plan, and state the stored amount and currency.
-  4. An unknown product or interval refuses the write, leaves the event retryable, and raises an unknown-price alert through DEBT-505's path.
+  4. An unknown product, or a Price step 1 does not accept, refuses the write, leaves the event retryable, and raises an unknown-price alert through DEBT-505's path.
   5. Checkout refuses a configured price whose Stripe amount, currency or interval differs from `lib/pricing-data.ts`, or whose `interval_count` is not 1 or `recurring.usage_type` is not `licensed`, and alerts (currency, and `interval_count` here and in step 1, added by the owner, 2026-11-19; `usage_type` in both, added by the owner, 2026-11-20, since a metered Price charges its amount per unit of usage).
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3) — waits for its trigger
