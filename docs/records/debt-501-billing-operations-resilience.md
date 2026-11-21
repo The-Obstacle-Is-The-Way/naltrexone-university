@@ -41,11 +41,11 @@ Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped wit
 - **Who it locks out today.** Production already holds subscription rows: by the owner's account (2026-10-13), real people took live trials, and a row is removed only with its user (`db/schema.ts:230-232`). A changed price ID would make every read of those rows throw and the reconcile fail them. The price-ID rule in `docs/architecture/environments.md` (done 2026-10-09) is the only guard, and it is in force.
 - **Moved to Waiting** by the owner, 2026-11-15, and removed from the pre-sale list. Trigger: a change of either price ID is planned, in any environment; the rule forbids making it first. Item 7's live purchase confirms that today's live Prices charge what the consent text states.
 - **Decided 2026-10-10: a subscription's plan is a recorded fact.**
-  1. When the webhook, the reconcile or the success sync learns of a subscription, take the plan from Stripe's Price (`recurring.interval` with `interval_count` 1, accepted only for our product) and store plan, amount and currency, in nullable columns filled by every write and by the reconcile. Reads fall back to today's mapping until production has no empty row; a second migration then makes them required and removes the fallback.
+  1. When the webhook, the reconcile or the success sync learns of a subscription, take the plan from Stripe's Price (accepted only for our product, and only as a flat fee: `recurring.interval` `month` or `year` with `interval_count` 1, `recurring.usage_type` `licensed`, and `billing_scheme` `per_unit` with a `unit_amount`) and store plan, amount and currency, in nullable columns filled by every write and by the reconcile. Reads fall back to today's mapping until production has no empty row; a second migration then makes them required and removes the fallback.
   2. Reads use the stored plan. Only Checkout creation reads the configured price IDs.
   3. Renewal notices and reminders select by stored plan, and state the stored amount and currency.
-  4. An unknown product or interval refuses the write, leaves the event retryable, and raises an unknown-price alert through DEBT-505's path.
-  5. Checkout refuses a configured price whose Stripe amount, currency or interval differs from `lib/pricing-data.ts`, or whose `interval_count` is not 1, and alerts (currency, and `interval_count` here and in step 1, added by the owner, 2026-11-19).
+  4. An unknown product, or a Price step 1 does not accept, refuses the write, leaves the event retryable, and raises an unknown-price alert through DEBT-505's path.
+  5. Checkout refuses a configured price that step 1 would not accept, or whose Stripe amount, currency or interval differs from `lib/pricing-data.ts`, and alerts (currency, and `interval_count` here and in step 1, added by the owner, 2026-11-19; `usage_type` in both, added by the owner, 2026-11-20, since a metered Price charges its amount per unit of usage; step 1's whole check, product included, added by the owner, 2026-11-21, so a buyer is not charged for a subscription step 4 would refuse; `billing_scheme` `per_unit` with a `unit_amount`, added 2026-11-21 under the owner's flat-fee choice, so step 1 always stores, and step 3 always states, the Price's own amount: a tiered Price has none).
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3) — waits for its trigger
 
@@ -93,3 +93,5 @@ Corrected 2026-11-18: item 9's watch checks every unreported unfinished run inst
 - BUG-364: shipped item 4's completion recheck.
 - DEBT-465: runs the billing QA procedure in test mode before the first live sale.
 - DEBT-530: the commercial terms that item 2's step 5 checks against Stripe.
+
+Corrected 2026-11-21: item 2's steps 1, 4 and 5 accept only our product's flat-fee monthly or annual Price: `usage_type` by the owner on 2026-11-20, the product check by the owner on 2026-11-21, and `billing_scheme` and the two intervals under the owner's flat-fee choice, from #1716's reviews.
