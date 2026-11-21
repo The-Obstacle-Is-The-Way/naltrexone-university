@@ -6,10 +6,11 @@ import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createGhRunner, withGhFailureReason } from './github-cli.mts';
 
-// A limit for a fake gh expected to exit on its own. A full gate starts
-// every test file at once, and Node's own startup can then take over a
-// second; the timeout tests pass their own short limits.
-const EXIT_LIMIT_MS = 5000;
+// A limit long enough for the fake gh to start: one expected to exit on its
+// own, or the stall fake, which writes before it is killed. Under a full
+// gate's parallel workers, Node's own startup can take over a second. Tests
+// that need only the kill pass their own short limits.
+const START_LIMIT_MS = 5000;
 
 let directory: string;
 let executable: string;
@@ -27,7 +28,7 @@ else if (args[0] === 'stderr') { process.stdout.write('{"message":"Not Found"}')
 else if (args[0] === 'wait') setTimeout(() => {}, 5000);
 else if (args[0] === 'silent') process.exit(1);
 else if (args[0] === 'die') process.kill(process.pid, 'SIGKILL');
-else if (args[0] === 'stall') { process.stderr.write('gh: partial output'); setTimeout(() => {}, 5000); }
+else if (args[0] === 'stall') { process.stderr.write('gh: partial output'); setTimeout(() => {}, 30000); }
 else if (args[0] === 'overflow') process.stdout.write('x'.repeat(4096));
 else process.stdout.write(JSON.stringify({ args, input: fs.readFileSync(0, 'utf8'), utf8: 'é' }));
 `,
@@ -39,7 +40,7 @@ afterEach(() => rmSync(directory, { recursive: true, force: true }));
 describe('GitHub CLI transport', () => {
   it('preserves argv, UTF-8 stdout and stdin without shell interpretation', () => {
     const gh = createGhRunner(
-      { timeout: EXIT_LIMIT_MS, maxBuffer: 8192 },
+      { timeout: START_LIMIT_MS, maxBuffer: 8192 },
       executable,
     );
     expect(
@@ -52,7 +53,7 @@ describe('GitHub CLI transport', () => {
   });
   it('captures stderr without publishing it and preserves the original exit evidence', () => {
     const source = `import { createGhRunner } from ${JSON.stringify(pathToFileURL(join(process.cwd(), 'scripts/lib/github-cli.mts')).href)};
-try { createGhRunner({timeout:${EXIT_LIMIT_MS}}, ${JSON.stringify(executable)})(['fail']); }
+try { createGhRunner({timeout:${START_LIMIT_MS}}, ${JSON.stringify(executable)})(['fail']); }
 catch (error) { console.log(JSON.stringify({status:error.status,stderr:error.stderr})); }`;
     const result = spawnSync(
       process.execPath,
@@ -74,7 +75,7 @@ catch (error) { console.log(JSON.stringify({status:error.status,stderr:error.std
   it('enforces the caller output bound', () => {
     expect(() =>
       createGhRunner(
-        { timeout: EXIT_LIMIT_MS, maxBuffer: 1024 },
+        { timeout: START_LIMIT_MS, maxBuffer: 1024 },
         executable,
       )(['overflow']),
     ).toThrow(/ENOBUFS/);
@@ -85,7 +86,7 @@ describe('withGhFailureReason', () => {
   const line = 'Job failed; inspect GitHub issue access.';
   const failure = (
     args: string[],
-    limits: Parameters<typeof createGhRunner>[0] = { timeout: EXIT_LIMIT_MS },
+    limits: Parameters<typeof createGhRunner>[0] = { timeout: START_LIMIT_MS },
   ) => {
     try {
       createGhRunner(limits, executable)(args);
@@ -126,7 +127,7 @@ describe('withGhFailureReason', () => {
     ['a timeout', () => failure(['wait'], { timeout: 100 }), 'ETIMEDOUT'],
     [
       'an output overflow',
-      () => failure(['overflow'], { timeout: EXIT_LIMIT_MS, maxBuffer: 1024 }),
+      () => failure(['overflow'], { timeout: START_LIMIT_MS, maxBuffer: 1024 }),
       'ENOBUFS',
     ],
     [
@@ -134,7 +135,7 @@ describe('withGhFailureReason', () => {
       () => {
         try {
           createGhRunner(
-            { timeout: EXIT_LIMIT_MS },
+            { timeout: START_LIMIT_MS },
             join(directory, 'missing'),
           )([]);
         } catch (error) {
@@ -149,7 +150,8 @@ describe('withGhFailureReason', () => {
   });
 
   it('lets a timeout’s code win over output written before it', () => {
-    const error = failure(['stall'], { timeout: 500 });
+    // The fake sleeps far past this limit, so the kill always comes first.
+    const error = failure(['stall'], { timeout: START_LIMIT_MS });
     expect(error).toHaveProperty('stderr', 'gh: partial output');
     expect(withGhFailureReason(line, error)).toBe(`${line} Cause: ETIMEDOUT`);
   });
