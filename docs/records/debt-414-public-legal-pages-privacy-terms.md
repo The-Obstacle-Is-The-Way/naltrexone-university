@@ -45,7 +45,7 @@ The full history is in git at `34d9aea0`: the implementation spec, the stage rev
 ## Options
 
 For F21, the early failure report:
-1. **Tag each send with its delivery row's ID** (decided 2026-10-06, kept 2026-11-15). Resend's bounced, failed and suppressed payloads carry the send's tags in `data.tags`, so the webhook can match a failure by its tag before the email ID is stored.
+1. **Tag each send** (decided 2026-10-06, kept 2026-11-15). The tag is the claim's `attemptId`, not the row's ID, since 2026-11-20 (Resolution). Resend's bounced, failed and suppressed payloads carry the send's tags in `data.tags`, so the webhook can match a failure by its tag before the email ID is stored.
 2. **A retryable webhook response** (rejected 2026-10-06). It still loses an early delivery report.
 3. **A durable inbox of unmatched reports** (rejected 2026-10-06). It would store outcomes for unrelated mail.
 4. **Accept the gap** (rejected 2026-11-15 by the reviewing session, at the owner's delegation). A suppression is decided without contacting the recipient's server, so its report can be the fastest. A crash between the send and the ID write is already covered: it ends in `outcome_unknown`, the daily job quarantines a claim stale for 15 minutes and raises its alert (`src/application/use-cases/send-due-renewal-notices.ts:200-221`). An early failure report is not covered.
@@ -53,10 +53,10 @@ For F21, the early failure report:
 ## Resolution (decided)
 
 **Engineering: F21 (P4).** Option 1. Ship it before the first live sale.
-- Send the delivery row's ID as a tag. When a failure or delivery report's email ID is unknown, match it by that tag. Confirm that `email.delivered` carries `data.tags` before relying on it.
+- Send the claim's `attemptId` as a tag, not the delivery row's ID: a requeue keeps the row and clears its email ID (`src/adapters/repositories/drizzle-renewal-notice-delivery-repository.ts:245`, `:281`), so a row tag could match a superseded send's late report. When a failure or delivery report's email ID is unknown, match it by that tag; a report naming a superseded attempt changes nothing. Confirm that `email.delivered` carries `data.tags` before relying on it.
 - `persistOutcome` never replaces a recorded failure or delivery. An untagged report whose email ID is unknown stays acknowledged and ignored; one whose ID is stored still matches by it. A lost send response ends in `outcome_unknown` only when no report was recorded first: the daily job's quarantine moves only `processing` rows (`src/adapters/repositories/drizzle-renewal-notice-delivery-repository.ts:221`), so a recorded report stands.
 - Files: `src/adapters/gateways/resend-transactional-email-gateway.ts`, `resend-webhook-controller.ts`, the delivery repository's port, fake and Drizzle adapter, and `dispatch-renewal-notice-delivery.ts`.
-- Red tests first: an early failure report, and an early delivery report, matched by its tag, each still recorded after the send's own outcome is stored; an early report followed by a lost send response, which keeps the report through the quarantine; a duplicate report; reports before and after the ID is stored; an untagged report with an unknown ID left unchanged, and one whose ID is stored still matched.
+- Red tests first: an early failure report, and an early delivery report, matched by its tag, each still recorded after the send's own outcome is stored; an early report followed by a lost send response, which keeps the report through the quarantine; an early report followed by an accepted send, asserting dispatch's result as well as the row, since `markAccepted` throws `CONFLICT` once the row has left `processing` (`src/adapters/repositories/drizzle-renewal-notice-delivery-repository.ts:169-175`, `:384-406`) and dispatch awaits it uncaught (`src/application/use-cases/dispatch-renewal-notice-delivery.ts:131-134`, `:292-298`); a duplicate report; reports before and after the ID is stored; an untagged report with an unknown ID left unchanged, and one whose ID is stored still matched.
 
 **Owner, counsel and tax.** Each item names who decides, when, and what closes it.
 - **F07, the first real report.** Owner. When the first acknowledgment is sent in production, at BUG-364's live trial check or the first live sale. Done when Resend's webhook log shows a 200 for a real report, and that notice's row reads `delivered` or `terminal_failure`.
@@ -132,3 +132,5 @@ For F21, the early failure report:
 - [Support cancellation procedure](../policies/security/support-cancellation-procedure.md) and the [requeue guide](../guides/operations/requeue-renewal-notice.md).
 
 Corrected 2026-11-15: rewritten as a live record of the open items. The finished build history is in git at `34d9aea0`: the spec, the stage reviews, the 2026-09-16 review tables, the remediation log and the earlier Corrected lines. Retitled from "Public Legal Pages, Renewal Consent, and Security-Program Closure". F22 moves to BUG-364, and the operator-alert limit to BUG-377 and DEBT-505. F23 is done, and so is the Georgia retrieval: ADR-027 cites the official code PDF (288ba0cf). F21's line references are updated, and its option to accept the gap is rejected. The Stripe public-details and out-of-band Session rules move to the Stripe integration doc. ADR-027's citations of this record's § 5 and § 7 refer to the text at `34d9aea0`.
+
+Corrected 2026-11-20: F21 tags the claim's `attemptId` rather than the delivery row's ID, since a requeue keeps the row; its early-report test asserts dispatch's result too (#1704 review).
