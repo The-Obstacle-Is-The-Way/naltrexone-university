@@ -69,6 +69,7 @@ Nothing reaches users or production. #1667, #1669 and #1683 stay open until the 
   - the four real-SDK tests' tokens gain `cat: 'cl_B7d4PD111AAA'`, the session category. Run them red on 3.28.0 first;
   - the limiter's mirrored refresh rules in `lib/clerk-backend-call-limit.ts` rechecked against 3.28.0. Its comments name 3.26.2, so if it should also skip untagged or non-session tokens, add that with a red test;
   - the `postcss` override removed, or restated with comments that match the installed consumers, decided on the bundle's lockfile. Raise the `nanoid@3` override to 3.3.20 or later, and correct its comment.
+- **Some updates are added by hand.** Dependabot's #1718 proposes `vite` 8.3.8 and `@clerk/nextjs` 7.10.0, but no Dependabot PR proposes `ws` or the `brace-expansion`, `postcss` and `nanoid` override changes. So the bundle follows "Updates added beyond the sources" in `docs/guides/dependencies/updating-dependencies.md`, since CodeRabbit skips the lockfile. The owner deferred a script for that scope check on 2026-11-17, to be built test-first with this bundle.
 - **If a fix reaches a later version first,** take the newest version past the gate.
 - **Take the `vite`, `brace-expansion` or `ws` fix at once, through an exception, if it becomes reachable.** The policy allows one for these critical and high advisories once they match this app:
   - a `ws` connection that a peer outside the machine can reach;
@@ -94,3 +95,5 @@ Nothing reaches users or production. #1667, #1669 and #1683 stay open until the 
 - `docs/policies/supply-chain.md`: Urgent CVE patches before the 7-day cooldown.
 
 Corrected 2026-11-15: `ws` (#1683) joins the bundle, clearing the gate before Clerk, so the title names four advisories and Impact names the three open issues; `@tailwindcss/postcss` is 4.3.5 since #1702, with the same `^8.5.25`; the advisory database still lacked all four on 2026-11-15.
+
+Corrected 2026-11-21: Resolution names the hand-added updates and the deferred scope-check script.

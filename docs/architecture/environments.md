@@ -93,7 +93,7 @@ These rules are enforced by the repo today:
 | Clerk webhook secret | Production Clerk webhook | Preview/dev Clerk webhook if used | Local/dev webhook secret if used |
 | Stripe secret + publishable keys | Live mode | Test mode | Test mode |
 | Stripe price IDs | Live price IDs | Test price IDs | Test price IDs |
-| `NEXT_PUBLIC_APP_URL` | Canonical production domain | Actual preview deployment URL | Local origin you are serving (`127.0.0.1` or `localhost`) |
+| `NEXT_PUBLIC_APP_URL` | Canonical production domain | The preview's address; on the `dev` preview, its branch alias (`naltrexone-university-git-dev-….vercel.app`) | Local origin you are serving (`127.0.0.1` or `localhost`) |
 | `SENTRY_DSN` (server project's key, sensitive, never `NEXT_PUBLIC`) / `NEXT_PUBLIC_SENTRY_DSN` (browser project's key) | Set both: server events and operational alerts need `SENTRY_DSN` | Optional | Optional |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Required; generate with `openssl rand -base64 32` | Required | Optional |
 | `CONSENT_STATE_SECRET` | Required; generate with `openssl rand -hex 32` | Required | Optional; the E2E server gets a test-only value |
