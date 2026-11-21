@@ -1,6 +1,6 @@
 # BUG-364: The Trial Says It Renews After Cancellation Is Scheduled
 
-**Status:** Verifying — the owner's no-card production trial check, before the first live sale; due 2026-11-08
+**Status:** Verifying — the owner's no-card live trial check, which also covers BUG-365, in the owner's pre-sale Stripe session; due 2026-11-22
 **Priority:** P3
 **Date:** 2026-10-22
 
@@ -8,85 +8,44 @@
 
 ## Summary
 
-The trial copy ignores a scheduled cancellation. This record is the engineering of DEBT-414 F22, decided 2026-10-06, and adds the saved-card variant found in the billing QA run for promotion #1594. F22 stays the decision of record; this record carries the fix, its tests and its verification.
+The trial copy ignored a scheduled cancellation. This record is the engineering of DEBT-414 F22, decided 2026-10-06, and adds the saved-card variant found in the billing QA run for promotion #1594. F22 stays the decision of record.
 
-**With a saved card**, after the learner cancels in the Stripe portal:
-- The app's trial banner says "Pro Monthly renews at $29 per month on your saved card when your trial ends".
-- The Billing line says "Renews at $29 per month on your saved card when your trial ends, until you cancel".
-- The same Billing page shows "Cancellation scheduled — Your subscription will cancel on …", so it contradicts itself.
+- **With a saved card**, after the learner canceled in the Stripe portal, the banner and the Billing line still promised a renewal on the saved card, while the same Billing page said "Cancellation scheduled".
+- **Without a card** (F22's case), the banner still offered the add-card dialog, and adding a card recorded an initial-offer renewal consent and sent an acknowledgment for a renewal that would not happen.
 
-**Without a card** (F22's case):
-- The banner still says "Add a card before your trial ends to keep access", and opens the add-card dialog.
-- The Billing line still promises a charge if a card is added.
-- Adding one records an initial-offer renewal consent and sends a renewal acknowledgment for a renewal that will not happen.
+This record's production check also records BUG-365's half: both fixes shipped in promotion #1613, and one live trial checks both. BUG-365 closes as Resolved when it is recorded here.
 
 ## Evidence
 
-Found on the dev preview during the billing-and-entitlement QA run for promotion #1594, 2026-10-22. The test account had a Pro Monthly trial with test card 4242 saved. After **Cancel subscription** in the Stripe portal, which showed "Cancels Oct 29", `/app/billing` showed the amber notice while the banner and the subscription line still promised renewal.
-
-The code on `main` after #1594:
-- **The banner** chooses its copy from `cardSaved` alone (`app/(app)/app/layout.tsx`, `TrialCountdownBanner`).
-- **The Billing line** does the same (`app/(app)/app/billing/page.tsx`, `TrialRenewalLine`).
-- **The no-card branch** offers the add-card dialog on the trial status alone.
-- **The layout's data has no cancellation flag.** `CheckEntitlementUseCase` (`src/application/use-cases/check-entitlement.ts`) does not return `cancelAtPeriodEnd`, so the layout cannot see it. The Billing page already receives the subscription.
-- **The persisted flag is already complete.** `cancelAtPeriodEnd` folds in the portal's `cancel_at` (`src/adapters/gateways/stripe/stripe-cancellation.ts`), so no adapter work is needed.
-- **The add-card use case** (`create-trial-payment-method-setup-session.ts`) checks only for an unexpired trial.
-- **A code comment states the false premise.** `check-trial-saved-card.ts` says a saved card means the trial renews.
-
-Promotion #1594 did not introduce this: the copy and the logic were on `main` before it.
-
-**Surfaces checked, none missed.** In-app renewal claims exist only in the banner and the Billing line. Paid `active` subscriptions show no renewal line. Pricing, checkout and terms text is pre-purchase. The renewal-notice job already excludes `cancelAtPeriodEnd` (`send-due-renewal-notices.ts`).
+Found on the dev preview on 2026-10-22: a Pro Monthly trial with test card 4242 saved, canceled in the Stripe portal ("Cancels Oct 29"). `/app/billing` showed the amber notice while the banner and the subscription line still promised renewal. The banner and the Billing line chose their copy from `cardSaved` alone, the layout's entitlement read did not return `cancelAtPeriodEnd`, and the add-card use case checked only for an unexpired trial. The copy and logic were on `main` before #1594.
 
 ## Impact
 
-- A learner who canceled is told they will be charged, or is invited to add a card for a renewal that will not happen. That works against DEBT-414's clear-cancellation evidence (F04 recorded a no-card trial journey).
-- In the no-card case, a false renewal consent record and acknowledgment email are created.
-- No charge happens: Stripe honors the scheduled cancellation, and adding a card only sets the default payment method.
+- A learner who canceled was told they would be charged, or invited to add a card for a renewal that would not happen. In the no-card case, a false renewal consent and acknowledgment email were created.
+- No charge happened: Stripe honors the scheduled cancellation.
 - P3 for both variants; F22's P4 is raised to match.
 
 ## Options
 
-F22's options were reviewed 2026-10-06. Within its decision, the open choice is where the cancellation reaches the layout:
-1. Return `cancelAtPeriodEnd` from `CheckEntitlementUseCase`, as `plan` and `trialEndsAt` already are.
-2. Add one pure domain function that classifies how a trial ends (renews on a card, ends without a charge, needs a card). The banner, the Billing line and the add-card guard then share one classification. Preferred, so the three cannot diverge again.
+1. Return `cancelAtPeriodEnd` from `CheckEntitlementUseCase`.
+2. Also add one pure domain function that classifies how a trial ends, shared by the banner, the Billing line and the add-card guard, so the three cannot diverge again. Chosen.
 
 ## Resolution (decided)
 
-DEBT-414 F22's decision, unchanged. When cancellation is scheduled:
-- The trial banner shows when access ends and links to billing, in place of the add-card dialog, so the dialog cannot be opened.
-- The Billing line drops the renewal copy.
-- The Billing page shows the scheduled end and support while the trial still blocks Checkout. It offers a new paid subscription only after the trial no longer blocks.
-- The creation use case refuses with `CONFLICT`, for a page loaded before the cancellation.
-- Completion rechecks the cancellation, so a setup session opened before it produces no renewal acknowledgment after it.
-
-The access-end date uses #1570's cutoff formatter, so this lands after #1570. The comment in `check-trial-saved-card.ts` is corrected in the same change.
-
-**As built**, on option 2:
-- **One classification.** `classifyTrialEnding` (`src/domain/services/trial-ending.ts`) answers `cancellationScheduled`, `renewsOnSavedCard` or `needsCard`. A scheduled cancellation wins whether or not a card is saved.
-- **The layout** gets `cancelAtPeriodEnd` from `CheckEntitlementUseCase`, which F22's option 1 also needed, and passes one `trialEnding` to the banner in place of `trialCardSaved`.
-- **The banner**, when cancellation is scheduled, says "Cancellation scheduled. Your access ends …" with the cutoff formatter, and links to Billing. It has no add-card dialog to open.
-- **The Billing line** says "Your trial ends without a charge. To keep access after it, undo the cancellation in Stripe, or email support@addictionboards.com." Without a saved card it says to undo the cancellation "and then add a card", since undoing alone still ends a card-less trial. Its amber notice already states the scheduled end. While the trial lasts it still blocks Checkout, so the page offers no new subscription; once the trial ends, the layout sends the learner to Pricing.
-- **Creation** refuses with `CONFLICT` before Stripe is contacted. Billing then says the card could not be added because the cancellation is scheduled, not to review terms the banner no longer shows.
-- **Billing's return notice** after a completion that kept no card says so, instead of "Stripe is confirming your card", which would never resolve.
-- **Completion** of a setup Session that finds the cancellation scheduled detaches the card and ends the operation as `trial_cancellation_scheduled`, the way it handles an ownership mismatch: no default card, no consent, no acknowledgment. Keeping the card without consent would let an undone cancellation renew on a card the learner never consented to. Undoing the cancellation brings back the add-card offer.
-- **Completion checks twice.** It checks before calling Stripe, and again in the transaction that records the consent, so a cancellation recorded while Stripe is called still leaves no consent and the card already set as the default is detached. The second check repeats the first in full: the subscription must still be the Session's, or the card is detached as an ownership mismatch, and the consent takes its trial end and deadline from that second read.
-- **A trial that no longer runs** (canceled outright, unpaid or paused) ends the setup as `subscription_inactive` at either check. An immediate cancellation leaves `cancelAtPeriodEnd` false, so the cancellation check alone would have recorded consent for it.
-- **No default stays on a detached card.** Stripe keeps a detached PaymentMethod as the Subscription's default (observed in TEST mode on 2026-10-24, and now in the contract's ninth scenario). The detach therefore first clears the default, under its own idempotency key, when this card holds it and the Subscription can still change. A test-clock probe the same day showed that at trial end Stripe treated such a default as missing and canceled the trial without a charge. Clearing it keeps Stripe's record consistent with ours, so the trial carries no card.
-- **A detached card is not a saved card.** The saved-card check ignores terminal operations, in the fake and in Postgres. Before, an operation that set the default and then ended terminal, after a failed attempt and a retry, kept counting as a saved card, so an undone cancellation would have promised a renewal on a detached card. The adversarial review found and reproduced this.
-- **What the checks read.** Completion reads the subscription row the cancellation webhook writes, so it is ordered by our own processing. A Stripe cancellation whose webhook is processed after the consent is recorded counts as later than it, like a cancellation made just after adding a card; nothing is charged in either order.
+DEBT-414 F22's decision, built on option 2 and released in promotion #1613 (2026-11-01):
+- `classifyTrialEnding` (`src/domain/services/trial-ending.ts`) answers `cancellationScheduled`, `renewsOnSavedCard` or `needsCard`; a scheduled cancellation wins whether or not a card is saved. The banner and the Billing line use it. Creation's guard checks `cancelAtPeriodEnd` itself (`src/application/use-cases/create-trial-payment-method-setup-session.ts:68`), the condition the classifier tests first, so the shared rule is that one field rather than one function. *Corrected 2026-11-17: option 2 had said the guard calls the classifier.*
+- With cancellation scheduled, the banner states when access ends and links to Billing, with no add-card dialog; the Billing line drops the renewal copy; creation refuses with `CONFLICT`.
+- Completion of a setup Session checks twice, before calling Stripe and in the transaction that records consent (`checkSetupSubscription`, `src/adapters/controllers/stripe-webhook-controller.ts:246-278`). A scheduled cancellation ends it as `trial_cancellation_scheduled`, and a trial that no longer runs as `subscription_inactive`: the card is detached, its default cleared first when it is the Subscription's default and the Subscription is not final (`src/adapters/gateways/stripe-payment-gateway.ts:185-206`), and no consent or acknowledgment is recorded.
+- Rule R11 states it.
 
 ## Verification
 
-- [x] Red-first render tests for the banner and the Billing line: with cancellation scheduled, in both the saved-card and no-card cases, no renewal or add-card copy, and the access end is shown. The layout test covers both card cases for the classification, and the Billing test renders both.
-- [x] The add-card use case refuses with `CONFLICT` when cancellation is scheduled (unit test).
-- [x] Completion after a cancellation records no renewal consent and sends no acknowledgment: the webhook controller tests, for a cancellation recorded first and one recorded while Stripe is called, and for a subscription replaced, moved to a new period or canceled outright while Stripe is called, and their Postgres integration cases (`tests/integration/stripe-webhook-trial-setup-cancellation.integration.test.ts`). The persistence case for the new terminal reason failed first on the row mapper, and the shared saved-card contract table failed first on a detached default, in the fake and Postgres. With the second check removed, the controller test and its integration case both fail.
-- [x] A trial canceled outright gets no card attached and no consent (controller test). With the status check removed, both new controller tests fail. The new reason reads back from Postgres.
-- [x] The Stripe gateway clears a default the card holds before detaching it, and leaves another card's default and a canceled Subscription alone. The fake's empty-value clear is proven by the contract's ninth scenario against TEST mode.
-- [x] `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: the trial case also asserts that no renewal or add-card copy remains after cancelling. It runs in the observational hosted-Stripe lane.
-- [x] Business rule R11 is reworded to cover in-app renewal statements, not only renewal notices, and names the new proving tests.
-- [x] Dev preview: cancel a trial in the portal, with and without a card; undo restores the renewal or add-card copy. *On `5c8c9f2b`, 2026-10-27 and 10-28:* without a card, the cancel at 23:39:09Z removed the add-card offer and the renewal promise from the frame and Billing, which state the access end, and the undo at 23:40:20Z restored the add-card copy. With a saved card, the cancel at 18:58:06Z removed the renewal promise, offered no card and kept the card, and the undo at 19:03:08Z restored the renewal copy. The portal sets `cancel_at` to the trial end with `cancel_at_period_end` false, which the app reads.
-- [ ] Production, before the first live sale: the owner, on their own account, starts a no-card trial; cancels it in the live portal, and the frame and Billing say the cancellation is scheduled with no renewal or add-card copy, and Renew restores the add-card copy (BUG-364); then, with the app open, cancels it immediately in the live Dashboard, and navigating in the app lands on Pricing (BUG-365). The tree is the one verified on the dev preview; this checks the live portal's cancellation mode and the live webhook. Starting a live trial is the owner's decision; if they decline, the record closes with this check as a Waiting row whose trigger is the first live sale. *Re-dated 2026-11-01:* promotion #1613 released the fix on 2026-11-01 (`e701fa8d`, the tree tested on the preview).
+- [x] Red-first unit, render, controller and Postgres tests for the banner, the Billing line, creation's refusal, both completion checks and the detached default (`tests/integration/stripe-webhook-trial-setup-cancellation.integration.test.ts`); the contract's ninth scenario proves the cleared default against TEST mode.
+- [x] Dev preview on `5c8c9f2b` (2026-10-27 and 10-28), the tree released in #1613: with and without a card, a portal cancel removed the renewal and add-card copy and stated the access end, and an undo restored it. The portal sets `cancel_at` to the trial end with `cancel_at_period_end` false, which the app reads.
+- [ ] Production, before the first live sale: the owner, on their own account, starts a no-card trial and cancels it in the live portal. The frame and Billing say the cancellation is scheduled, with no renewal or add-card copy, and Renew restores the add-card copy. Then, with the app open, the owner cancels it immediately in the live Dashboard, and navigating to the app's dashboard lands on Pricing (BUG-365's half). This checks the live portal's cancellation mode and the live webhook. Starting a live trial is the owner's decision. If they decline the check itself, both records close with that decision recorded; until one or the other, both stay open, as the index's Tracking rule requires.
+
+Corrected 2026-11-15: BUG-365's only open check was this one, word for word, so it is run once and recorded here; BUG-365 stays Verifying until then. Re-dated from 2026-11-08, when the check had not been run: it joins the owner's one pre-sale Stripe session with BUG-343's Dashboard checks and DEBT-501 item 7. Finished build history is in git at 34d9aea0.
 
 ## Related
 
-DEBT-414 (F22, F04), BUG-308, BUG-350 and #1570, BUG-365.
+DEBT-414 (F22, F04), BUG-365 (its production check is recorded here), BUG-308, BUG-350.

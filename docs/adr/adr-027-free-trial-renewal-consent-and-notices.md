@@ -29,7 +29,7 @@
    - The webhook attaches the card and makes it the subscription's default only after the Session matches its pending operation and Stripe reports a succeeded card setup.
    - The portal's trial profile turns payment-method updates off (`stripe-portal-configurations.ts`, F05). `CheckTrialSavedCardUseCase` then knows a trial has a card exactly when this flow saved one (BUG-308).
    - The daily job prunes abandoned setup operations 30 days after they expire.
-   - Reasons: DEBT-414 §5 rejected the generic portal as the consent step. A Session that names the customer lets Stripe attach the card before our checks run. F05 found that the portal let a trial convert to paid without a consent record. BUG-310 found non-card methods on a flow whose consent says "card".
+   - Reasons: DEBT-414 §5 at `34d9aea0` rejected the generic portal as the consent step. A Session that names the customer lets Stripe attach the card before our checks run. F05 found that the portal let a trial convert to paid without a consent record. BUG-310 found non-card methods on a flow whose consent says "card".
 4. **Consent is a separate, unchecked opt-in to the stated terms (Terms checkbox 2026-08-06, #742; opt-in and policy 2026-09-28).**
    - Checkout requires Stripe's Terms checkbox (`consent_collection`). Both checkout and the trial add-card dialog add an unchecked native checkbox, labelled with the offer's renewal statement. The billing controller refuses a submission without `renewalOptIn: true`.
    - Each consent text quotes the Terms' cancellation and refund policy (`CANCELLATION_AND_REFUND_POLICY`, F15). Checkout texts are registered by version in `lib/checkout-disclosures.ts` and reach Stripe as a SHA-256. The webhook records consent only if the hash matches the registered text.
@@ -43,7 +43,7 @@
 6. **An acknowledgment is queued with the consent (2026-08-07, #746; links 2026-10-01).**
    - The webhook queues the acknowledgment in the transaction that records consent, then dispatches it. The daily job retries a row that is still queued.
    - It states the accepted terms, the price, the trial end, the cancellation deadline and method, and the policy. It links Billing, support, Terms and Privacy (`send-renewal-acknowledgment.ts`).
-   - Reason (DEBT-414 §7): a failure after consent must not leave consent without an acknowledgment, and a retry must not send it twice.
+   - Reason (DEBT-414 §7 at `34d9aea0`): a failure after consent must not leave consent without an acknowledgment, and a retry must not send it twice.
 7. **Renewal notices start at 39 days before renewal and stop at 30, for both plans (39-day start approved 2026-10-19, replacing the 35-day start approved 2026-09-27; monthly from 2026-09-28).**
    - An annual plan gets an `annual_reminder` and a `renewal_notice`. A monthly plan gets an `anniversary_reminder` before the renewal that carries service past each twelve-month mark (`nextAnniversaryRenewalAt`).
    - The cron is scheduled for 09:00 UTC (`vercel.json`); its current daily start window is 09:00–10:00 UTC. It selects active, renewing subscriptions 39 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`; the constant is in `src/application/shared/renewal-notice-schedule.ts`).
@@ -53,7 +53,7 @@
 8. **Delivery is durable, is never repeated while the outcome is unknown, and is revalidated before sending (2026-08-07, #744; revalidation 2026-09-27; delivery evidence 2026-09-30, #1262).**
    - Resend sends the email (`src/adapters/gateways/resend-transactional-email-gateway.ts`). Without `RESEND_API_KEY`, rows stay queued.
    - Each row has an immutable payload, its hash, and a provider idempotency key derived from the row's ID. Dispatch claims the row before it sends.
-   - A rate-limit or quota error retries with backoff, from 15 minutes up to 24 hours. A terminal error stops. An ambiguous result, or a claim stale for 15 minutes, becomes `outcome_unknown` and is never resent automatically, because Resend keeps an idempotency key for only 24 hours (DEBT-414 §7).
+   - A rate-limit or quota error retries with backoff, from 15 minutes up to 24 hours. A terminal error stops. An ambiguous result, or a claim stale for 15 minutes, becomes `outcome_unknown` and is never resent automatically, because Resend keeps an idempotency key for only 24 hours (DEBT-414 §7 at `34d9aea0`).
    - `RequeueRenewalNoticeDeliveryUseCase` needs an operator, a reason and the attempt count inspected before checking the provider. It rejects evidence for an older attempt, and records the prior count in new audit entries. For an unknown outcome, it also needs confirmation that nothing was sent. An operator runs it with `pnpm notice:requeue` (`scripts/operations/requeue-renewal-notice.ts`, 2026-10-18, DEBT-414 F23).
    - Before sending, dispatch supersedes a scheduled notice whose subscription is gone, inactive or cancelling, or is now on another plan or renewal date, or whose account email has changed. It refuses a reminder past its 30-day cutoff (F07).
    - Provider acceptance is stored as `accepted`, not `delivered`. Signed Resend webhooks record delivery or failure (`RecordRenewalNoticeProviderOutcomeUseCase`). A missed deadline, a refused late notice, an unknown outcome or an actionable terminal failure raises an [operational alert](../architecture/observability.md#operational-alerts).
@@ -131,10 +131,10 @@ DEBT-414 also leaves to counsel or the owner: the remedy for a missed statutory 
 
 - **A card to start a trial.** A card wall cuts trial starts, and the owner chose "try free, enter a card only to continue" (DEBT-410 D2, D4).
 - **Stripe's newer trial offers.** Hosted Checkout cannot use them (DEBT-410).
-- **The generic billing portal for a trial's first card.** DEBT-414 §5 rejected it as the consent step, and F05 found it let a trial convert to paid without a consent record.
+- **The generic billing portal for a trial's first card.** DEBT-414 §5 at `34d9aea0` rejected it as the consent step, and F05 found it let a trial convert to paid without a consent record.
 - **A setup Session that names the customer.** Stripe would attach the card before the app's checks run.
 - **A 15–45-day notice window.** F01 found it too early or too late for some states.
-- **Resending a notice whose outcome is unknown.** Resend keeps an idempotency key for only 24 hours, so a resend could deliver a second notice (DEBT-414 §7).
+- **Resending a notice whose outcome is unknown.** Resend keeps an idempotency key for only 24 hours, so a resend could deliver a second notice (DEBT-414 §7 at `34d9aea0`).
 
 ## Compliance
 

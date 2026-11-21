@@ -527,22 +527,3 @@ The remaining inline action bars on the question-review route are still separate
 | DEBT-265 | Retry lineage and inline session-review retry implementation contract |
 | DEBT-266 | Retry observability + marker-persistence policy (resolved) |
 | DEBT-267 | Mixed `attemptId + sessionId` contract hardening (resolved) |
-
----
-
-## 12. Changelog
-
-| Date | Change |
-|------|--------|
-| 2026-04-25 | Synced active exam details after DEBT-363 and audit-#19: header `Finish exam` is no longer a shipped exam exit, active exam uses draft-save/finalize, and `Review & Submit` is the single pre-submit review entry. |
-| 2026-03-19 | Implemented DEBT-324: removed misleading `Practice missed questions` CTA from exam Session Summary. The BS-058 post-exam review already provides full question-level feedback before the terminal summary. |
-| 2026-03-19 | Implemented BS-058: exam finalization now enters an in-session post-exam review stage with score banner + inline feedback, Session Summary gained `Practice missed questions`, summary-origin review remains `from=summary`, and exam-session review suppresses per-question reattempt actions. |
-| 2026-03-18 | Implemented DEBT-322: removed the exam Q1 spacer, renamed the exam header exit to `Finish exam`, and renamed the review heading to `Review & Submit`. DEBT-361 later updated the last-question footer label from `Next` to `Review & Submit` while preserving review-stage routing. |
-| 2026-03-17 | Accuracy pass: documented the then-current completed-session review entry points, corrected bookmark availability in review mode, removed stale top-right back-link claims for history review, and fixed related spec-link labels. |
-| 2026-03-02 | Linked canonical Exam Answer Secrecy Policy for cross-context correctness/explanation exposure rules. |
-| 2026-03-01 | Closed DEBT-266 and DEBT-267: documented server telemetry events, accepted visit-scoped retry-marker policy, and synced previous-attempt mixed-id contract hardening. |
-| 2026-03-01 | Synced to DEBT-265 implementation: updated review route ownership, hydration outcome model, session-review submit/reattempt matrix, and `mode=review` semantics. Added follow-up debt references for retry observability and marker-persistence policy (DEBT-266). |
-| 2026-02-17 | Accuracy pass for BUG-145: removed stale `SessionNavigationBar` references, updated action-bar/state-persistence docs to current `previousSubmission` restoration behavior, replaced Section 6 with resolved status, and refreshed file index references. |
-| 2026-02-16 | Initial version — comprehensive audit of question-viewing contexts. Documented state persistence bug in Tutor Mode, navigation architecture, shared vs context-specific components. |
-| 2026-02-16 | Accuracy pass — fixed `disabled` prop table (was oversimplified), removed non-existent `buildSessionNavigation` export from file index (logic is inline in controller). |
-| 2026-02-16 | Accuracy pass — corrected QuestionNavigator usage (not exam-only), fixed Bookmarks query params, documented unanswered “review mode” fallback behavior, and added Quick Practice context. |

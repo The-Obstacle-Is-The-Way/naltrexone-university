@@ -243,7 +243,7 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED when the Session it could not inspect completed before its expire`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED instead of reusing an open Session when another completed after the subscription check`
 
-### R25. When the webhook stores a completed subscription Checkout's subscription, it ends the customer's other open subscription Checkout pages created before that event. If one stays open, the event fails, and Stripe sends it again. A page completed before the sweep reaches it is logged as a second subscription, which BUG-343's option 4 will correct.
+### R25. When the webhook stores a completed subscription Checkout's subscription, it ends the customer's other open subscription Checkout pages created before that event. If one stays open, the event fails, and Stripe sends it again. A listed page the sweep finds completed while it works through its list is logged and alerted as a second subscription. The daily reconcile, on a run that reaches the customer, keeps one of the blocking subscriptions among the customer's 100 newest (it reads one page), an entitled one with the latest period end first, and cancels the others (a failed Stripe retrieval or listing of the customer's subscriptions, a user-ID mismatch, a write of the kept subscription that throws, including version conflicts that outlast their retries, or a failed Stripe cancel stops that customer's cancels and is logged as a failed row; a write the stored row's guard declines does not), so it may cancel the earlier one; the owner refunds any charge by hand (BUG-343).
 
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `expires the customer's other open subscription Sessions and keeps the completed one`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `throws when an open Session cannot be expired, so the webhook is retried`
@@ -251,6 +251,9 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/adapters/controllers/stripe-webhook-controller-completion-sweep.test.ts`: `fails the delivery when the sweep fails, and sweeps again when Stripe sends the event again`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `keeps a Session created after the completion's event, which belongs to a later checkout`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `logs an error, and goes on, when another Session completed too`
+- `src/domain/services/subscription-canonicalization.test.ts`: `sorts entitled candidates ahead of later non-entitled candidates`
+- `src/domain/services/subscription-canonicalization.test.ts`: `sorts by later period end within the same entitlement tier`
+- `src/adapters/jobs/reconcile-stripe-subscriptions-duplicates.test.ts`: `cancels duplicate blocking subscriptions when dryRun is disabled`
 
 ### R30. The first observed subscription termination starts the retention clock; a replay changes no consent record. Consent evidence is kept for at least three UTC calendar years after acceptance or one year after that termination, whichever is later. A longer stored floor is preserved. February 29 plus one year is March 1.
 

@@ -90,7 +90,7 @@ test.describe('core app pages', () => {
 
     // The server action creates a Stripe billing-portal session and redirects
     // to it. Reaching Stripe's hosted portal is the self-serve cancellation
-    // entry the legal copy names (DEBT-414 § 8); the portal's own contents are
+    // entry the legal copy names (DEBT-414 § 8 at 34d9aea0); the portal's own contents are
     // Stripe's and are not asserted here.
     await expect(page).toHaveURL(/^https:\/\/billing\.stripe\.com\//, {
       timeout: 30_000,

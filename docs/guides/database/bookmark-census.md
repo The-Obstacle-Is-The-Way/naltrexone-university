@@ -1,11 +1,12 @@
-# Monthly Bookmark Cardinality Census
+# Bookmark Cardinality Census
 
-**Last Updated:** 2026-07-22
+**Last Updated:** 2026-11-16
 
-This read-only monthly census supplies the cardinality limb of the parked
-DEBT-450 Part 3b
-bookmark-pagination trigger. It reports aggregate counts only and must never
-emit user or bookmark identifiers.
+This read-only census measures bookmark collection sizes. Since 2026-11-15 it
+fires nothing: DEBT-450 Part 3b's Waiting row in the records index revives
+bookmark pagination only on `action.getBookmarks` latency, which a session can
+read in Sentry (DEBT-533). The owner may still run it to size that work. It
+reports aggregate counts only and must never emit user or bookmark identifiers.
 
 ## Safety boundary
 
@@ -19,7 +20,7 @@ emit user or bookmark identifiers.
   aggregate result columns. Never commit a raw terminal transcript containing
   credentials or identifiers.
 
-## Monthly query
+## Query
 
 ```sql
 BEGIN TRANSACTION READ ONLY;
@@ -44,18 +45,15 @@ FROM bookmark_counts;
 ROLLBACK;
 ```
 
-Require `transaction_read_only` to be `on`. The parked pagination trigger fires
-when `users_at_or_above_500` is greater than zero. A zero result does not alter
-the separate sampled-latency limb: after the shipped width fix, seven
-consecutive days with `action.getBookmarks` p95 at or above 300 ms also revives
-Part 3b.
+Require `transaction_read_only` to be `on`. No result revives Part 3b; seven
+consecutive days with `action.getBookmarks` p95 at or above 300 ms does.
 
 ## Evidence record
 
-Append a dated observation to DEBT-450 with this shape:
+Record a dated observation in the pull request or issue that uses it, with this shape:
 
 ```text
 YYYY-MM-DD UTC — <environment label>; transaction_read_only=on;
 users_with_bookmarks=<count>; max_bookmarks_for_one_user=<count>;
-users_at_or_above_500=<count>; trigger=<fired|not fired>.
+users_at_or_above_500=<count>.
 ```
