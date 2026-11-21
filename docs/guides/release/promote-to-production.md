@@ -113,6 +113,16 @@ The deleted `deploy` job only echoed a message. Its success never proved that pr
 
 On a failed, cancelled, missing, or timed-out check, keep the previous release serving and investigate. Do not use **Force Promote**. A missing check requires checking the job name and workflow trigger; a failed E2E requires defect investigation, not retry-to-green.
 
+**A check that never sees `test` finish (2026-11-21, promotion #1715).** Main CI's `test` passed at 01:02:41Z, but the production deployment stayed `READY/STAGED` with `aliasAssigned=false`. Its check runs, read with `vercel api "/v2/deployments/<deployment>/check-runs?teamId=<orgId>"`, still showed `test` as `running`, unchanged since 00:48:30Z, four seconds after the deployment was created. Vercel had missed GitHub's completion: the check still read `running` twelve hours later and never released the deployment.
+- When step 5's domain check still names the previous deployment about five minutes after `test` passes, read those check runs first. Each names the GitHub check run it tracks in `externalId`.
+- A `running` reading is stale only when all of these hold. Otherwise wait, or follow the paragraph above:
+  - GitHub reports that check run completed with `success`: `gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/check-runs/<externalId> --jq '.status, .conclusion'`;
+  - no other `test` check run on `<sha>` is queued or in progress, since the check follows the commit's latest one: `gh api "repos/The-Obstacle-Is-The-Way/naltrexone-university/commits/<sha>/check-runs?check_name=test" --jq '.check_runs[] | .status'`;
+  - the deployment was built from `<sha>`: `vercel api "/v13/deployments/<deployment>?teamId=<orgId>"` reports `meta.githubCommitSha` as `<sha>`. This route skips step 3, so this is what ties the deployment to the tested commit.
+- Then, with the owner's approval, release it with step 4 of "No production deployment at all" below, and record it with step 5. This is step 4's normal promotion, not Force Promote.
+- On #1715, the check run's `externalId` was CI's `test` job, which completed with `success` at 01:02:41Z. The promote ran at 01:15:08Z, and the production alias moved at 01:15:10Z.
+- Step 4's two tests stay as written. `vercel api "/v10/projects/<projectId>/promote/<deployment>?teamId=<orgId>" -X POST` can replace its `curl`: it uses the CLI's own login, so no token is handled.
+
 **No production deployment at all.** Three times, a promotion's merge commit got no production deployment:
 - promotion #509 on 2026-06-24 (BUG-259);
 - promotion #1367 on 2026-10-05;
@@ -191,7 +201,7 @@ If the commit has no `Vercel` commit status within about ten minutes, Vercel has
    - **A normal promotion.** This releases a checked commit; it is not **Force Promote**.
    - **A `test` that passed before the deployment existed never releases it.** On 2026-10-15 the deployment was still staged 29 minutes after it was created, and the promote step released it at once.
    - #509 used `vercel deploy --prod`, which assigns the domains at once.
-5. Record the release on GitHub, and only after step 4's promote succeeds: the record clears the release watch's issue. Neither route creates a GitHub `Production` deployment: the promoted API deployment of 2026-10-15 left none. Without one, the watch keeps its issue open, and reopens it every hour if it is closed by hand:
+5. Record the release on GitHub, and only after step 4's promote succeeds and the production domain points to that deployment: `vercel api "/v4/aliases/addictionboards.com?teamId=<orgId>" --raw | jq -r .deploymentId` prints its `dpl_…` ID. The deployment's own `aliasAssigned` is not enough, since its alias list holds only `vercel.app` addresses. The promote request can return before the domain moves, and the record clears the release watch's issue, so until the domain names the deployment, record nothing and investigate. Neither route creates a GitHub `Production` deployment: the promoted API deployment of 2026-10-15 left none. Without one, the watch keeps its issue open, and reopens it every hour if it is closed by hand:
 
    ```sh
    id=$(echo '{"ref":"<sha>","environment":"Production","auto_merge":false,"required_contexts":[],"description":"Released with vercel promote"}' \
