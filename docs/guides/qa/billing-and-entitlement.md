@@ -11,6 +11,8 @@
 
 Known environment quirk (not a bug): in Clerk development mode, the redirect back from Stripe Checkout can land on a sign-in screen on dev/preview — `docs/architecture/environments.md`.
 
+A promotion whose only billing change is a Stripe API version that meets the four conditions in [QA method](method.md#when-procedures-run) item 2 runs only Section A and steps 13–15.
+
 On the dev preview, run every step at the `dev` branch alias, the `naltrexone-university-git-dev-….vercel.app` address in the latest `dev` deployment's domains, never at a deployment's own address. The app builds Stripe's success, cancel, add-card and portal return URLs from `NEXT_PUBLIC_APP_URL`, which on the dev preview is that alias, and each `vercel.app` address keeps its own Clerk sign-in. So a checkout started elsewhere returns to the alias, where the paying account may not be signed in: the success page then asks for sign-in, or refuses the purchase as another account's.
 
 ---

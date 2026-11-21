@@ -113,6 +113,12 @@ The deleted `deploy` job only echoed a message. Its success never proved that pr
 
 On a failed, cancelled, missing, or timed-out check, keep the previous release serving and investigate. Do not use **Force Promote**. A missing check requires checking the job name and workflow trigger; a failed E2E requires defect investigation, not retry-to-green.
 
+**A check that never sees `test` finish (2026-11-21, promotion #1715).** Main CI's `test` passed at 01:02:41Z, but the production deployment stayed `READY/STAGED` with `aliasAssigned=false`. Its check runs, read with `vercel api /v2/deployments/<deployment>/check-runs`, still showed `test` as `running`, unchanged since 00:48:30Z, four seconds after the deployment was created. Vercel had missed GitHub's completion: the check still read `running` twelve hours later and never released the deployment.
+- When the alias has not moved about five minutes after `test` passes, read those check runs first.
+- If `test` passed but its check run still reads `running`, release the deployment with step 4 of "No production deployment at all" below, with the owner's approval, then record it with step 5. This is step 4's normal promotion, not Force Promote. A check that failed or timed out follows the paragraph above instead.
+- #1715's promote ran at 01:15:08Z, and the production alias moved at 01:15:10Z.
+- Step 4's two tests stay as written. `vercel api "/v10/projects/<projectId>/promote/<deployment>?teamId=<orgId>" -X POST` can replace its `curl`: it uses the CLI's own login, so no token is handled.
+
 **No production deployment at all.** Three times, a promotion's merge commit got no production deployment:
 - promotion #509 on 2026-06-24 (BUG-259);
 - promotion #1367 on 2026-10-05;
