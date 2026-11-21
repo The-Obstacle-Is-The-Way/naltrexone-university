@@ -8,9 +8,9 @@
 
 ## Summary
 
-Operational alerts reach the owner by one route: Sentry's email. On 2026-11-03 that email went missing. The alerts' workflow fired for the month's drill, and no email arrived. Nothing noticed, because the watcher checks only that the workflow fired.
+Operational alerts reached the owner by one route: Sentry's email. On 2026-11-03 that email went missing. The alerts' workflow fired for the month's drill, and no email arrived. Nothing noticed, because the watcher checked only that the workflow fired.
 
-The watcher reports through a GitHub issue, and so do the weekly due checks. GitHub never emailed the owner about either, because both jobs open their issues unassigned. So for weeks the owner heard nothing: not the overdue dated actions, and not the warning that Sentry's error quota is running out, which would drop alerts too.
+The watcher reports through a GitHub issue, and so do the weekly due checks. GitHub never emailed the owner about either, because both jobs opened their issues unassigned. So for weeks the owner heard nothing: not the overdue dated actions, and not the warning that Sentry's error quota was running out, which would drop alerts too.
 
 ## Evidence
 
@@ -26,7 +26,7 @@ The watcher reports through a GitHub issue, and so do the weekly due checks. Git
 - **The watcher cannot see a lost email.** It reads the workflow's `lastTriggered`, which the drill moved. To the watcher, 2026-11-03 looked healthy.
 - **Unassigned issues notify nobody.**
   - GitHub emails about an issue that GitHub Actions opens only to the repository's watchers and to its assignees. The repository has no watchers: `GET /repos/{owner}/{repo}/subscription` answers 404 for the owner.
-  - `operational-alert-watcher.ts` and `documentation-due-checks.ts` call `createGithubAlertIssues()` with no assignee. `security-txt-renewal.mts` opens its reminders unassigned too, though none has opened yet.
+  - `operational-alert-watcher.ts` and `documentation-due-checks.ts` called `createGithubAlertIssues()` with no assignee. `security-txt-renewal.mts` opened its reminders unassigned too, though none had opened yet.
   - The owner's mail has no email about #1610 (the watcher's issue, opened 2026-10-27 and reopened 2026-11-13) or #1569 (the due checks).
   - The release and fix watches and the learnings review assign the owner, as DEBT-515 established a week after the watcher shipped, and their emails arrive. The advisory watch assigns only critical and high advisories, deliberately; that is unchanged here.
 - **What went unseen.** #1569 has listed 15 overdue records and the weekly queue review, some for three weeks. #1610 has reported Sentry's error quota past 80% since 2026-11-13.
@@ -68,3 +68,5 @@ Option 2 is held for evidence: if the alerts' workflow's email for the next dril
 
 - DEBT-505: the alerts, the drill and the watcher this record repairs.
 - DEBT-515: the assignment convention that the watcher and the due checks predate.
+
+Corrected 2026-11-15: the Summary's single route and the unassigned calls are past tense, since the fix assigns the issues (`documentation-due-checks.ts:128`, `operational-alert-watcher.ts:454`) and copies each alert. Rechecked: SERVER-1 and SERVER-4 are still unresolved, so the next drill's condition holds.

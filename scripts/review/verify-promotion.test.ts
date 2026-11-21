@@ -459,6 +459,29 @@ describe('promotion proof command', () => {
     expect(() => run(['991'], () => {})).toThrow('number');
     expect(host.calls).toHaveLength(2);
   });
+  it('reads every page of a source PR’s review threads', () => {
+    const { host, run } = fixture();
+    host.prs.set('987', {
+      ...source(),
+      reviewThreads: {
+        nodes: [{ isResolved: true }],
+        pageInfo: { hasNextPage: true },
+      },
+    });
+    host.connectionPages.set('987:reviewThreads', [
+      {
+        nodes: [{ isResolved: true }],
+        pageInfo: { hasNextPage: true, endCursor: 'next' },
+      },
+      {
+        nodes: [{ isResolved: false }],
+        pageInfo: { hasNextPage: false, endCursor: null },
+      },
+    ]);
+    expect(() => run(['990'], () => {})).toThrow(
+      'Source PR has unresolved findings',
+    );
+  });
   it('refuses source evidence for a different PR', () => {
     expect(() => fixture(988).run(['990'], () => {})).toThrow(
       'Source PR number',

@@ -61,6 +61,51 @@ const query = `query($number:Int!) {
   }
 }`;
 
+// GraphQL returns at most 100 nodes a page. A PR reviewed many times has more
+// threads or comments than that, so a full first page is followed by these,
+// one connection a query, with the same fields as the merge query.
+const PAGED_FIELDS = ['reviewThreads', 'comments'] as const;
+type PagedField = (typeof PAGED_FIELDS)[number];
+const pagedQuery = (
+  field: PagedField,
+  nodes: string,
+) => `query($number:Int!, $endCursor:String) {
+  repository(owner:"The-Obstacle-Is-The-Way",name:"naltrexone-university") {
+    pullRequest(number:$number) {
+      ${field}(first:100, after:$endCursor) {
+        nodes { ${nodes} }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+}`;
+const PAGED_QUERIES: Record<PagedField, string> = {
+  reviewThreads: pagedQuery(
+    'reviewThreads',
+    `isResolved comments(first:100) {
+          pageInfo { hasNextPage } nodes { author { login } url body }
+        }`,
+  ),
+  comments: pagedQuery('comments', 'author { login } url body'),
+};
+const connectionPage = z.object({
+  nodes: z.array(z.unknown()),
+  pageInfo: z.object({ hasNextPage: z.boolean() }),
+});
+const firstPages = z.looseObject({
+  reviewThreads: connectionPage.optional(),
+  comments: connectionPage.optional(),
+});
+const connectionPages = z.array(
+  z.object({
+    data: z.object({
+      repository: z.object({
+        pullRequest: z.record(z.string(), connectionPage),
+      }),
+    }),
+  }),
+);
+
 const gh = createGhRunner({ timeout: 30000, maxBuffer: 32 * 1024 * 1024 });
 
 // Bind one transport across every read and mutation, including REST fallbacks.
@@ -71,6 +116,53 @@ export function createMergeCommands(run: Gh = gh) {
       'api',
       `repos/${REPOSITORY}/commits/${oid}/check-suites?app_id=${ACTIONS_APP_ID}&per_page=${REST_SUITE_PAGE}`,
     ]);
+  }
+
+  // Every page of one connection. If the last page read still reports more,
+  // the connection stays incomplete and the merge policy refuses it.
+  function readAllPages(number: string, field: PagedField) {
+    const pages = connectionPages
+      .parse(
+        JSON.parse(
+          run([
+            'api',
+            'graphql',
+            '--paginate',
+            '--slurp',
+            '-f',
+            `query=${PAGED_QUERIES[field]}`,
+            '-F',
+            `number=${number}`,
+          ]),
+        ),
+      )
+      .map((response) => response.data.repository.pullRequest[field]);
+    const last = pages.at(-1);
+    return {
+      nodes: pages.flatMap((page) => page?.nodes ?? []),
+      pageInfo: {
+        hasNextPage:
+          !last ||
+          last.pageInfo.hasNextPage ||
+          pages.some((page) => page === undefined),
+      },
+    };
+  }
+
+  // Replaces each connection whose first page is full with all its pages.
+  function completePages(number: string, pullRequest: unknown): unknown {
+    const parsed = firstPages.safeParse(pullRequest);
+    if (!parsed.success) return pullRequest;
+    const more = PAGED_FIELDS.filter(
+      (field) => parsed.data[field]?.pageInfo.hasNextPage,
+    );
+    if (more.length === 0) return pullRequest;
+    return {
+      ...parsed.data,
+      ...Object.fromEntries(
+        more.map((field) => [field, readAllPages(number, field)]),
+      ),
+    };
   }
 
   function readMergeEvidence(number: string) {
@@ -100,7 +192,7 @@ export function createMergeCommands(run: Gh = gh) {
     );
     return {
       pullRequest: restoreDeletedBranchNames(
-        response.data.repository.pullRequest,
+        completePages(number, response.data.repository.pullRequest),
         readRestCheckSuites,
       ),
       reviewPages,

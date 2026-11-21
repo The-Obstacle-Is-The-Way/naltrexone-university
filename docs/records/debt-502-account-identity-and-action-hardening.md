@@ -1,70 +1,77 @@
 # DEBT-502: Rare Account States Can Lock a Person Out, and Payment Actions Expose Test Seams
 
-**Status:** Open — decided per item
+**Status:** Open — items 3, 1, 2 by 39 days before the first real renewal or anniversary (dated from DEBT-511's count); owner: Clerk's verify-at-sign-up setting
 **Priority:** P3
 **Date:** 2026-10-05
-**Resolved:** —
-**Verification receipts:** —
 
 ---
 
 ## Summary
 
-The same hunt (2026-10-05) found account-lifecycle states that can lock a person out of the app, and therefore out of subscribing, or that leave no way to repair them. It also found hardening gaps on the payment actions. Each needs a rare precondition, a scale threshold, or a Clerk setting. None is known to have happened.
+The same hunt (2026-10-05) found account-lifecycle states that can stop a person from subscribing, or that leave no way to repair them. It also found hardening gaps on the payment actions. Each needs a rare precondition, a scale threshold, or a Clerk setting. None is known to have happened.
 
 ## Items
 
-**Decided 2026-10-08 (AUDIT-015): one identity resolver.** Clerk, `users.email` and the Stripe customer each hold the user's email, and nothing keeps them in step; items 1–3 and DEBT-511 are symptoms. One resolver takes Clerk's verified primary email, provisions under the tombstone lock (item 2), moves a conflicting row (item 1), and syncs Stripe's copy. Provisioning, the billing refresh, the webhook and notice dispatch all use it. It ships before 39 days ahead of the earliest live renewal, in the order items 3, 1, 2.
+**Decided 2026-10-08 (AUDIT-015): one identity resolver.** Clerk, `users.email` and the Stripe customer each hold the user's email, and nothing keeps them in step; items 1–3 and DEBT-511 are symptoms. Two paths write the stored email today:
+
+- `ensureClerkUser` (`src/adapters/gateways/clerk-user-provisioner.ts:296`), for provisioning and the billing refresh (`clerk-auth-gateway.ts:120`);
+- the `user.updated` webhook, which runs the provisioner's steps itself in two transactions. The first takes the tombstone lock (`src/adapters/controllers/clerk-webhook-controller.ts:257`) for `upsertByClerkId` (`:286`) and `validateClerkUserEmailOwnershipConflict` (`:307`). After it commits, `resolveClerkUserEmailOwnershipConflict` (`:400`) asks Clerk outside any lock, and a second transaction takes the lock again (`:423`) for `applyClerkUserEmailOwnershipResolution` (`:441`).
+
+None of the following is built. Both paths are to take only Clerk's verified primary email (item 3); provisioning is to run under the tombstone lock (item 2); and the shared validation is to move a conflicting row (item 1). DEBT-511 refreshes notice addresses through `ensureClerkUser`, and owns syncing Stripe's copy (DEBT-511 item 4). Ship in the order items 3, 1, 2, by 39 days before the earliest annual renewal, or a monthly subscription's first yearly anniversary, of a real live subscription, from the owner's read-only count; DEBT-501 item 7's refunded purchase does not count.
 
 **Adopted 2026-10-17 (DEBT-524 step 5):** keep this deadline and order. The resolver must preserve ADR-004: the verified Clerk session establishes identity; an email address does not. Retain BUG-320/BUG-332's retries as defense after consolidation. If implementation adds `user.created`, specify and test missing/delayed-webhook request fallback, concurrent requests and tombstone/deletion behavior before enabling it. A new webhook path does not remove those races.
 
-### 1. An email change to an address a stale row holds locks the person out (P3)
+### 1. An email change to an address a stale row holds blocks checkout (P3)
 
-- **Evidence.** `ensureClerkUser` validates before it resolves (`src/adapters/gateways/clerk-user-provisioner.ts:309-310`). It refuses as soon as the incoming Clerk user already has a row (`:110-120`, `blocked_incoming_identity_already_exists`), even when Clerk proves the stale owner has moved to another address. The webhook does the same (`clerk-webhook-controller.ts:305-311`). `clerk-auth-gateway-session.test.ts`'s "keeps both rows when the refreshed email is held by another identity" locks this in for the billing refresh.
-- **Impact.** Every signed-in page errors, the marketing navigation included (`components/auth-nav.tsx:50`). The person cannot change their email back in the app. Once DEBT-503 item 1 ships, signed-in pages read the person's own row by Clerk ID, so the lockout narrows to the billing refresh (checkout and trial card setup) and the webhook.
-- **Decided.** When Clerk confirms the stale owner's current email differs, move that owner's row first, as the new-user path already does, then continue. The refusal stays for an owner that Clerk cannot confirm.
+- **Evidence.** `ensureClerkUser` validates before it resolves (`clerk-user-provisioner.ts:309-310`). It refuses as soon as the incoming Clerk user already has a row (`:110-120`, `blocked_incoming_identity_already_exists`), even when Clerk proves the stale owner has moved to another address. The webhook does the same (`clerk-webhook-controller.ts:307-311`). `clerk-auth-gateway-session.test.ts`'s "keeps both rows when the refreshed email is held by another identity" (`:275`) locks this in for the billing refresh.
+- **Impact.** Since DEBT-503 item 1, signed-in pages read the person's own row by Clerk ID with no Clerk call (`clerk-auth-gateway.ts:50-66`), so pages still load. The refusal blocks the billing refresh (`billing-controller.ts:161`), so the person cannot start a checkout or trial card setup, and their `user.updated` webhook fails on every delivery.
+- **Decided.** When Clerk confirms the stale owner's current email differs, move that owner's row first, as the new-user path already does, then continue. The refusal stays for an owner that Clerk cannot confirm. The change is in the shared validation, so both paths get it.
 
 ### 2. A row whose Clerk user no longer exists blocks its email permanently, and nothing repairs it (P3)
 
 - **Evidence.** Re-signing up with the same email hits Clerk's 404 for the old ID and is refused on every request (`clerk-user-provisioner.ts:155-165`, BUG-284's fail-closed design). Such a row arises in three ways:
-  1. a sign-in render whose upsert commits after the deletion. Since DEBT-503 item 1, the sign-in path reads the `deleted_clerk_users` tombstone before provisioning, but in a separate read without the tombstone lock, so this interleaving remains.
+  1. a first sign-in, or a billing refresh, whose upsert commits after the deletion. The sign-in path reads the `deleted_clerk_users` tombstone in a separate read without the tombstone lock (`clerk-auth-gateway.ts:54-57`, and `:82` for the refresh), so this interleaving remains;
   2. a `user.deleted` webhook whose retries ran out;
   3. a Clerk instance switch, which is what happened in BUG-078.
 - **Impact.** The deleted person's email also stays in our database, a privacy residue.
+- **Decided, not built.**
+  - The sign-in path and the billing refresh, which both provision through `provisionFromClerk` and `ensureClerkUser`, take the existing Clerk tombstone lock, check the tombstone and provision in the same short transaction, using transaction-bound repositories. A separate preflight check still races deletion. Preserve the deletion path's lock order; provider reads happen outside the transaction and their result is revalidated under the lock. Prove both interleavings, for sign-in and for the refresh, against real Postgres. (`DrizzleDeletedClerkUserRepository.lock` and `clerk-webhook-controller.ts:257` already define that lock.)
+  - An operator command, with a runbook, deletes a row whose Clerk user is confirmed gone, under the same locks as the webhook. Clerk's 404 alone does not confirm it: after an instance switch (the third way above) the same 404 can stand for a person who is still paying, whose subscription this command would cancel. So the command requires a tombstone for that ID, or the owner's confirmation that production has served only today's Clerk instance since the row was created, with no instance switch and no rollback to a deployment built with other keys (a rolled-back deployment keeps the keys it was built with, `docs/architecture/environments.md:183`, `:198`); it refuses any other row. A `user.deleted` whose retries ran out (the second way) can also be replayed from the Clerk Dashboard, which runs the webhook's own deletion, but only while Clerk still holds the message: Svix's documented default keeps payloads 90 days ([Svix: payload retention](https://docs.svix.com/retention)), and Clerk states no window, so a loss found later, such as by DEBT-511's renewal refresh, takes the owner's confirmation. Whether a switched instance's paying row is kept or moved is the owner's decision at a switch, and none is recorded. In the same transaction the command writes the tombstone if none exists, as the webhook does (`deletedClerkUsers.markDeleted`, `clerk-webhook-controller.ts:380`), so a late `user.updated` skips the user instead of recreating the row (`:259-262`), and schedules the row's Stripe customer for deletion (`pendingStripeCustomerCleanups.schedule`, `:387`), so the reconcile's cleanup drain (`drain-pending-stripe-customer-cleanups.ts`) deletes the customer and with it any live subscription. A customer already gone counts as done (`stripe-customer-deleter.ts:57-62`), so the command and a late webhook retry cannot conflict. A Postgres test shows that the command refuses a row with neither a tombstone nor the owner's confirmation and leaves a tombstone and a pending cleanup that the drain completes, and that a `user.updated` arriving after it does not recreate the row.
+
+### 3. A Clerk user with no email gets no app row, and an unverified one is accepted (P3, depends on Clerk settings)
+
+- **Evidence.** With no address, the sign-in path throws `INTERNAL_ERROR` (`ClerkAuthGateway.provisionFromClerk`, "User has no email address", `clerk-auth-gateway.ts:104`), and the webhook skips the user (`clerk-webhook-controller.ts:264-272`). With only an unverified address, both selectors return it, since they fall back to the first address (`clerk-user-provisioner.ts:54-64`; the webhook's `getPrimaryEmailOrNull`, `clerk-webhook-controller.ts:125`), and the row is created with it.
 - **Decided.**
-  - The sign-in path takes the existing Clerk tombstone lock, checks the tombstone and provisions in the same short transaction, using transaction-bound repositories. A separate preflight check still races deletion. Preserve the deletion path's lock order; provider reads happen outside the transaction and their result is revalidated under the lock. Prove both interleavings against real Postgres. (`DrizzleDeletedClerkUserRepository.lock` and `clerk-webhook-controller.ts` already define that lock.)
-  - An operator command, with a runbook, deletes a row whose Clerk user is confirmed gone, under the same locks as the webhook.
+  - The owner confirms in the Clerk dashboard that a verified email is required for every sign-up method, in both instances ("Verify at sign-up"), and the setting is recorded here.
+  - Both selectors take only a verified primary address. Checkout and add-card refuse an unverified refreshed primary, and the Billing page tells the user to verify their address, which is their recovery path. A user with no row and no verified address cannot be provisioned, so that provisioning failure is a distinct error, not `INTERNAL_ERROR` (`clerk-auth-gateway.ts:103-105`), which the signed-in pages show as the same verify-address prompt; a test covers it.
 
-  *Corrected 2026-10-06: the tombstone check and provisioning now share one transaction under the existing lock; a separate preflight check still raced deletion (#1410).*
+### 4 and 5. Moved
 
-### 3. A Clerk user with no email can never get an app row (P3, depends on Clerk settings)
-
-- **Evidence.** The sign-in path throws `INTERNAL_ERROR` (`ClerkAuthGateway.provisionFromClerk`, "User has no email address"), and the webhook skips the user (`clerk-webhook-controller.ts:264-272`). The fallback to `emailAddresses[0]` can pick an unverified address (`clerk-user-provisioner.ts:54-64`).
-- **Decided.** The owner confirms in the Clerk dashboard that a verified email is required for every sign-up method. Record the setting, and use only verified addresses.
-
-### 4. Clerk's rate limit is a single point of failure for signed-in traffic (moved to DEBT-503 on 2026-10-05)
-
-- **Evidence.** Every signed-in render and action called `currentUser()`, one Clerk Backend API call (`lib/container.ts:61-65` at the time), and Checkout made two. Clerk documents 1,000 requests per 10 seconds in production.
-- **Decided.** Read identity from the session token's claims where they suffice, and call the Backend API only for provisioning. *Moved 2026-10-05 to DEBT-503, at P2 and without waiting for the traffic trigger: BUG-323 showed the allowance can be spent from outside.*
-
-### 5. Exported payment server actions accept caller-supplied dependencies (moved to BUG-324 on 2026-10-05)
-
-- **Evidence.** `subscribeMonthlyAction(formData, deps?)` and `subscribeAnnualAction` (`app/pricing/subscribe-actions.ts:82-94`) take an optional `deps` used for test injection. A client calls a server action with arguments of its choosing. React decodes them only as data, or as references to registered server actions, never arbitrary code. So a crafted `deps` can only fail the caller's own request, or call actions the caller could call anyway.
-- **Decided.** Exported actions take only their form data and delegate to an internal function that tests inject into. Check the other `'use server'` modules for the same seam. *Moved 2026-10-05 to BUG-324, at P1: the seam reaches every controller action, and one request can run many actions.*
+Item 4, Clerk's rate limit, moved to DEBT-503 on 2026-10-05; item 5, payment actions that accept caller-supplied dependencies, moved to BUG-324 the same day.
 
 ### 6. Smaller items (P3)
 
-- **`CONSENT_STATE_SECRET` is optional** in the production schema (`lib/env.ts:52`), yet "Add a card" fails without it. It is set in Production and Preview (names checked 2026-10-05). Decided: require it in production. *Done 2026-10-09 (quick-wins pull request):* `lib/env.ts` requires it on Vercel production and preview builds, like the server-actions key, because Preview holds it too (names re-checked that day). A build without it fails and logs the name; off Vercel it stays optional. Test-first in `lib/env.test.ts`.
-- **No sign-in URL prop is set** on `ClerkProvider` (`components/providers.tsx:71-77`). Clerk also reads `NEXT_PUBLIC_CLERK_SIGN_IN_URL` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL` (`@clerk/nextjs/dist/cjs/utils/mergeNextClerkPropsWithEnv.js`), so source omission alone does not prove the deployed redirect. Decided: establish one explicit app-route configuration, check the deployed environment by presence only, then test sign-in, sign-up and the return to `/pricing?plan=…`. The project environment API, read without decryption on 2026-10-06, lists neither URL variable. The reported accounts-subdomain journey remains unverified in this audit. *Corrected 2026-10-06: Clerk also reads the sign-in and sign-up URL environment variables, so a missing prop alone does not show the deployed behavior (#1410).*
-- **A signed-out "Add a card" loses its way back** (`app/(app)/app/trial-payment-method-action-handler.ts:60-62`). Decided: carry a return path.
-- **Deleting an account and signing up again grants a fresh 7-day trial**, because eligibility is per app row. Decided: owner's call whether to key trial eligibility on the email's history.
-- **The shared E2E user's seed re-points the row by email** (`tests/e2e/helpers/seed-test-user.ts:166-168`), the reassignment BUG-284 removed from production. So the fail-closed identity path is never exercised end to end. Decided: seed by Clerk ID.
+- **No sign-in URL prop is set** on `ClerkProvider` (`components/providers.tsx:71-77`). Clerk also reads `NEXT_PUBLIC_CLERK_SIGN_IN_URL` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL` (`@clerk/nextjs/dist/cjs/utils/mergeNextClerkPropsWithEnv.js`), so source omission alone does not prove the deployed redirect. Vercel's variable names, read 2026-11-15, include neither. Decided: establish one explicit app-route configuration, then test sign-in, sign-up and the return to `/pricing?plan=…`. The reported accounts-subdomain journey is unverified.
+- **A signed-out "Add a card" loses its way back:** it redirects to sign-up with no return path (`app/(app)/app/trial-payment-method-action-handler.ts:61-62`). Decided: carry a return path.
+- **Deleting an account and signing up again grants a fresh 7-day trial**, because eligibility is per app row (`src/application/use-cases/create-checkout-session.ts:132`). **Won't Fix, decided 2026-11-15 by the reviewing session, at the owner's delegation.** Detecting it means keeping deleted users' emails, which contradicts the privacy policy's promise that deletion removes the user record; a new address gets around it anyway; and the trial is 7 days with no card required (`payment_method_collection: 'if_required'`).
+- **The shared E2E user's seed re-points the row by email** (`tests/e2e/helpers/seed-test-user.ts:214-220`, `ON CONFLICT (email)`), the reassignment BUG-284 removed from production. So the fail-closed identity path is never exercised end to end. Decided: seed by Clerk ID.
 
 ## Verification
 
 Criteria to meet before closing: each item shipped with red-first tests, or left as a Waiting row with its trigger in the records index.
 
+- [ ] Item 3: the owner's Clerk setting is recorded; both selectors refuse an unverified address; checkout and add-card refuse an unverified refreshed primary; and the Billing page tells the user to verify their address.
+- [ ] Item 1: a refresh, and a `user.updated`, whose address a stale owner held succeeds once Clerk confirms that owner moved, and still refuses when Clerk cannot.
+- [ ] Item 2: both interleavings of provisioning and deletion leave no row, for sign-in and for the billing refresh, proven against real Postgres; the operator command and its runbook ship, and the command leaves a pending Stripe customer cleanup that the drain completes.
+- [ ] Item 6: the sign-in URL, the add-card return path and the E2E seed ship.
+- [x] Item 6: trial re-use is Won't Fix (2026-11-15).
+
 ## Related
 
 - DEBT-501, BUG-320: the same hunt.
-- BUG-078, BUG-284 and BUG-293 (archived): earlier identity decisions this builds on.
+- DEBT-511: the notice refresh built on `ensureClerkUser`.
+- BUG-078, BUG-284 and BUG-293: earlier identity decisions this builds on.
+
+Corrected 2026-11-15: DEBT-503 item 1 shipped, so item 1's lockout narrows to checkout, trial card setup and the webhook; the webhook does not call `ensureClerkUser` but runs the provisioner's steps itself, and the resolver's three behaviors are work to do, not built; item 2's 2026-10-06 note described the decision, not code; the deadline counts real subscriptions only, not DEBT-501 item 7's refunded purchase; trial re-use is Won't Fix, decided by the reviewing session at the owner's delegation; item 3's checkout refusal and Billing prompt gained Verification lines; DEBT-511's former verified-only item moved into item 3; drifted lines corrected; moved items 4 and 5 and the finished `CONSENT_STATE_SECRET` item stripped (finished build history is in git at 34d9aea0).
+
+Corrected 2026-11-18 and 2026-11-19: item 2's operator command runs only on a tombstone for the ID or the owner's confirmation that production has served one Clerk instance since the row was created. An instance switch gives the same 404 for a person who may still be paying, a row's creation date cannot show which instance wrote it, and replaying the missed event works only while Clerk still holds it.

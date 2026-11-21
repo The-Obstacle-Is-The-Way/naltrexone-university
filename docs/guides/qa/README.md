@@ -13,7 +13,7 @@ Scripts that test the app **at the UI**, run by a person, by an agent (Chrome MC
 - **Active:** validated by runs, and part of a run rotation.
 - **Superseded:** replaced by a Playwright spec, or retired. Delete the procedure and say so in the PR.
 
-Each procedure's two evidenced runs are on the [records index](../../records/README.md#waiting) (DEBT-465): the practice procedure before the production content bootstrap, and the billing procedure with the first live purchase.
+Each procedure's two evidenced runs are on the [records index](../../records/README.md#waiting) (DEBT-465): the practice procedure before the production content bootstrap, and the billing procedure, in test mode, before the first live sale. The live purchase is not this procedure's: it is the owner's own check (DEBT-501 item 7).
 
 ## Not Yet Covered
 

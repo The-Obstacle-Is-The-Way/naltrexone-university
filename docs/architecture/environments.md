@@ -107,14 +107,16 @@ Stripe live mode and test mode should remain on the same Stripe account. This av
 
 ### Stripe price ID rule
 
-Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` in an environment that has subscribers. The app recognizes only the current monthly and annual IDs (DEBT-501 item 2). Every subscription still on an old ID would then fail:
+Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` while anything still refers to an old ID: a subscription row in the environment's database, former trials' included; a subscription on it in Stripe, recorded or not (`checkout_stripe_holds_unrecorded` is one way a row goes missing); or an open subscription Checkout Session created with it. The app recognizes only the current monthly and annual IDs (DEBT-501 item 2). Every subscription still on an old ID would then fail:
 
 - its webhooks answer 500;
 - reads of it throw;
 - the reconcile job fails its row;
 - the success page sends its buyer to an error.
 
-A new price for new customers waits for item 2's list of recognized legacy IDs. Nothing enforces this rule yet.
+A Session keeps the price it was created with (`line_items`, `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1368`) and stays completable until Stripe's default expiry, 24 hours after creation, since the create sets no `expires_at`, and the live deployment keeps creating Sessions on the old IDs until the new ones are deployed. So no check made before the deploy settles it. After the deploy, expire every subscription Session still open on an old ID (`checkout.sessions.expire`), then check Stripe again for subscriptions on the old IDs: one completed in between fails as above, and the owner decides its remedy. DEBT-501 item 2 removes that race, for Prices of our product: it takes a subscription's plan from its Stripe Price, not the ID.
+
+A new price for new customers waits for DEBT-501 item 2's recorded-plan design. Nothing enforces this rule yet.
 
 ### Clerk key pairing rule
 

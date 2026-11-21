@@ -20,8 +20,8 @@ updates:
         update-types:
           - version-update:semver-major
       # DEBT-514: lint-staged 17.6.0 can stage another session's tracked edits
-      # during the hook. Remove only after one of the record's Exit Paths is
-      # verified, in the upgrade PR that also restores package.json's caret range.
+      # during the hook. The read-only Biome hook will replace lint-staged; that
+      # pull request deletes this ignore with the dependency.
       - dependency-name: lint-staged
         versions: ['>=17.6.0']
     groups:

@@ -236,6 +236,8 @@ The temporary local `assertLocalTrialCheckoutReplayCapacity()` guard and `[E2E_C
 
 All three journey projects depend on the `setup` project, which runs the shared credential preflight and seed/reset pass before their tests start. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it. The former fourteen per-spec `test.skip(!hasClerkCredentials, ...)` guards were deleted under DEBT-473; the parser-backed skip-policy scan keeps their floor at zero, so suite setup remains the single fail-closed credential gate.
 
+Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target. Never point a deploy-target check at the production database. Once preflight succeeds, setup upserts the `users` row whose email is `E2E_CLERK_USER_USERNAME`, rebinding its `clerk_user_id` to the test Clerk user, and writes that user's subscription rows; both stay even if the reset then stops. The reset then checks that placeholder-01 and placeholder-02 exist, and stops with `E2E_RESET:PLACEHOLDER_FIXTURES_MISSING` if either is missing; otherwise it republishes both, deletes that user's practice data, then rebuilds it, so a failure between the two leaves it deleted (BUG-360). The target must therefore already hold both fixtures. This path does not seed, and no seed command adds the fixtures to a remote database: `pnpm db:seed --include-placeholders` refuses one (BUG-353). BUG-360's decided fix (2026-11-15) removes deploy-target E2E: E2E and integration will refuse every non-local target.
+
 To intentionally validate a non-production deploy-target database instead of the local Docker database, opt out explicitly and prefix the target URL. This is not the default local flow:
 
 ```bash
@@ -243,8 +245,6 @@ DEPLOY_TARGET_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.lo
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$DEPLOY_TARGET_DATABASE_URL"
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$DEPLOY_TARGET_DATABASE_URL" pnpm test:e2e
 ```
-
-Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target. Never point a deploy-target check at the production database. Once preflight succeeds, setup writes the shared test user's subscription rows. The reset then checks that placeholder-01 and placeholder-02 exist, and stops with `E2E_RESET:PLACEHOLDER_FIXTURES_MISSING` if either is missing; otherwise it republishes both and deletes and rebuilds that user's practice data (BUG-360). The target must therefore already hold both fixtures. This path does not seed, and no seed command adds the fixtures to a remote database: `pnpm db:seed --include-placeholders` refuses one (BUG-353). BUG-360 holds the owner's decision on whether deploy-target E2E stays, and how its target is fenced.
 
 The E2E credential preflight includes DEBT-391's migration-ledger check: it compares the active database against `db/migrations/meta/_journal.json` before seed/reset. The default local Docker flow also migrates first, so the check should pass by construction; it remains useful for explicit deploy-target runs.
 

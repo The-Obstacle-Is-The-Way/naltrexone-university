@@ -20,7 +20,7 @@ How to do a task: procedures, and the references they rely on. The rules an agen
 
 - [Migrations](./database/migrations.md): writing and applying migrations safely.
 - [Query plan capture](./database/query-plan-capture.md): a sanitized `EXPLAIN` for a hot path.
-- [Bookmark census](./database/bookmark-census.md): the monthly read-only bookmark cardinality check.
+- [Bookmark census](./database/bookmark-census.md): an optional read-only count of bookmark collection sizes.
 
 ## Operations and Dependencies
 

@@ -6,6 +6,9 @@ import type { Gh } from '../lib/github-cli.mts';
 export class ReviewHost {
   constructor(readonly events: Array<{ file: string; args: string[] }> = []) {}
   readonly prs = new Map<string, Record<string, unknown>>();
+  // A paginated GraphQL read of one PR connection, keyed `<number>:<field>`:
+  // the pages `gh api graphql --paginate --slurp` would return, in order.
+  readonly connectionPages = new Map<string, unknown[]>();
   readonly api = new Map<string, unknown>();
   readonly bodies = new Map<string, string>();
   readonly calls: Array<{ args: string[]; input: string | undefined }> = [];
@@ -20,6 +23,19 @@ export class ReviewHost {
     if (args[0] === 'api') {
       if (args[1] === 'graphql') {
         const number = args.find((arg) => arg.startsWith('number='))?.slice(7);
+        if (args.includes('--paginate')) {
+          const field = args
+            .find((arg) => arg.startsWith('query='))
+            ?.match(/(\w+)\(first:100, after:\$endCursor\)/)?.[1];
+          const pages = this.connectionPages.get(`${number}:${field}`);
+          if (!field || !pages)
+            throw new Error(`Unexpected paginated read: ${number}:${field}`);
+          return JSON.stringify(
+            pages.map((page) => ({
+              data: { repository: { pullRequest: { [field]: page } } },
+            })),
+          );
+        }
         if (!number || !this.prs.has(number))
           throw new Error(`Unexpected PR read: ${number}`);
         return JSON.stringify({
