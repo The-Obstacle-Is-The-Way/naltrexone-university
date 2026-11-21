@@ -29,6 +29,9 @@ async function createHarness(
     layout = 'mirror-list' as 'mirror-list' | 'direct',
     // The runner writes `mirror+file:/path`; apt also reads a file URI.
     mirrorUri = 'mirror+file:' as 'mirror+file:' | 'mirror+file://',
+    // The runner's regional archive: Azure's, or on AWS runners (since
+    // 2026-11-15) the EC2 region's, which the list names first.
+    regionalArchive = 'azure.archive.ubuntu.com',
   } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), 'playwright-install-'));
@@ -53,12 +56,12 @@ async function createHarness(
     layout === 'mirror-list'
       ? `Types: deb\nURIs: ${mirrorUri}${mirrorList}\nSuites: noble noble-updates\n\n` +
         `Types: deb\nURIs: ${mirrorUri}${mirrorList}\nSuites: noble-security\n`
-      : 'Types: deb\nURIs: http://azure.archive.ubuntu.com/ubuntu\nSuites: noble\n';
+      : `Types: deb\nURIs: http://${regionalArchive}/ubuntu\nSuites: noble\n`;
   await writeFile(ubuntuSource, sourceText);
   if (layout === 'mirror-list') {
     await writeFile(
       mirrorList,
-      'http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\n' +
+      `http://${regionalArchive}/ubuntu/\tpriority:1\n` +
         'https://archive.ubuntu.com/ubuntu/\tpriority:2\n' +
         'https://security.ubuntu.com/ubuntu/\tpriority:3\n',
     );
@@ -128,8 +131,9 @@ kill "$1" "$pid" 2>/dev/null
     ubuntuSource,
     sourceText,
     mirrorList,
-    // The file that names the Azure archive in this layout.
+    // The file that names the regional archive in this layout.
     archiveFile: layout === 'mirror-list' ? mirrorList : ubuntuSource,
+    regionalArchive,
     microsoftSource,
     unrelatedAptConfig,
     logPath,
@@ -186,14 +190,34 @@ async function stagedCopies(file: string): Promise<string[]> {
 }
 
 describe('install-playwright-chromium.sh', () => {
+  const azure = 'azure.archive.ubuntu.com';
+  const aws = 'us-east-2.ec2.archive.ubuntu.com';
   it.each([
-    ['the mirror list the runner names', 'mirror-list', 'mirror+file:', true],
-    ['a mirror list named by file URI', 'mirror-list', 'mirror+file://', true],
-    ['a source that names the mirror', 'direct', 'mirror+file:', false],
+    [
+      'the mirror list the runner names',
+      'mirror-list',
+      'mirror+file:',
+      azure,
+      true,
+    ],
+    [
+      'a mirror list named by file URI',
+      'mirror-list',
+      'mirror+file://',
+      azure,
+      true,
+    ],
+    ['a source that names the mirror', 'direct', 'mirror+file:', azure, false],
+    ["an AWS runner's mirror list", 'mirror-list', 'mirror+file:', aws, true],
+    ['a source that names an AWS mirror', 'direct', 'mirror+file:', aws, false],
   ] as const)(
     'kills a hung apt phase, preserves Ubuntu sources, and fails over to the archive in %s',
-    async (_where, layout, mirrorUri, sourceKept) => {
-      const harness = await createHarness(true, { layout, mirrorUri });
+    async (_where, layout, mirrorUri, regionalArchive, sourceKept) => {
+      const harness = await createHarness(true, {
+        layout,
+        mirrorUri,
+        regionalArchive,
+      });
       await chmod(harness.archiveFile, 0o640);
       const startedAt = Date.now();
 
@@ -212,7 +236,7 @@ describe('install-playwright-chromium.sh', () => {
       );
       const archive = await readFile(harness.archiveFile, 'utf8');
       expect(archive).toContain('http://archive.ubuntu.com/ubuntu');
-      expect(archive).not.toContain('azure.archive.ubuntu.com');
+      expect(archive).not.toContain(regionalArchive);
       // The staged copy takes the file's mode, and none is left behind.
       expect((await stat(harness.archiveFile)).mode & 0o777).toBe(0o640);
       expect(await stagedCopies(harness.archiveFile)).toEqual([]);
@@ -234,7 +258,7 @@ describe('install-playwright-chromium.sh', () => {
     });
 
     expect(stdout).toContain(
-      '[playwright-install] No Azure Ubuntu source was present; retrying the bounded apt phase once.',
+      '[playwright-install] No regional Ubuntu mirror was present; retrying the bounded apt phase once.',
     );
     expect(stderr).not.toContain('No such file');
     expect(await readFile(harness.logPath, 'utf8')).toBe(
