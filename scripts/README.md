@@ -9,7 +9,7 @@ The [directory](#directory) below gives every script one row: what it does and w
   - The check follows package commands, workflow steps' `run` text, and only `vercel.json`'s `buildCommand`, looking for the complete path or a `pnpm` package command that references it. Comments and commands whose first word names `echo` or `printf` (including executable paths) are excluded.
   - It does not interpret shell control flow, command wrappers, variables, heredocs, continued lines or imports, prove that a command executes, or find omitted callers. Those claims and the purpose column need source review; changes to callers update the row.
 
-The non-content families are grouped below. The content family (the seed and import scripts in the root, `seed/` and `content-release/`) stays where it is: moving it is tidiness, and would touch the commands DEBT-483's irreversible bootstrap runs (declined 2026-11-15 by the records accuracy review, at the owner's delegation). Once the bootstrap makes the seeds refuse production, `seed-production.ts` and `pnpm db:seed:prod` go (DEBT-483).
+The non-content families are grouped below. The content family (the seed and import scripts in the root, `seed/` and `content-release/`) stays where it is: moving it is tidiness, and would touch the commands the irreversible content bootstrap runs (declined 2026-11-15 by the records accuracy review, at the owner's delegation). Once the bootstrap makes the seeds refuse production, `seed-production.ts` and `pnpm db:seed:prod` go (DEBT-539).
 
 ## Conventions
 

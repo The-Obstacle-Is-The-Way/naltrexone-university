@@ -1,6 +1,6 @@
 # DEBT-538: Handled Clerk Events Grow Without Pruning, and Only the Owner Can Count Them
 
-**Status:** Blocked — the owner runs the read-only `clerk_events` census and records its two counts; due 2026-12-01
+**Status:** Blocked — the owner runs the read-only `clerk_events` census with DEBT-503's usage-row read and records its two counts; due 2026-11-22
 **Priority:** P4
 **Date:** 2026-11-20
 
@@ -22,15 +22,16 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
 
 ## Options
 
-1. **Monthly owner censuses until DEBT-449's trigger fires.** Chosen: DEBT-449 parked the prune on this trigger.
+1. **Monthly owner censuses until DEBT-449's trigger fires.** Chosen: DEBT-449 parked the prune on this trigger. Narrowed on 2026-11-21 to one census unless it reaches 100,000 handled rows or 100 MB (below).
 2. Build the prune now. Not chosen: DEBT-449 parked it.
 
 ## Resolution (decided)
 
-- The census is the owner's, since no session can read the table, and the records rules give it a due date. The owner runs this read-only query against production, then records both numbers and the date here: `SELECT count(*) FILTER (WHERE processed_at IS NOT NULL), pg_total_relation_size('clerk_events') FROM clerk_events`. Each census sets the next one's due date, a month later, in the status.
+- The census is the owner's, since no session can read the table, and the records rules give it a due date. The owner runs this read-only query against production, then records both numbers and the date here: `SELECT count(*) FILTER (WHERE processed_at IS NOT NULL), pg_total_relation_size('clerk_events') FROM clerk_events`. Each census that continues them sets the next one's due date, a month later, in the status.
 - DEBT-449's trigger fires when either holds:
   - two consecutive monthly censuses show at least 1,000,000 handled rows (the query's first count) or 1 GiB for the table and its indexes;
   - Neon reports backup, storage or latency impact attributable to the table. #1704 (DEBT-533) named Neon's storage page and spend alert (DEBT-534) as where that shows.
+- **Decided 2026-11-21 at the owner's delegation: one census, unless it reaches 100,000 handled rows or 100 MB.** The first census runs with DEBT-503's usage-row read, which is due the same day. If it shows under 100,000 handled rows and under 100 MB, the owner declines further censuses, and this record closes. That drops the census half of DEBT-449's trigger, which needs two consecutive censuses. Its other half moves unchanged to a Waiting row: Neon reports backup, storage or latency impact attributable to the table, read on Neon's storage page and spend alert (DEBT-534). Otherwise the monthly censuses continue.
 - When it fires, the prune goes back to direction review before it is built (DEBT-449). A revived design must:
   - preserve unresolved outcomes;
   - exclude any event with an outstanding `pending_stripe_cancellations` child;
@@ -39,7 +40,7 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
 
 ## Verification
 
-- [ ] The trigger fires, and the prune's direction review opens as its own record; or the owner declines further censuses.
+- [ ] The trigger fires, and the prune's direction review opens as its own record; or the owner declines further censuses, and DEBT-449's Neon half becomes a Waiting row.
 
 ## Related
 
@@ -47,3 +48,5 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
 - DEBT-533 (closed in #1704): added Neon's storage page and spend alert as evidence.
 - DEBT-534: Neon's plan, storage page and spend alert.
 - BUG-246 (closed): the cascade and prune-horizon constraint.
+
+Corrected 2026-11-21: decided at the owner's delegation that one census under 100,000 handled rows and 100 MB ends the monthly censuses, dropping the census half of DEBT-449's trigger and keeping its Neon half; the census moves to 11-22, beside DEBT-503's read.

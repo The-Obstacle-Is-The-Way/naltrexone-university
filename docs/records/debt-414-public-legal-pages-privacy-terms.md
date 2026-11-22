@@ -1,6 +1,6 @@
 # DEBT-414: Renewal-Law Gaps and Legal Review Before Paid Launch
 
-**Status:** Open — F21's notice tagging; F07 waits on Resend's first real report; owner, counsel and tax items remain
+**Status:** Open — F21's notice tagging, F19b's trial dates, F19a's annual reminder; F07 waits on Resend's first real report; owner, counsel and tax items remain
 **Priority:** P1
 **Date:** 2026-06-10
 
@@ -11,9 +11,9 @@
 ## Summary
 
 The Privacy Policy and Terms are public, and the owner adopted the New York SHIELD program on 2026-08-27. The renewal-consent and notice work the owner authorized on 2026-09-27 has shipped (ADR-027). What remains:
-- one engineering gap (F21);
+- engineering: F21's gap, and the F19a and F19b builds decided on 2026-11-21;
 - one production check (F07's first real delivery report);
-- Massachusetts' notice rules (F19);
+- Massachusetts' other notice rules (F19c, F19d);
 - the owner's evidence tasks;
 - counsel's questions Q1–Q6 and Q8, and the tax question Q7.
 
@@ -60,17 +60,17 @@ For F21, the early failure report:
 
 **Owner, counsel and tax.** Each item names who decides, when, and what closes it.
 - **F07, the first real report.** Owner. When the first acknowledgment is sent in production, at BUG-364's live trial check or the first live sale. Done when Resend's webhook log shows a 200 for a real report, and that notice's row reads `delivered` or `terminal_failure`.
-- **F19a, Massachusetts' annual notice.** The owner, with counsel's Q1. Decided when DEBT-501 item 7 records its live purchase (set 2026-10-19). If the rule applies, the fix ships before 39 days ahead of the first live annual renewal. Recommended: our own reminder about 25 days before the cancellation deadline (the renewal instant), with its own send-by constant beside `RENEWAL_NOTICE_MINIMUM_DAYS` (`src/application/shared/renewal-notice-schedule.ts:6`) and its own missed-deadline alert. The 39-to-30-day reminder stays. The new reminder needs a new `renewal_notice_kind` value, which is a migration: the scheduled-notice unique index keys on kind, subscription, renewal instant, disclosure version and destination (`db/schema.ts:494-507`), and `anniversary_reminder` is the monthly plan's yearly reminder.
-- **F19b, calendar dates in the trial copy.** Owner. It changes consent evidence, so it merges only on the owner's instruction (DEBT-478). No date is set. Done when it is built on the owner's instruction, or the owner declines it.
+- **F19a, Massachusetts' annual notice.** **Decided 2026-11-21 at the owner's delegation: build it, whatever counsel's Q1 answers,** before 39 days ahead of the first live annual renewal. [940 CMR 38.05(4)](https://www.mass.gov/doc/940-cmr-38-unfair-and-deceptive-fees/download) requires a written notice no more than 30 and no fewer than 5 calendar days before the cancellation deadline for a negative option over 31 days. The existing reminder is queued once a renewal is within 39 days (`src/adapters/jobs/send-due-renewal-notices.ts:64`), normally before that window opens. The fix: our own reminder about 25 days before the cancellation deadline (the renewal instant), with its own send-by constant beside `RENEWAL_NOTICE_MINIMUM_DAYS` (`src/application/shared/renewal-notice-schedule.ts:6`) and its own missed-deadline alert. The 39-to-30-day reminder stays. The new reminder needs a new `renewal_notice_kind` value, which is a migration: the scheduled-notice unique index keys on kind, subscription, renewal instant, disclosure version and destination (`db/schema.ts:494-507`), and `anniversary_reminder` is the monthly plan's yearly reminder.
+- **F19b, calendar dates in the trial copy.** **Decided 2026-11-21 at the owner's delegation: build it before the first live sale,** with the time zone, as a new disclosure version. 940 CMR 38.05(1)(d)–(e) require, before a trial offer is accepted, the calendar date by which to cancel and the date of the first charge. It changes consent evidence, so its pull request merges only on the owner's explicit instruction (DEBT-478, ADR-027); the owner approved building it on 2026-11-22, after seeing this decision summarized. Done when it ships.
 - **F19c, Massachusetts' per-charge notice.** The owner, with counsel's Q1. Before the first live sale (set 2026-10-19). Check DEBT-501 item 7's live receipt for the amount charged and how to cancel. Then the owner accepts it as the notice, or our own per-charge notice ships before the first live monthly charge.
 - **F19d, the notice medium.** Counsel, with Q1. Done when counsel picks (5)'s route: a medium substantially like the online signup, or a recorded, affirmative choice of email.
-- **Support address and phone.** Owner. Recorded on 2026-08-13 as "before scale". Recommended: decide at DEBT-501 item 7's live purchase, since the first live receipt would show them. Done when Stripe's public details show a commercial mail-receiving address and a business line.
-- **Support mailbox coverage.** Owner, before accepting users. Done when the procedure names who covers the support mailbox when the owner is away, so a timely cancellation request cannot turn into a late renewal.
+- **Support address and phone.** Owner. Recorded on 2026-08-13 as "before scale"; **decided 2026-11-21 at the owner's delegation: before the first live sale,** since the first live receipt would show them. [Stripe's receipts page](https://docs.stripe.com/receipts) lists the support address and email, not the phone, among what receipts always require. [Stripe's screening of mail-receiving addresses](https://support.stripe.com/questions/physical-presence-requirement-faq) covers only the business and representative addresses, on US accounts with Issuing, Treasury or Opal, so it does not reach the public support address. Done when Stripe's public details show a commercial mail-receiving address and a business line. That is an edit to Stripe's public details, which the Stripe integration doc's Checkout Rules treat as release-blocking because they carry the Terms and Privacy URLs, so both are rechecked after the edit.
+- **Support mailbox coverage.** **Decided 2026-11-21 at the owner's delegation,** and added as § 5 of `docs/policies/security/support-cancellation-procedure.md`: the support coordinator, the owner, covers the mailbox, and an always-on auto-reply acknowledges each email and links the Billing page, where a subscriber can cancel at once. No one else covers it: while the owner is away, § 5 lets § 1's one-business-day step wait for their return. The procedure's § 3, adopted 2026-09-28, still dates a verified request from when it was received and refunds a renewal charged after it. So an emailed request can still meet a renewal while the owner is away, and each renewal charged after it is refunded rather than prevented; § 1 then cancels immediately, not at the end of the new period. Done when the owner turns the auto-reply on.
 - **F08, template specimens.** Owner, before counsel's review. Done when each enabled Clerk and Stripe template has its sanitized subject and body, purpose, trigger and recipient relationship kept, and Invitation is reclassified or its use restricted.
 - **F14, entity and threshold facts.** Owner, before counsel's review, then at each annual program review. Done when the merchant's legal identity, any assumed-name filing and other businesses are verified privately, and revenue and state-consumer counts are recorded. The Workspace label "John H Jung MD LLC" is not evidence of an LLC.
 - **F09 and F12, incident channel and stores.** Owner. Before relying on electronic breach notice, or before first storing affected-person data. Done when the channel tabletop is repeated, and the Apple Notes/iCloud and Bitwarden reviews are documented ([incident procedure](../policies/security/incident-response-and-breach-notification.md), 2026-09-16 supplement).
-- **Q1–Q6.** Counsel. Before the first paid acquisition, or earlier if accepting a consumer contract requires it (#902). Done when written answers are recorded. A Terms change ships as a new `TERMS_VERSION` and hash, keeps the old accepted text, updates the disclosure, consent and acknowledgment evidence, and follows the notice or assent process. No frozen text is replaced in place.
-- **Q7.** A tax adviser or counsel. Before the first taxable charge, and so before the first live sale. Done when the classification and any registration are recorded.
+- **Q1–Q6.** Counsel: a fixed-fee New York consumer-protection attorney, engaged before the first live sale (decided 2026-11-21 at the owner's delegation). Answers before the first paid acquisition, or earlier if accepting a consumer contract requires it (#902). Done when written answers are recorded. A Terms change ships as a new `TERMS_VERSION` and hash, keeps the old accepted text, updates the disclosure, consent and acknowledgment evidence, and follows the notice or assent process. No frozen text is replaced in place.
+- **Q7.** A New York sales-tax adviser (decided 2026-11-21 at the owner's delegation). Before the first taxable charge, and so before the first live sale. Two 2020 advisory opinions found online course subscriptions (TSB-A-20(18)S) and online courses (TSB-A-20(33)S) not taxable; each binds only its petitioner, so a written opinion is still needed. Done when the classification and any registration are recorded.
 - **Q8.** IP counsel. Before paid launch. Done when the answers are recorded.
 - **Price-change machinery.** Owner. Parked on 2026-08-06. Before planning or announcing the first change to an existing subscriber's price or material terms, build it with its notice, consent, claim, reconciliation and audit tests (design in git at `34d9aea0`, § 7). Until then no existing subscriber's price changes (ADR-027). The design must also show changed renewal terms in at least 12-point bold (North Carolina § 75-41(a)(4)).
 
@@ -114,11 +114,11 @@ For F21, the early failure report:
 
 - [ ] F21 ships with its red tests.
 - [ ] F07: Resend's log shows a 200 for a real report, and its notice's row reads `delivered` or `terminal_failure`.
-- [ ] F19a, F19b and F19c are decided, and anything decided is built. F19d is answered.
+- [ ] F19a and F19b are built. F19c is decided, and built if decided. F19d is answered.
 - [ ] The support address and phone are replaced.
 - [ ] F08's specimens and F14's facts are recorded.
-- [ ] Q1–Q6 and Q8 are answered by counsel, and Q7 by a tax adviser or counsel.
-- [ ] Support mailbox coverage is named.
+- [ ] Q1–Q6 and Q8 are answered by counsel, and Q7 by a tax adviser.
+- [ ] The support mailbox's auto-reply is on.
 - [ ] At closing, the conditional items (F09 and F12, the price-change machinery) become Waiting rows with their triggers, and the standing rulings and rules move to their homes.
 
 ## Related
@@ -126,7 +126,7 @@ For F21, the early failure report:
 - ADR-027: the shipped decisions and counsel's open questions.
 - BUG-364: carries F22 (a trial cancelled in the portal is still offered "Add a card"). F22 closes with it.
 - BUG-377 and DEBT-505: an operational alert reaching the owner. Before 2026-11-15 this record held that as an open limit.
-- DEBT-501 item 7: the live purchase. It supplies F19c's specimen and starts F19a's decision.
+- DEBT-501 item 7: the live purchase. It supplies F19c's specimen.
 - DEBT-511: notices go to the address Clerk verifies.
 - GitHub issues: #902 (counsel), #903 (engineering and evidence), #1543 (the Resend webhook), #1544 (F19a and F19b), #772 (marketing email).
 - [Support cancellation procedure](../policies/security/support-cancellation-procedure.md) and the [requeue guide](../guides/operations/requeue-renewal-notice.md).
@@ -135,4 +135,8 @@ Corrected 2026-11-15: rewritten as a live record of the open items. The finished
 
 Corrected 2026-11-21: F21's tag stays the row ID. The record names the superseded-send case and the idempotency-key replay a per-attempt tag would break, for F21's design to settle. Its early-report tests now state dispatch's result, and a late report for a superseded send is tested, including one arriving after the next claim. The replay constraint holds only inside Resend's 24-hour key window (#1704 and #1716 reviews).
 
+Corrected 2026-11-21: decided at the owner's delegation to build F19a and F19b, to replace the support address and phone and engage counsel and a New York sales-tax adviser before the first live sale, and how the support mailbox is covered; the Summary and DEBT-501 item 7's Related line follow, since item 7 no longer starts F19a's decision.
+
 Corrected 2026-11-22: the replay constraint covers only a send Resend accepted; the requeue guide requeues promptly only once no send is confirmed (#1716 review).
+
+Corrected 2026-11-22: F19b cites the owner's 2026-11-22 approval to build it, and its pull request still needs the owner's explicit merge instruction; the support address overrides the 2026-08-13 "before scale" and is release-blocking; the mailbox decision states that no one covers it while the owner is away, with § 3's refund as the remedy; § 1 cancels immediately when a request is processed after its period ends (#1722 review).
