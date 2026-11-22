@@ -1,6 +1,6 @@
 # DEBT-537: Four Advisory Fixes Wait on the 7-Day Gate: vite, brace-expansion, ws and Clerk
 
-**Status:** Open — one repo-owned bundle takes the vite, brace-expansion, ws and @clerk/backend fixes once the last clears the gate (2026-11-19 22:57Z); due 2026-11-20
+**Status:** Open — one repo-owned bundle takes the vite, brace-expansion, ws and @clerk/backend fixes, all past the gate since 2026-11-19 22:57Z; due 2026-11-25
 **Priority:** P3
 **Date:** 2026-11-13
 
@@ -33,6 +33,7 @@ Four advisories cover versions installed on `dev`; the fourth, `ws`, joined on 2
     - `lib/clerk-call-failures-sdk.test.ts`;
     - `lib/clerk-backend-call-limit-sdk.test.ts`;
     - `proxy-authorization-header-sdk.test.ts`. Its cookie case expects Clerk to refresh the token.
+  - Dependabot #1718 confirmed it on 2026-11-21: with `@clerk/nextjs` 7.10.0, those four files failed 35 tests (2, 5, 27 and 1, in that order), such as "expected 'signed-out' to be 'handshake'" (CI run 44847053914).
   - The fifth, `proxy-clerk-signed-in-refresh.test.ts`, signs tokens for the app's own limiter and replaces `clerkMiddleware` with a stub.
 - **The app's limiter mirrors Clerk.** `lib/clerk-backend-call-limit.ts` predicts which expired session token Clerk will refresh, from `@clerk/backend` 3.26.2's rules. It checks the signature and `alg` but not `cat`. Under 3.28.0, Clerk signs out an untagged token rather than refreshing it.
   - The limiter would then count a refresh Clerk never makes, an over-count.
