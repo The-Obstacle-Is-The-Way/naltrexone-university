@@ -28,14 +28,14 @@ No harm is recorded. Until the bootstrap, a production seed from a clone's `cont
 ## Resolution (decided)
 
 1. If production content changed after 2026-11-11, rerun `pnpm content:keys:compare` against the content repository's `main`. Its commit replaces the baseline only when every mismatch count is 0 (`content-pipeline.md`).
-2. Run the practice QA guide (`docs/guides/qa/practice-core-flows.md`) against the dev preview (QA method, item 2). A session can run its behavior steps; its judgment checks and its `⚠ human/PW` steps need the owner or Playwright (the guide's Execution modes).
+2. Run the practice QA guide (`docs/guides/qa/practice-core-flows.md`) against the dev preview (QA method, item 2). A session can run its tutor and quick steps, and Playwright every behavior step; its judgment checks need the owner's review (the guide's Execution modes).
 3. The owner takes the restore point, then runs `pnpm content:release:bootstrap` with `--reason` and `--authority`, previews its plan, and applies it with `--plan <plan-id> --apply`.
 4. The owner records the date and the release here.
 5. A code pull request then deletes `scripts/seed-production.ts` and `pnpm db:seed:prod`, which after the bootstrap only refuse (DEBT-532).
 
 ## Verification
 
-- [ ] The practice QA guide passes on a preview.
+- [ ] The practice QA guide passes on the dev preview.
 - [ ] The owner records the bootstrap's date and release.
 - [ ] `seed-production.ts` and `pnpm db:seed:prod` are deleted.
 

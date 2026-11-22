@@ -22,7 +22,7 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
 
 ## Options
 
-1. **Monthly owner censuses until DEBT-449's trigger fires.** Chosen: DEBT-449 parked the prune on this trigger. Narrowed on 2026-11-21 to one census unless it reaches either threshold below.
+1. **Monthly owner censuses until DEBT-449's trigger fires.** Chosen: DEBT-449 parked the prune on this trigger. Narrowed on 2026-11-21 to one census unless it reaches 100,000 handled rows or 100 MB (below).
 2. Build the prune now. Not chosen: DEBT-449 parked it.
 
 ## Resolution (decided)
@@ -40,7 +40,7 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
 
 ## Verification
 
-- [ ] The trigger fires, and the prune's direction review opens as its own record; or the owner declines further censuses.
+- [ ] The trigger fires, and the prune's direction review opens as its own record; or the owner declines further censuses, and DEBT-449's Neon half becomes a Waiting row.
 
 ## Related
 
