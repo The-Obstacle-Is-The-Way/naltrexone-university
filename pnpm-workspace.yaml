@@ -3,13 +3,6 @@ minimumReleaseAgeStrict: true # v11-only: fail when no version satisfies the 7-d
 minimumReleaseAgeIgnoreMissingTime: false # v11-only: fail when registry metadata lacks package publish time.
 blockExoticSubdeps: true
 overrides:
-  # Security: GHSA-r28c-9q8g-f849 + GHSA-fxqj-rqcc-2cmp — crafted
-  # sourceMappingURL paths could disclose arbitrary .map files, including when
-  # PostCSS has no `from` value. Build-only via Next/Tailwind/Vite over trusted
-  # repo CSS, so defense-in-depth. 8.5.23 satisfies Tailwind's ^8.5.16 and
-  # Vite's ^8.5.23, and Next 16.3.8 pins 8.5.23 exactly. Aged past the 7-day
-  # gate as of 2026-08-07 (published 2026-07-24).
-  postcss: 8.5.23
   # Security: GHSA-q8mj-m7cp-5q26 (CVE-2026-8723; alert #64) — qs.stringify
   # throws on null/undefined entries in comma-format arrays with
   # encodeValuesOnly; GHSA-4mjr-xmp4-gh2g — stringify calls an attacker-set,
@@ -56,11 +49,12 @@ overrides:
   fast-uri: 3.1.9
   # Security: GHSA-2v37-7h3g-55p8 — custom nanoid generators can loop
   # indefinitely when size is zero. The 2026-08-14 advisory revision moved the
-  # patched floor to 3.3.18. Transitive via postcss@8.5.23 (build-time CSS
-  # tooling under Tailwind/Next); no direct usage, so defense-in-depth. Scoped
-  # to the 3.x line; 3.3.18 satisfies postcss's ^3.3.16. Aged past the 7-day
-  # gate 2026-08-14T16:41:05Z (published 2026-08-07T16:41:05Z).
-  'nanoid@3': 3.3.18
+  # patched floor to 3.3.18. Transitive via postcss (build-time CSS tooling
+  # under Tailwind, Next and Vite); no direct usage, so defense-in-depth.
+  # Scoped to the 3.x line. 3.3.20 satisfies postcss 8.5.33's ^3.3.20 and
+  # 8.5.23's ^3.3.16 (DEBT-537). Published 2026-10-05T09:44:40Z, past the
+  # 7-day gate.
+  'nanoid@3': 3.3.20
   # Security: GHSA-68fv-2mgg-jv7q (alert #80) — unvalidated indexed-map
   # section offsets let a crafted source map block the event loop. Build- and
   # test-only: postcss and @tailwindcss/node read repository CSS at build time,
