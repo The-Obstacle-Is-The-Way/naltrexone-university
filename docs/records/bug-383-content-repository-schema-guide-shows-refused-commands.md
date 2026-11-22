@@ -27,11 +27,11 @@ An author who follows the content repository's guide gets an error or, in a fres
 
 ## Resolution (decided)
 
-Replace the content repository's Commands block (lines 563–581) and the two `-- --dry-run` lines (583 and 756) with this repository's current wording, through that repository's own pull-request process.
+Through that repository's own pull-request process, replace its Commands block (lines 563–581) with this repository's commands and the paragraph after them (`content/drafts/questions/SCHEMA.md:479-497`), and remove the `--` separator from lines 583 and 756. That paragraph's relative link to `docs/architecture/content-pipeline.md` resolves only inside this repository, so the copy links to that guide's URL here.
 
 ## Verification
 
-- [ ] The content repository's `questions/SCHEMA.md` on `main` shows `--include-placeholders`, no `--` separator, an explicit `DATABASE_URL` and a fresh `--out` directory. Then close this record, with that commit in the closing pull request's description.
+- [ ] The content repository's `questions/SCHEMA.md` on `main` shows `--include-placeholders`, no `--` separator, an explicit `DATABASE_URL`, a fresh `--out` directory and a content-pipeline link that resolves. Then close this record, with that commit in the closing pull request's description.
 
 ## Related
 
