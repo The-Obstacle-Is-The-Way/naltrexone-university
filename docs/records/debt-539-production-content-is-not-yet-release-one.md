@@ -1,6 +1,6 @@
 # DEBT-539: Production Content Is Not Yet Bootstrapped as Release One
 
-**Status:** Blocked — a session runs the practice QA guide on a preview, then the owner runs the content bootstrap, before the first live sale
+**Status:** Blocked — the practice QA guide passes on the dev preview, then the owner runs the content bootstrap, before the first live sale
 **Priority:** P2
 **Date:** 2026-11-21
 
@@ -22,13 +22,13 @@ No harm is recorded. Until the bootstrap, a production seed from a clone's `cont
 
 ## Options
 
-1. **Bootstrap before the first live sale.** Chosen 2026-11-21 at the owner's delegation: no paying user sees content that bypassed a release, and after it a bad question is held (`pnpm content:hold`) or replaced by a new release.
+1. **Bootstrap before the first live sale.** Chosen 2026-11-21 at the owner's delegation: after it, every content change goes through a release, and a bad question is held (`pnpm content:hold`) or replaced by a new release. The bootstrap itself adopts the live bank without proving its source (business rule R31).
 2. Bootstrap after launch. Not chosen: the direct seed could still write production while people pay.
 
 ## Resolution (decided)
 
 1. If production content changed after 2026-11-11, rerun `pnpm content:keys:compare` against the content repository's `main`. Its commit replaces the baseline only when every mismatch count is 0 (`content-pipeline.md`).
-2. Run the practice QA guide (`docs/guides/qa/practice-core-flows.md`) on a preview. A session can run it.
+2. Run the practice QA guide (`docs/guides/qa/practice-core-flows.md`) against the dev preview (QA method, item 2). A session can run its behavior steps; its judgment checks and its `⚠ human/PW` steps need the owner or Playwright (the guide's Execution modes).
 3. The owner takes the restore point, then runs `pnpm content:release:bootstrap` with `--reason` and `--authority`, previews its plan, and applies it with `--plan <plan-id> --apply`.
 4. The owner records the date and the release here.
 5. A code pull request then deletes `scripts/seed-production.ts` and `pnpm db:seed:prod`, which after the bootstrap only refuse (DEBT-532).

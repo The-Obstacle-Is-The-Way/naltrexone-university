@@ -1,6 +1,6 @@
 # BUG-383: The Content Repository's Schema Guide Shows Commands the App Refuses
 
-**Status:** Blocked — the owner has the content repository's building agent correct the Commands block of its `questions/SCHEMA.md`; due 2026-11-29
+**Status:** Blocked — the owner has the content repository's building agent correct the Commands block and two dry-run lines of its `questions/SCHEMA.md`; due 2026-11-29
 **Priority:** P4
 **Date:** 2026-11-22
 
@@ -12,7 +12,7 @@ The content repository, `addiction-final-2026`, tells authors how to import draf
 
 ## Evidence
 
-Checked at the content repository's `main`, `c1e5897f`, and this repository's `dev`, 2026-11-22:
+Checked on the content repository's `main` and this repository's `dev`, 2026-11-22:
 
 - **The `--` separator.** `pnpm content:import:drafts -- --dry-run` and `-- --status published` (the guide's lines 565, 571 and 580) pass `--` to the importer under pnpm 11. The importer accepts only `--in`, `--out`, `--status` and `--dry-run`, and throws `Unknown argument: --` (`scripts/import-draft-questions.ts:26-32`). The same `-- --dry-run` appears outside the block, at lines 583 and 756.
 - **A bare import.** `pnpm content:import:drafts` (line 568) writes to `content/questions/imported` by default (`scripts/import-draft-questions.ts:20`). The importer refuses an output root that is not empty (`:87-91`, `:161`). That tree is gitignored (`.gitignore:58`), so in a fresh clone it is empty and the import writes into it. This repository's guide imports into a fresh staging directory outside the live tree instead (`content/drafts/questions/SCHEMA.md:483-485`).
@@ -31,7 +31,7 @@ Replace the content repository's Commands block (lines 563–581) and the two `-
 
 ## Verification
 
-- [ ] The content repository's `questions/SCHEMA.md` on `main` shows `--include-placeholders`, no `--` separator, an explicit `DATABASE_URL` and a fresh `--out` directory. Record its commit here, then close this record.
+- [ ] The content repository's `questions/SCHEMA.md` on `main` shows `--include-placeholders`, no `--` separator, an explicit `DATABASE_URL` and a fresh `--out` directory. Then close this record, with that commit in the closing pull request's description.
 
 ## Related
 

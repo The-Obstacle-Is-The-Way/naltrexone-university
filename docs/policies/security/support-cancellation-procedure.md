@@ -52,7 +52,7 @@ Keep these notes for as long as renewal-consent evidence is kept (at least three
 ## 5. Coverage
 
 - The support coordinator covers the mailbox.
-- An always-on auto-reply acknowledges every message and links the Billing page, where a learner can cancel at once.
+- An always-on auto-reply, turned on before the first live sale (DEBT-414), acknowledges every message and links the Billing page, where a learner can cancel at once.
 - While the coordinator is away, § 1's one-business-day step waits for their return. § 3 still dates a verified request from when it was received.
 
 ## Related
