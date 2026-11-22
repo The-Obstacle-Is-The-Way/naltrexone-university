@@ -135,4 +135,4 @@ Corrected 2026-11-15: rewritten as a live record of the open items. The finished
 
 Corrected 2026-11-21: F21's tag stays the row ID. The record names the superseded-send case and the idempotency-key replay a per-attempt tag would break, for F21's design to settle. Its early-report tests now state dispatch's result, and a late report for a superseded send is tested, including one arriving after the next claim. The replay constraint holds only inside Resend's 24-hour key window (#1704 and #1716 reviews).
 
-Corrected 2026-11-22: the replay constraint covers only a send Resend accepted; the requeue guide requeues any other promptly (#1716 review).
+Corrected 2026-11-22: the replay constraint covers only a send Resend accepted; the requeue guide requeues promptly only once no send is confirmed (#1716 review).
