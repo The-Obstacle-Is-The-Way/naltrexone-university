@@ -18,7 +18,7 @@ Checked on the content repository's `main` and this repository's `dev`, 2026-11-
 - **A bare import.** `pnpm content:import:drafts` (line 568) writes to `content/questions/imported` by default (`scripts/import-draft-questions.ts:20`). The importer refuses an output root that is not empty (`:87-91`, `:161`). That tree is gitignored (`.gitignore:58`), so in a fresh clone it is empty and the import writes into it. This repository's guide imports into a fresh staging directory outside the live tree instead (`content/drafts/questions/SCHEMA.md:483-485`).
 - **A bare seed.** `pnpm db:seed` (lines 574 and 580) needs an explicit `DATABASE_URL` and refuses the dotenv fallback (`scripts/database/database-target.ts:30-39`).
 - **The placeholder variable.** `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed` (line 577) is refused: "SEED_INCLUDE_PLACEHOLDERS is set, but the seed no longer reads it" (`scripts/seed/seed-options.ts:21-23`). The flag `--include-placeholders` replaced it.
-- **The current wording** is in this repository's `content/drafts/questions/SCHEMA.md:479-501` and `:680`.
+- **The current wording** is in this repository's `content/drafts/questions/SCHEMA.md:479-497` and `:680`.
 - **Why the owner.** In the content repository, a building agent authors each pull request and the owner's session verifies and merges it. That repository's session confirmed the defect on 2026-11-22 and cannot author the fix itself.
 
 ## Impact

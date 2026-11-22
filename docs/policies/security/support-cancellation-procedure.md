@@ -1,6 +1,6 @@
 # Support Cancellation Procedure
 
-**Status:** Adopted 2026-09-28 (DEBT-414 F04); § 5 added 2026-11-21 at the owner's delegation, and § 1 step 3 aligned with § 3 on 2026-11-22 (DEBT-414)
+**Status:** Adopted 2026-09-28 (DEBT-414 F04); § 5 added 2026-11-21 at the owner's delegation (DEBT-414); § 1 steps 3 and 4 aligned with § 3 on 2026-11-22 (#1722 review)
 **Owner:** the support coordinator named in the [information security program](./information-security-program.md)
 **Applies to:** requests to cancel a subscription sent to support@addictionboards.com
 
@@ -12,12 +12,13 @@ A `From` header can be forged, so a matching address alone is not proof (#1179 r
 
 1. Find the account in Clerk by the sender's address, and its customer in the Stripe Dashboard.
 2. Confirm control of the mailbox. Write a **new** message to the account's address, not a reply to the request, asking the learner to reply to confirm the cancellation. Act only on a reply that comes from that mailbox. The request still takes effect as of when it was received (§ 3).
-3. In Stripe, cancel the subscription **at the end of the period (or trial) in which the request was received**. If that period has already ended, cancel immediately and refund the charge for the new period in full (§ 3), so no delay extends service. Do not otherwise cancel immediately unless the learner asks for that.
+3. In Stripe, cancel the subscription **at the end of the period (or trial) in which the request was received**. If that period has already ended, cancel immediately, not at the end of the new period, and refund in full every charge posted since it ended (§ 3). Do not otherwise cancel immediately unless the learner asks for that.
 4. Reply in writing, to the account's address, confirming:
    - that the cancellation is recorded;
    - the date service ends;
    - that access continues until then;
-   - that no further charges will be made.
+   - that no further charges will be made;
+   - any refund made under § 3.
 
    This reply is the learner's retainable confirmation.
 5. Complete these steps within **one business day** of receiving the confirmation.
