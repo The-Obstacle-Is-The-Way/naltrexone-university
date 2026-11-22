@@ -87,6 +87,7 @@ const UNCONDITIONAL = new Set([
   'seed-production.ts',
   'seed-all-environments.ts',
   'dependencies/verify-lockfile-union.ts',
+  'dependencies/verify-lockfile-drift.ts',
 ]);
 
 describe('entry point policy', () => {
@@ -177,6 +178,7 @@ const operatorCommands = {
   'docs:audit': 'records/documentation-archive.ts',
   'secret:check-header': 'deploy/validate-header-safe-secret.ts',
   'deps:verify-union': 'dependencies/verify-lockfile-union.ts',
+  'deps:verify-drift': 'dependencies/verify-lockfile-drift.ts',
 };
 
 describe('operator package commands', () => {

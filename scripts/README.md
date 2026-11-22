@@ -14,7 +14,7 @@ The non-content families are grouped below. The content family (the seed and imp
 ## Conventions
 
 - **Run a script through its package script** when it has one (`pnpm db:migrate`), and otherwise with `pnpm exec tsx scripts/<path>`. Some scripts run another way:
-  - `dependencies/verify-lockfile-union.ts` runs with `node --import tsx`, as its guide explains;
+  - `dependencies/verify-lockfile-union.ts` and `dependencies/verify-lockfile-drift.ts` run with `node --import tsx`, as their guide explains;
   - the two `.mts` jobs run with plain `node`;
   - `ci/*.sh` runs with `bash`.
 
@@ -22,7 +22,7 @@ The non-content families are grouped below. The content family (the seed and imp
 - **Most TypeScript entry points export their work as a function.** Some inject their dependencies; others call real infrastructure. Guarded entry points use `isMain` from `lib/entry-point.mts`, which compares real paths and resolves extensionless or `.js` entry spellings supported by the runtime. The shared check resolves symlinks; imports do not enter the guarded command body. `tests/script-entry-points.test.ts` exercises both runtimes and requires a top-level shared check in modules with executable entry signals; its bounded AST scan ignores comments and nested lookalikes and checks package-script entry points outside `scripts/` too. Pass arguments directly to package commands; strict parsers refuse the literal `--` separator that pnpm 11 forwards (#1567).
   - Error reporting varies: message, stack, or a sanitized diagnostic; most guards set `process.exitCode = 1` on failure. Many carry `/* v8 ignore */` comments.
   - Not every entry point follows this yet. `import-draft-questions.ts`, `seed-production.ts` and `seed-all-environments.ts` run unconditionally, and some guards neither catch nor carry the comments.
-  - `dependencies/verify-lockfile-union.ts` is also an unconditional thin CLI; reusable logic lives in `dependencies/lockfile-union.ts`.
+  - `dependencies/verify-lockfile-union.ts` and `dependencies/verify-lockfile-drift.ts` are also unconditional thin CLIs; reusable logic lives in `dependencies/lockfile-union.ts` and `dependencies/lockfile-drift.ts`.
 - **Workflow entry points run with plain `node` only when they use `.mts`,** with no `pnpm install`. `tests/workflow-node-scripts.test.ts` requires that extension because this package declares no module type. The shared native entry helper also uses `.mts`.
   - Such a script cannot use `node_modules`.
   - Native TypeScript imports include their extension; `tsconfig.json` permits this under `noEmit`. Shared native helpers use only Node built-ins.
@@ -183,6 +183,8 @@ The non-content families are grouped below. The content family (the seed and imp
 | --- | --- | --- |
 | `dependencies/lockfile-union.ts` | Checks that a bundle's `pnpm-lock.yaml` changes exactly the union of its source pull requests' changes. | Imported by `dependencies/verify-lockfile-union.ts` |
 | `dependencies/verify-lockfile-union.ts` | The lockfile union check's command line. | `pnpm deps:verify-union`; By hand with `node --import tsx`, per `docs/guides/dependencies/updating-dependencies.md` |
+| `dependencies/lockfile-drift.ts` | Checks an update added to a bundle beyond its sources for drift outside the packages it names: a new duplicate copy, or an existing entry moved onto a new, still-shared or older copy. | Imported by `dependencies/verify-lockfile-drift.ts` |
+| `dependencies/verify-lockfile-drift.ts` | The lockfile drift check's command line. | `pnpm deps:verify-drift`; By hand with `node --import tsx`, per `docs/guides/dependencies/updating-dependencies.md` |
 
 ### Records and Documentation
 

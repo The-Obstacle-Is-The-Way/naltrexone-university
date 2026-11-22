@@ -29,6 +29,7 @@ const STRICT_OPERATOR_COMMANDS = [
   'docs:audit',
   'secret:check-header',
   'deps:verify-union',
+  'deps:verify-drift',
 ];
 const SEPARATOR_AFTER_STRICT_COMMAND = new RegExp(
   `\\bpnpm[ \\t]+(?:(?:run|--silent)[ \\t]+)*(?:${STRICT_OPERATOR_COMMANDS.join('|')})[ \\t]+\\[?--(?=[ \\t\\r\\n\\]])`,

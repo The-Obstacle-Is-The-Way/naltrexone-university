@@ -117,7 +117,7 @@ Each argument is a git revision or a lockfile path. The verifier refuses a name 
 
 The parser checks the shapes needed for comparison, not the complete pnpm lockfile schema. The frozen install supplies the pnpm compatibility check.
 
-Failure codes add up when several categories fail; 28 means extra, missing and unmatched. A newer transitive usually means a wrong cutoff: regenerate rather than edit the lockfile. A conflict needs a deliberate choice, such as asking Dependabot to recreate the sources from one base or bundling fewer of them. Record that choice in the PR.
+Failure codes add up when several categories fail; 28 means extra, missing and unmatched. A newer transitive usually means a wrong cutoff: regenerate rather than edit the lockfile. Dependabot can also resolve a transitive differently from a scoped update: for the bundle of #1718 and #1717, steps 3 to 5 left three Babel helpers on `@babel/types` 8.0.8 where #1718 moved them to 8.1.2, published before the cutoff, and the verifier exited 12. When the sources share a parent, start instead from one source's own lockfile and run step 4 and 5's commands for the other sources' updates; that reproduced the union exactly. The bundle then keeps that source's own resolution, duplicates included, so run the drift check below on the bundle commit, naming every package the sources update, and list what it reports in the PR. A conflict needs a deliberate choice, such as asking Dependabot to recreate the sources from one base or bundling fewer of them. Record that choice in the PR.
 
 A correct bundle can still report missing when the sources overlap. For example, one source drops `is-number@6.0.0` because it moves to 7, while another source's new dependency still needs 6. The bundle rightly keeps 6.0.0, so the verifier reports the first source's removal as missing, and no regeneration clears it. Treat that the same way as a conflict: confirm in `pnpm why` that the kept entry is needed, then record the overlap and the decision in the PR.
 
@@ -127,22 +127,28 @@ Receipt, 2026-10-05: starting from the sources' parent, steps 3 to 5 reproduced 
 
 ### Updates added beyond the sources
 
-A bundle can also take updates that no Dependabot PR proposes, such as a release that cleared the 7-day gate after Dependabot's weekly run: #1702 added Tailwind, Vitest and Biome updates. No automated check covers their scope:
+A bundle can also take updates that no Dependabot PR proposes, such as a release that cleared the 7-day gate after Dependabot's weekly run: #1702 added Tailwind, Vitest and Biome updates. The other checks miss their scope:
 
 - The verifier compares the candidate with the Dependabot sources only, so it proves the bundle commit alone. Pass that commit, before any added update, as `--candidate`.
 - The frozen install checks the lockfile against `package.json` and `pnpm-workspace.yaml`, and each entry's release age and trust, not which entries changed.
 - CodeRabbit skips `pnpm-lock.yaml` (`path_filters` in `.coderabbit.yaml`), so it cannot see an update that changes only the lockfile. On #1702 it read the two Tailwind version lines in `package.json`; the Vitest and Biome updates, and the lockfile's 443 changed lines, went unread.
 
-No script checks an added update's scope yet, so check it by hand. Finish steps 1 to 4 for each update before you add the next one:
+The drift check covers their scope. Finish steps 1 to 4 for each update before you add the next one:
 
-1. Add the update in its own commit after the bundle commit. After a scoped `pnpm update`, restore `package.json`'s ranges, unless the update raises an exact pin, and resynchronize with `pnpm install --lockfile-only --config.optimistic-repeat-install=false`. Leave out step 5's cutoff: it predates the added release, so the release-age check would reject it.
-2. Look for drift: entries moved onto newer duplicate copies that nothing requires. On #1702, the Vitest 5.1.0 update moved eight Babel 8 consumers from `@babel/types` 8.0.8 to a new 8.1.0 copy, and `estree-walker` from `@types/estree` 1.0.9 to a new 1.0.10 copy. Both copies were old enough and trusted, so CI passed. Compare the `snapshots` section of the update's lockfile with its parent commit's, and apply two rules to every entry, the updated packages' own dependencies included:
-   - Apart from the new versions of the packages the update names, no new key may sit beside an older copy of the same package, unless a consumer's declared range requires it.
-   - No entry that exists in both may move a dependency onto a copy the parent lacked, unless that consumer's declared range requires the copy.
+1. Add the update in its own commit after the bundle commit. After a scoped `pnpm update`, restore `package.json`'s ranges, unless the update raises an exact pin, and resynchronize with `pnpm install --lockfile-only --config.optimistic-repeat-install=false`. Leave out step 5's cutoff: it predates the added release, so the release-age check would reject it. For a package no importer lists, `pnpm update ws@8.23.0 --lockfile-only` changed nothing on this repository's pnpm 11.3.0, and `pnpm update ws --depth Infinity --lockfile-only` moved `ws` to the newest release past the gate.
+2. Run the drift check on the update's commit, naming each package the update moves on purpose:
 
-   A copy is required only when the consumer's declared range, from `pnpm view <consumer>@<version> dependencies optionalDependencies peerDependencies`, rules out every older copy. `pnpm why <package> --config.lockfile-only=true` lists the entries that use each copy; without that setting it reads the installed packages, not the lockfile.
+   ```sh
+   node --import tsx scripts/dependencies/verify-lockfile-drift.ts --parent HEAD^ --candidate HEAD --update ws
+   ```
 
-   A changed peer suffix (see above) renames an entry, so compare the old and new keys as a pair. A rename is allowed when its only change is a peer that moved to a version these rules allow, as when an `@types/node` update renames `stripe@22.5.0(@types/node@24.13.4)`. A move onto a copy the parent already had is allowed when it leaves the old copy unused, so that the old key disappears and a duplicate is gone; a move that leaves both copies in use needs the same justification as a move onto a new copy. Record each rename and move in the PR.
+   `--update name@<major>` names one major line, as `brace-expansion@5` does for a version-selected override. It exits 4 on drift, applying two rules to every entry, the updated packages' own dependencies included:
+   - Apart from the new versions of the named packages, no new copy may sit beside another copy on the same caret line (the same major, or for 0.x the same minor).
+   - No entry that exists in both lockfiles may move a dependency onto a copy the parent lacked, onto one the parent had while the old copy stays in use, or onto an older version, unless the dependency is a named package.
+
+   An entry keeps its key unless its peers change. A renamed entry is compared with the parent's entries of the same name and version, so a rename whose only change is a peer these rules allow passes, as when an `@types/node` update renames `stripe@22.5.0(@types/node@24.13.4)`. So do a new copy that replaces its old one outright and a move onto a newer copy that leaves the old one unused. It reads `packages` keys and the importers' and entries' dependency maps only: a change inside a `packages` entry, to `overrides` or `settings`, or to a tarball or git value does not show. An `--update` that changes nothing fails with exit 8. On #1702, the Vitest 5.1.0 update moved eight Babel 8 consumers from `@babel/types` 8.0.8 to a new 8.1.0 copy, and `estree-walker` from `@types/estree` 1.0.9 to a new 1.0.10 copy. Both copies were old enough and trusted, so CI passed; the check reports both, and passes the corrected lockfile.
+
+   A copy is required only when a consumer's declared range, from `pnpm view <consumer>@<version> dependencies optionalDependencies peerDependencies`, rules out every older copy. Pass `--allow <consumer>><name>@<version>` for each consumer whose range requires it, such as `--allow @babel/helpers@8.0.8>@babel/types@8.1.0`, and quote the range in the PR. An allowance covers only that consumer, and one that matches nothing fails with exit 8. `pnpm why <package> --config.lockfile-only=true` lists the entries that use each copy; without that setting it reads the installed packages, not the lockfile.
 3. Remove drift by regenerating, never by editing the lockfile.
    - Add a temporary entry under `overrides:` in `pnpm-workspace.yaml` that pins the old version. When the package has several major lines, use a version selector, as in `'@babel/types@8': 8.0.8`. When an updated package needs the new copy, scope the entry to the drifted consumer, as in `'estree-walker>@types/estree': 1.0.9`.
    - Regenerate with `pnpm install --lockfile-only --config.optimistic-repeat-install=false`.
