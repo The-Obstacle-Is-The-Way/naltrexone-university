@@ -5,48 +5,11 @@ import {
   LOCKFILE_DRIFT_EXIT,
   lockfileDriftExitCode,
 } from './lockfile-drift';
+import {
+  type SnapshotDependencies as Dependencies,
+  lockfile,
+} from './lockfile-drift-test-helpers';
 import type { LockfileText } from './lockfile-union';
-
-// Dependency name -> the value pnpm writes for it in a snapshot entry.
-type Dependencies = Record<string, string>;
-
-// Builds a pnpm 9 lockfile: one root importer, a packages entry for every
-// snapshot entry, and the snapshot entries themselves.
-function lockfile(
-  label: string,
-  spec: {
-    importer?: Record<string, string>;
-    snapshots: Record<string, Dependencies>;
-  },
-): LockfileText {
-  const packages = Object.fromEntries(
-    Object.keys(spec.snapshots).map((key) => [
-      key.replace(/\(.*$/, ''),
-      { resolution: { integrity: 'sha512-fixture' } },
-    ]),
-  );
-  const snapshots = Object.fromEntries(
-    Object.entries(spec.snapshots).map(([key, dependencies]) => [
-      key,
-      Object.keys(dependencies).length > 0 ? { dependencies } : {},
-    ]),
-  );
-  const dependencies = Object.fromEntries(
-    Object.entries(spec.importer ?? {}).map(([name, version]) => [
-      name,
-      { specifier: version.replace(/\(.*$/, ''), version },
-    ]),
-  );
-  return {
-    label,
-    text: stringify({
-      lockfileVersion: '9.0',
-      importers: { '.': { dependencies } },
-      packages,
-      snapshots,
-    }),
-  };
-}
 
 // Modeled on #1702's Vitest update, whose lockfile moved Babel 8 helpers and
 // `estree-walker` onto new duplicate copies that nothing required.
@@ -277,45 +240,6 @@ describe('compareLockfileDrift', () => {
     expect(report.findings).toEqual([]);
   });
 
-  it('passes a peer-suffix rename whose peer is the named update', () => {
-    const peerParent = lockfile('parent', {
-      importer: { '@types/node': '24.13.4', stripe: '22.5.0' },
-      snapshots: {
-        'stripe@22.5.0(@types/node@24.13.4)': { '@types/node': '24.13.4' },
-        '@types/node@24.13.4': {},
-      },
-    });
-    const renamed = lockfile('candidate', {
-      importer: { '@types/node': '24.13.5', stripe: '22.5.0' },
-      snapshots: {
-        'stripe@22.5.0(@types/node@24.13.5)': { '@types/node': '24.13.5' },
-        '@types/node@24.13.5': {},
-      },
-    });
-
-    expect(drift(renamed, ['@types/node'], [], peerParent).findings).toEqual(
-      [],
-    );
-    // Named differently, the same lockfile moves an existing entry and the
-    // root importer onto a copy the parent lacked.
-    expect(
-      drift(renamed, ['stripe'], [], peerParent).findings[0]?.moves,
-    ).toEqual([
-      {
-        consumer: 'importer .',
-        from: ['@types/node@24.13.4'],
-        fromStaysInUse: false,
-        downgrade: false,
-      },
-      {
-        consumer: 'stripe@22.5.0',
-        from: ['@types/node@24.13.4'],
-        fromStaysInUse: false,
-        downgrade: false,
-      },
-    ]);
-  });
-
   it('resolves an npm alias to the package it installs', () => {
     const aliasParent = lockfile('parent', {
       snapshots: {
@@ -464,103 +388,6 @@ describe('compareLockfileDrift', () => {
         ],
       },
     ]);
-  });
-
-  it('compares each peer variant of an entry on its own', () => {
-    const variantsParent = lockfile('parent', {
-      snapshots: {
-        'lib@1.0.0(react@18.0.0)': { util: '1.0.0', react: '18.0.0' },
-        'lib@1.0.0(react@19.0.0)': { util: '1.1.0', react: '19.0.0' },
-        'other@1.0.0': { util: '1.0.0' },
-        'util@1.0.0': {},
-        'util@1.1.0': {},
-        'react@18.0.0': {},
-        'react@19.0.0': {},
-      },
-    });
-    const moved = lockfile('candidate', {
-      snapshots: {
-        'lib@1.0.0(react@18.0.0)': { util: '1.1.0', react: '18.0.0' },
-        'lib@1.0.0(react@19.0.0)': { util: '1.1.0', react: '19.0.0' },
-        'other@1.0.0': { util: '1.0.0' },
-        'util@1.0.0': {},
-        'util@1.1.0': {},
-        'react@18.0.0': {},
-        'react@19.0.0': {},
-      },
-    });
-
-    expect(drift(moved, ['react'], [], variantsParent).findings).toEqual([
-      {
-        copy: 'util@1.1.0',
-        besides: [],
-        users: [],
-        moves: [
-          {
-            consumer: 'lib@1.0.0',
-            from: ['util@1.0.0'],
-            fromStaysInUse: true,
-            downgrade: false,
-          },
-        ],
-      },
-    ]);
-  });
-
-  it('compares a renamed entry with the variants that went, not those that stayed', () => {
-    const variantsParent = lockfile('parent', {
-      snapshots: {
-        'lib@1.0.0(react@18.0.0)': { util: '1.0.0', react: '18.0.0' },
-        'lib@1.0.0(react@19.0.0)': { util: '1.1.0', react: '19.0.0' },
-        'other@1.0.0': { util: '1.0.0' },
-        'util@1.0.0': {},
-        'util@1.1.0': {},
-        'react@18.0.0': {},
-        'react@19.0.0': {},
-      },
-    });
-    // The react@18 variant is renamed and moves onto 1.1.0, which only its
-    // retained react@19 sibling used, while `other` keeps 1.0.0.
-    const renamed = lockfile('candidate', {
-      snapshots: {
-        'lib@1.0.0(react@18.3.0)': { util: '1.1.0', react: '18.3.0' },
-        'lib@1.0.0(react@19.0.0)': { util: '1.1.0', react: '19.0.0' },
-        'other@1.0.0': { util: '1.0.0' },
-        'util@1.0.0': {},
-        'util@1.1.0': {},
-        'react@18.3.0': {},
-        'react@19.0.0': {},
-      },
-    });
-
-    expect(drift(renamed, ['react'], [], variantsParent).findings).toEqual([
-      {
-        copy: 'util@1.1.0',
-        besides: [],
-        users: [],
-        moves: [
-          {
-            consumer: 'lib@1.0.0',
-            from: ['util@1.0.0'],
-            fromStaysInUse: true,
-            downgrade: false,
-          },
-        ],
-      },
-    ]);
-
-    // With both variants gone, the one left may succeed either, so it is
-    // compared with both.
-    const merged = lockfile('candidate', {
-      snapshots: {
-        'lib@1.0.0(react@20.0.0)': { util: '1.1.0', react: '20.0.0' },
-        'other@1.0.0': { util: '1.0.0' },
-        'util@1.0.0': {},
-        'util@1.1.0': {},
-        'react@20.0.0': {},
-      },
-    });
-    expect(drift(merged, ['react'], [], variantsParent).findings).toEqual([]);
   });
 
   it('exempts only the major line an update names', () => {

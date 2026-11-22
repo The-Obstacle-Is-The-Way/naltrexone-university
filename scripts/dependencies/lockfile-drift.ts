@@ -280,7 +280,13 @@ export function compareLockfileDrift(input: {
     const identity = withoutPeers(key);
     const before = parent.entries.get(key) ?? gone.get(identity);
     if (!before) {
-      newEntries.set(identity, dependencies);
+      // New peer variants of one package report as one user, so merge their
+      // dependencies: a variant without the copy must not hide one with it.
+      const merged = newEntries.get(identity) ?? new Map<string, Set<string>>();
+      for (const [name, copies] of dependencies) {
+        for (const copy of copies) addUse(merged, name, copy);
+      }
+      newEntries.set(identity, merged);
       continue;
     }
     for (const [name, copies] of dependencies) {
@@ -292,12 +298,20 @@ export function compareLockfileDrift(input: {
           (old) => (compareVersions(versionOf(copy), versionOf(old)) ?? -1) < 0,
         );
         if (parent.copies.has(copy) && !fromStaysInUse && !downgrade) continue;
+        // Peer variants of one entry report as one consumer, so their moves
+        // onto the same copy merge rather than replace each other.
         const byConsumer = moves.get(copy) ?? new Map<string, DriftMove>();
+        const previous = byConsumer.get(identity) ?? {
+          consumer: identity,
+          from: [],
+          fromStaysInUse: false,
+          downgrade: false,
+        };
         byConsumer.set(identity, {
           consumer: identity,
-          from: earlier,
-          fromStaysInUse,
-          downgrade,
+          from: [...new Set([...previous.from, ...earlier])].sort(),
+          fromStaysInUse: previous.fromStaysInUse || fromStaysInUse,
+          downgrade: previous.downgrade || downgrade,
         });
         moves.set(copy, byConsumer);
       }
@@ -401,8 +415,13 @@ export function formatLockfileDriftReport(report: LockfileDriftReport): string {
   ];
   const exitCode = lockfileDriftExitCode(report);
   if (exitCode === 0) {
+    // A pass that needed allowances says so.
+    const scope =
+      report.allowed.length > 0
+        ? 'the named updates and the allowances'
+        : 'the named updates';
     lines.push(
-      'PASS: outside the named updates, no new copy sits beside another, and no entry the parent had moves onto a new, still-shared or older copy.',
+      `PASS: outside ${scope}, no new copy sits beside another, and no entry the parent had moves onto a new, still-shared or older copy.`,
     );
     return lines.join('\n');
   }

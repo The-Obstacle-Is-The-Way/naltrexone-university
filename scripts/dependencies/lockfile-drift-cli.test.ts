@@ -69,6 +69,14 @@ describe('formatLockfileDriftReport', () => {
     );
   });
 
+  it('says a pass needed its allowances', () => {
+    const text = report(drifted, ['tool'], ['x@1.0.0>util@1.1.0']);
+
+    expect(text).toContain(
+      'PASS: outside the named updates and the allowances, no new copy sits beside another, and no entry the parent had moves onto a new, still-shared or older copy.',
+    );
+  });
+
   it('names each drifted copy and its moves, and how to clear it', () => {
     const text = report(drifted, ['tool']);
 
