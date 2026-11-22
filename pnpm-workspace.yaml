@@ -30,9 +30,15 @@ overrides:
   # GHSA-6j4f-fj2g-mc7p + GHSA-qhr7-859c-m2p7 — uncontrolled recursion; and
   # GHSA-q2hr-2g5m-vwhr — quadratic-time `{a},b}` rewriting. All DoS, fixed
   # together in 5.0.12. Build/test globs are repository-controlled. Scoped to
-  # minimatch@10's 5.x line; 5.0.12 satisfies ^5.0.8. Aged past the 7-day gate
+  # minimatch's 5.x line; 5.0.12 satisfies ^5.0.8. Aged past the 7-day gate
   # (published 2026-09-14).
-  'brace-expansion@5': 5.0.12
+  # 5.0.13 fixes GHSA-6jwq-xf8q-xcwh (issue #1669, high): unbounded parsing and
+  # expansion work, a CPU DoS. Its consumers are Stryker's minimatch 10, which
+  # matches repository-set patterns, and minimatch 11 under glob in Sentry's
+  # bundler plugin, which this build never loads (no withSentryConfig;
+  # DEBT-537). Published 2026-11-11T12:27:55Z; the 7-day gate cleared
+  # 2026-11-18T12:27:55Z.
+  'brace-expansion@5': 5.0.13
   # Security: GHSA-5jgf-p345-68v8 + GHSA-fph4-wmhf-6fwf + GHSA-f65p-4m7j-42xc +
   # GHSA-jqff-g426-hqxp — host confusion / SSRF via IDN, percent-decoding, IPv6,
   # and percent-encoded scheme (fixed in 3.1.6), plus GHSA-qw65-cvwx-89v3 +
