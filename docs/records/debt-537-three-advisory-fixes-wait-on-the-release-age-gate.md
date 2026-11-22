@@ -1,6 +1,6 @@
 # DEBT-537: Four Advisory Fixes Wait on the 7-Day Gate: vite, brace-expansion, ws and Clerk
 
-**Status:** Open — one repo-owned bundle takes the vite, brace-expansion, ws and @clerk/backend fixes once the last clears the gate (2026-11-19 22:57Z); due 2026-11-20
+**Status:** Open — one repo-owned bundle takes the vite, brace-expansion, ws and @clerk/backend fixes, all past the gate since 2026-11-19 22:57Z; due 2026-11-25
 **Priority:** P3
 **Date:** 2026-11-13
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-Four advisories cover versions installed on `dev`; the fourth, `ws`, joined on 2026-11-13 (#1683). None is reachable as this app is configured, and none is urgent under `docs/policies/supply-chain.md` (When a fix is urgent). Each fix is published but younger than the 7-day release-age gate. One repo-owned dependency bundle takes all four once the last fix clears the gate. The same bundle corrects the `postcss` and `nanoid` overrides, which no longer match their consumers.
+Four advisories cover versions installed on `dev`; the fourth, `ws`, joined on 2026-11-13 (#1683). None is reachable as this app is configured, and none is urgent under `docs/policies/supply-chain.md` (When a fix is urgent). Each fix was published younger than the 7-day release-age gate, and the last cleared it on 2026-11-19. One repo-owned dependency bundle takes all four. The same bundle corrects the `postcss` and `nanoid` overrides, which no longer match their consumers.
 
 | Advisory | Issue | Installed | Fixed in | Published | Clears the gate | Reachable here |
 |---|---|---|---|---|---|---|
@@ -33,6 +33,7 @@ Four advisories cover versions installed on `dev`; the fourth, `ws`, joined on 2
     - `lib/clerk-call-failures-sdk.test.ts`;
     - `lib/clerk-backend-call-limit-sdk.test.ts`;
     - `proxy-authorization-header-sdk.test.ts`. Its cookie case expects Clerk to refresh the token.
+  - Dependabot #1718 confirmed it on 2026-11-21: with `@clerk/nextjs` 7.10.0, those four files failed 35 tests (2, 5, 27 and 1, in that order), such as "expected 'signed-out' to be 'handshake'".
   - The fifth, `proxy-clerk-signed-in-refresh.test.ts`, signs tokens for the app's own limiter and replaces `clerkMiddleware` with a stub.
 - **The app's limiter mirrors Clerk.** `lib/clerk-backend-call-limit.ts` predicts which expired session token Clerk will refresh, from `@clerk/backend` 3.26.2's rules. It checks the signature and `alg` but not `cat`. Under 3.28.0, Clerk signs out an untagged token rather than refreshing it.
   - The limiter would then count a refresh Clerk never makes, an over-count.
@@ -69,6 +70,7 @@ Nothing reaches users or production. #1667, #1669 and #1683 stay open until the 
   - the four real-SDK tests' tokens gain `cat: 'cl_B7d4PD111AAA'`, the session category. Run them red on 3.28.0 first;
   - the limiter's mirrored refresh rules in `lib/clerk-backend-call-limit.ts` rechecked against 3.28.0. Its comments name 3.26.2, so if it should also skip untagged or non-session tokens, add that with a red test;
   - the `postcss` override removed, or restated with comments that match the installed consumers, decided on the bundle's lockfile. Raise the `nanoid@3` override to 3.3.20 or later, and correct its comment.
+- **Some updates are added by hand.** Dependabot's #1718 proposes `vite` 8.3.8 and `@clerk/nextjs` 7.10.0, but no Dependabot PR proposes `ws` or the `brace-expansion`, `postcss` and `nanoid` override changes. So the bundle follows "Updates added beyond the sources" in `docs/guides/dependencies/updating-dependencies.md`, since CodeRabbit skips the lockfile. The owner deferred a script for that scope check on 2026-11-17, to be built test-first with this bundle.
 - **If a fix reaches a later version first,** take the newest version past the gate.
 - **Take the `vite`, `brace-expansion` or `ws` fix at once, through an exception, if it becomes reachable.** The policy allows one for these critical and high advisories once they match this app:
   - a `ws` connection that a peer outside the machine can reach;
@@ -94,3 +96,7 @@ Nothing reaches users or production. #1667, #1669 and #1683 stay open until the 
 - `docs/policies/supply-chain.md`: Urgent CVE patches before the 7-day cooldown.
 
 Corrected 2026-11-15: `ws` (#1683) joins the bundle, clearing the gate before Clerk, so the title names four advisories and Impact names the three open issues; `@tailwindcss/postcss` is 4.3.5 since #1702, with the same `^8.5.25`; the advisory database still lacked all four on 2026-11-15.
+
+Corrected 2026-11-21: Resolution names the hand-added updates and the deferred scope-check script.
+
+Corrected 2026-11-22: all four fixes are past the gate; the 2026-11-22 queue review moved the due date to 11-25 and recorded Dependabot #1718's Clerk failures.

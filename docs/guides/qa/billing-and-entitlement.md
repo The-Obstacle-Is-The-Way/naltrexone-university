@@ -11,6 +11,10 @@
 
 Known environment quirk (not a bug): in Clerk development mode, the redirect back from Stripe Checkout can land on a sign-in screen on dev/preview — `docs/architecture/environments.md`.
 
+A promotion whose only billing change is a Stripe API version that meets the four conditions in [QA method](method.md#when-procedures-run) item 2 runs only Section A and steps 13–15.
+
+On the dev preview, run every step at the `dev` branch alias, the `naltrexone-university-git-dev-….vercel.app` address in the latest `dev` deployment's domains, never at a deployment's own address. The app builds Stripe's success, cancel, add-card and portal return URLs from `NEXT_PUBLIC_APP_URL`, which on the dev preview is that alias, and each `vercel.app` address keeps its own Clerk sign-in. So a checkout started elsewhere returns to the alias, where the paying account may not be signed in: the success page then asks for sign-in, or refuses the purchase as another account's.
+
 ---
 
 ## Section A — Signed out (production-safe)
@@ -62,6 +66,8 @@ The screens cannot show whether the app processed Stripe's webhook. Stripe creat
 
 Delivery can trail the screen, so re-read the rows for up to five minutes. The step fails if its event is stored with an `error`, or if the processed event or any row is still missing after five minutes, even when its screen passed.
 
+Never resend a failed event to make a step pass. A resent card save re-checks the account's billing, and the handler detaches the saved card once the account has no subscription, its subscription, plan or Stripe customer differs from the ones the card was saved for, its subscription is no longer entitled, or a cancellation is scheduled (`endTrialPaymentMethodSetup` in `src/adapters/controllers/stripe-webhook-controller.ts`). Record the failure instead.
+
 ## Visual checks
 
 - [ ] Reason and checkout banners use semantic status tokens (no raw palette) — `docs/design-system/pattern-registry.md` feedback patterns
@@ -69,9 +75,11 @@ Delivery can trail the screen, so re-read the rows for up to five minutes. The s
 - [ ] Pricing legal-consent links carry the canonical focus ring — `docs/design-system/standards.md` §3
 - [ ] `/pricing` at 390×844: plan cards stack without overflow; CTAs full-width tappable
 
+A Stripe-version run that runs only Section A and steps 13–15 does the last two checks. It never shows the reason, checkout or cancellation banners, and a change that qualifies for that run alters no screen ([QA method](method.md#when-procedures-run) item 2).
+
 ## Evidence
 
-Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellation banner). Attach representative screenshots to the pull request or the run's report.
+Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellation banner). A Stripe-version run that runs only Section A and steps 13–15 takes step 14 (plan and status on `/app/billing`) and step 15 (the Stripe portal open) instead. Attach representative screenshots to the pull request or the run's report.
 
 ## On failure
 
