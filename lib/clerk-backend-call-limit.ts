@@ -289,7 +289,10 @@ function readsCurrentSuffixedSession(
 // The sessions a GET could refresh: expired session tokens alongside a
 // refresh cookie. Clerk refreshes the suffixed cookie's or the plain one's, as
 // it decides; given the instance, a request whose current suffixed token Clerk
-// reads has none. A session's ID keys the per-session limit.
+// reads has none. A session's ID keys the per-session limit. Since
+// `@clerk/backend` 3.28.0, Clerk also signs out, without refreshing, a token
+// whose header lacks the session category; counting it anyway over-counts,
+// which never lets a refresh through uncounted (rechecked on 3.29.0, DEBT-537).
 function expiredSessions(
   request: ClerkRequest,
   cookies: Map<string, string>,

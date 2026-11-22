@@ -15,6 +15,9 @@ vi.mock('server-only', () => ({}));
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 const FRONTEND_API = 'clerk.example.com';
+// Clerk's session-token category. Since @clerk/backend 3.28.0, Clerk signs out
+// a session token whose header lacks it, before verifying or refreshing it.
+const SESSION_TOKEN_CATEGORY = 'cl_B7d4PD111AAA';
 const PUBLISHABLE_KEY = `pk_live_${Buffer.from(`${FRONTEND_API}$`).toString('base64')}`;
 // Clerk names the refresh cookie with a suffix derived from the publishable key.
 const REFRESH_COOKIE = `__refresh_${createHash('sha1')
@@ -40,15 +43,17 @@ function signingKey() {
   const part = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString('base64url');
   const now = Math.floor(Date.now() / 1000);
-  const unsigned = `${part({ alg: 'RS256', typ: 'JWT', kid })}.${part({
-    sid: 'sess_sdk',
-    sub: 'user_sdk',
-    iss: `https://${FRONTEND_API}`,
-    azp: 'https://example.com',
-    iat: now - 120,
-    nbf: now - 130,
-    exp: now - 60,
-  })}`;
+  const unsigned = `${part({ alg: 'RS256', typ: 'JWT', kid, cat: SESSION_TOKEN_CATEGORY })}.${part(
+    {
+      sid: 'sess_sdk',
+      sub: 'user_sdk',
+      iss: `https://${FRONTEND_API}`,
+      azp: 'https://example.com',
+      iat: now - 120,
+      nbf: now - 130,
+      exp: now - 60,
+    },
+  )}`;
   const signature = sign(
     'RSA-SHA256',
     Buffer.from(unsigned),
