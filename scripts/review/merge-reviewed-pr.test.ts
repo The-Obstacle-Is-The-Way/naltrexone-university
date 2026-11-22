@@ -17,6 +17,10 @@ import {
 import { ReviewHost } from './review-command-test-helpers';
 
 const REPO = 'repos/The-Obstacle-Is-The-Way/naltrexone-university';
+// Long enough for `node --import tsx` to start under a full gate's parallel
+// workers, where loading the script can take seconds; under Vitest's 10-second
+// test timeout.
+const TSX_START_LIMIT_MS = 8000;
 // GitHub's compare of main against a ref: behind_by counts main's commits
 // the ref lacks (DEBT-491).
 const compareWithMain = (behind = 0) =>
@@ -571,7 +575,7 @@ describe('merge command', () => {
     const result = spawnSync(
       process.execPath,
       ['--import', 'tsx', 'scripts/review/merge-reviewed-pr.ts', '--admin'],
-      { encoding: 'utf8', timeout: 2_000 },
+      { encoding: 'utf8', timeout: TSX_START_LIMIT_MS },
     );
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
