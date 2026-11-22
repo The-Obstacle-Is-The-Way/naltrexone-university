@@ -30,6 +30,10 @@ const SUFFIX = createHash('sha1')
   .slice(0, 8);
 const REFRESH_COOKIE = `__refresh_${SUFFIX}`;
 
+// Clerk's session-token category. Since @clerk/backend 3.28.0, Clerk signs out
+// a session token whose header lacks it, before verifying or refreshing it.
+const SESSION_TOKEN_CATEGORY = 'cl_B7d4PD111AAA';
+
 // The instance's signing key, configured as CLERK_JWT_KEY, and a key Clerk
 // never used.
 const clerkKey = generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -45,20 +49,27 @@ function expiredSessionToken(privateKey: typeof clerkKey.privateKey) {
 }
 
 // A session token issued the given number of seconds ago, valid for two
-// minutes unless told otherwise, signed with the given key.
+// minutes unless told otherwise, signed with the given key. An empty category
+// leaves the header without one.
 function sessionToken(
   privateKey: typeof clerkKey.privateKey,
   {
     issuedSecondsAgo,
     validSeconds = 120,
     issuer = `https://${FRONTEND_API}`,
-  }: { issuedSecondsAgo: number; validSeconds?: number; issuer?: string },
+    category = SESSION_TOKEN_CATEGORY,
+  }: {
+    issuedSecondsAgo: number;
+    validSeconds?: number;
+    issuer?: string;
+    category?: string;
+  },
 ) {
   const now = Math.floor(Date.now() / 1000);
   const iat = now - issuedSecondsAgo;
   const part = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString('base64url');
-  const unsigned = `${part({ alg: 'RS256', typ: 'JWT', kid: 'ins_sdk' })}.${part(
+  const unsigned = `${part({ alg: 'RS256', typ: 'JWT', kid: 'ins_sdk', ...(category ? { cat: category } : {}) })}.${part(
     {
       sid: 'sess_sdk',
       sub: 'user_sdk',
@@ -192,6 +203,24 @@ describe("BUG-323's limiter and Clerk's middleware, with Clerk's key", () => {
       'clerk-backend-call:session:sess_sdk',
       'clerk-backend-call:site',
     ]);
+  });
+
+  // DEBT-537: since @clerk/backend 3.28.0, Clerk signs out a token whose header
+  // lacks the session category before it would refresh one. The limiter does
+  // not read the category, so it counts such a token: an over-count, which
+  // never lets a refresh through uncounted.
+  it('counts a signed token without the session category in its signed-in buckets, for which Clerk calls nothing', async () => {
+    const { paths, counted } = await clerkAndLimiterOn(
+      refreshCookies(
+        sessionToken(clerkKey.privateKey, {
+          issuedSecondsAgo: 180,
+          category: '',
+        }),
+      ),
+    );
+
+    expect(paths).toEqual([]);
+    expect(counted).toEqual(SIGNED_IN);
   });
 
   // BUG-374: a returning visitor's first page load refreshes the suffixed
