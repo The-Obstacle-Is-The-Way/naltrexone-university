@@ -240,6 +240,10 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
         await auth.protect();
       }
     },
+    // No `poppy` option: since @clerk/nextjs 7.10.0 it makes Clerk call its
+    // Backend API on each GET of /.well-known/poppy.json or
+    // /.well-known/oauth-protected-resource, which the limiter does not count
+    // (DEBT-503). Count those calls before turning it on.
     {
       ...clerkJwtKeyOption(),
       ...clerkPublishableKeyOption(),

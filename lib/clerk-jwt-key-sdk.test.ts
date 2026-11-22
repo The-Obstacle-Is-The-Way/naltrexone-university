@@ -10,6 +10,10 @@ import { parseClerkJwtKey } from './clerk-jwt-key';
 
 vi.mock('server-only', () => ({}));
 
+// Clerk's session-token category. Since @clerk/backend 3.28.0, Clerk signs out
+// a session token whose header lacks it, before verifying or refreshing it.
+const SESSION_TOKEN_CATEGORY = 'cl_B7d4PD111AAA';
+
 const ORIGINAL_ENV = snapshotProcessEnv();
 const FRONTEND_API = 'clerk.example.com';
 
@@ -23,7 +27,7 @@ function signingKey() {
     pem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
     token() {
       const now = Math.floor(Date.now() / 1000);
-      const unsigned = `${part({ alg: 'RS256', typ: 'JWT', kid: 'ins_sdk' })}.${part(
+      const unsigned = `${part({ alg: 'RS256', typ: 'JWT', kid: 'ins_sdk', cat: SESSION_TOKEN_CATEGORY })}.${part(
         {
           sid: 'sess_sdk',
           sub: 'user_sdk',
