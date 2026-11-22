@@ -66,9 +66,6 @@ type Lockfile = {
   // Entries by full key: a snapshot key with its peer suffix, or
   // `importer <path>`.
   entries: Map<string, Dependencies>;
-  // The same entries merged by key without the peer suffix, for an entry
-  // whose peers, and so whose key, changed.
-  byIdentity: Map<string, Dependencies>;
 };
 type Update = { spec: string; name: string; major?: string };
 
@@ -122,7 +119,27 @@ function compareVersions(a: string, b: string): number | undefined {
   // A prerelease comes before its release.
   if (!x.prerelease) return 1;
   if (!y.prerelease) return -1;
-  return x.prerelease < y.prerelease ? -1 : 1;
+  return comparePrereleases(x.prerelease, y.prerelease);
+}
+
+// SemVer's prerelease order, for two different prereleases: identifier by
+// identifier, numbers by value and before words, and a shorter list first
+// when the longer one starts with it.
+function comparePrereleases(a: string, b: string): number {
+  const x = a.split('.');
+  const y = b.split('.');
+  for (let index = 0; ; index += 1) {
+    const p = x[index];
+    const q = y[index];
+    if (p === undefined) return -1;
+    if (q === undefined) return 1;
+    if (p === q) continue;
+    const pNumber = /^\d+$/.test(p);
+    const qNumber = /^\d+$/.test(q);
+    if (pNumber && qNumber) return Number(p) - Number(q);
+    if (pNumber !== qNumber) return pNumber ? -1 : 1;
+    return p < q ? -1 : 1;
+  }
 }
 
 // The versions one caret range can span: the major, or for 0.x the minor.
@@ -167,15 +184,11 @@ function readLockfile(lockfile: LockfileText): Lockfile {
   };
   const copies = new Set(Object.keys(section('packages')).map(withoutPeers));
   const entries = new Map<string, Dependencies>();
-  const byIdentity = new Map<string, Dependencies>();
   // Every entry is recorded, even one with no dependencies, so a new entry is
   // never mistaken for one the parent had.
   const record = (key: string, fields: unknown, names: string[]) => {
     const own: Dependencies = new Map();
     entries.set(key, own);
-    const identity = withoutPeers(key);
-    const merged = byIdentity.get(identity) ?? new Map<string, Set<string>>();
-    byIdentity.set(identity, merged);
     if (!isMapping(fields)) return;
     for (const field of names) {
       const values = fields[field];
@@ -187,7 +200,6 @@ function readLockfile(lockfile: LockfileText): Lockfile {
         );
         if (!copy) continue;
         addUse(own, name, copy);
-        addUse(merged, name, copy);
       }
     }
   };
@@ -197,7 +209,7 @@ function readLockfile(lockfile: LockfileText): Lockfile {
   for (const [key, fields] of Object.entries(section('snapshots'))) {
     record(key, fields, SNAPSHOT_FIELDS);
   }
-  return { copies, entries, byIdentity };
+  return { copies, entries };
 }
 
 // An update names a package, or one major line of it as `name@<major>`.
@@ -219,14 +231,15 @@ export function compareLockfileDrift(input: {
   const candidate = readLockfile(input.candidate);
   const updates = input.updates.map(parseUpdate);
   const usedUpdates = new Set<string>();
+  // Every update that covers a changed copy counts as used.
   const inScope = (copy: string) => {
-    const update = updates.find(
+    const covering = updates.filter(
       ({ name, major }) =>
         name === packageName(copy) &&
         (major === undefined || versionOf(copy).split('.')[0] === major),
     );
-    if (update) usedUpdates.add(update.spec);
-    return update !== undefined;
+    for (const { spec } of covering) usedUpdates.add(spec);
+    return covering.length > 0;
   };
   for (const copy of new Set([...parent.copies, ...candidate.copies])) {
     if (parent.copies.has(copy) !== candidate.copies.has(copy)) inScope(copy);
@@ -245,14 +258,27 @@ export function compareLockfileDrift(input: {
     if (others.length > 0) besides.set(copy, others.sort());
   }
 
+  // An entry keeps its key unless its peers changed. A renamed one succeeds
+  // the parent's variants of the same name and version that the candidate
+  // no longer has, so it is compared with those, merged; a variant that
+  // stays is its own entry, and cannot hide the renamed one's move.
+  const gone = new Map<string, Dependencies>();
+  for (const [key, dependencies] of parent.entries) {
+    if (candidate.entries.has(key)) continue;
+    const identity = withoutPeers(key);
+    const merged = gone.get(identity) ?? new Map<string, Set<string>>();
+    for (const [name, copies] of dependencies) {
+      for (const copy of copies) addUse(merged, name, copy);
+    }
+    gone.set(identity, merged);
+  }
+
   // An entry the parent had that moves onto a copy the parent lacked, onto
-  // one whose old copy stays in use, or onto an older version. An entry keeps
-  // its key unless its peers changed; a renamed one is compared with every
-  // variant the parent had under the same name and version.
+  // one whose old copy stays in use, or onto an older version.
   const newEntries = new Map<string, Dependencies>();
   for (const [key, dependencies] of candidate.entries) {
     const identity = withoutPeers(key);
-    const before = parent.entries.get(key) ?? parent.byIdentity.get(identity);
+    const before = parent.entries.get(key) ?? gone.get(identity);
     if (!before) {
       newEntries.set(identity, dependencies);
       continue;

@@ -507,6 +507,62 @@ describe('compareLockfileDrift', () => {
     ]);
   });
 
+  it('compares a renamed entry with the variants that went, not those that stayed', () => {
+    const variantsParent = lockfile('parent', {
+      snapshots: {
+        'lib@1.0.0(react@18.0.0)': { util: '1.0.0', react: '18.0.0' },
+        'lib@1.0.0(react@19.0.0)': { util: '1.1.0', react: '19.0.0' },
+        'other@1.0.0': { util: '1.0.0' },
+        'util@1.0.0': {},
+        'util@1.1.0': {},
+        'react@18.0.0': {},
+        'react@19.0.0': {},
+      },
+    });
+    // The react@18 variant is renamed and moves onto 1.1.0, which only its
+    // retained react@19 sibling used, while `other` keeps 1.0.0.
+    const renamed = lockfile('candidate', {
+      snapshots: {
+        'lib@1.0.0(react@18.3.0)': { util: '1.1.0', react: '18.3.0' },
+        'lib@1.0.0(react@19.0.0)': { util: '1.1.0', react: '19.0.0' },
+        'other@1.0.0': { util: '1.0.0' },
+        'util@1.0.0': {},
+        'util@1.1.0': {},
+        'react@18.3.0': {},
+        'react@19.0.0': {},
+      },
+    });
+
+    expect(drift(renamed, ['react'], [], variantsParent).findings).toEqual([
+      {
+        copy: 'util@1.1.0',
+        besides: [],
+        users: [],
+        moves: [
+          {
+            consumer: 'lib@1.0.0',
+            from: ['util@1.0.0'],
+            fromStaysInUse: true,
+            downgrade: false,
+          },
+        ],
+      },
+    ]);
+
+    // With both variants gone, the one left may succeed either, so it is
+    // compared with both.
+    const merged = lockfile('candidate', {
+      snapshots: {
+        'lib@1.0.0(react@20.0.0)': { util: '1.1.0', react: '20.0.0' },
+        'other@1.0.0': { util: '1.0.0' },
+        'util@1.0.0': {},
+        'util@1.1.0': {},
+        'react@20.0.0': {},
+      },
+    });
+    expect(drift(merged, ['react'], [], variantsParent).findings).toEqual([]);
+  });
+
   it('exempts only the major line an update names', () => {
     const linesParent = lockfile('parent', {
       snapshots: {
@@ -531,6 +587,11 @@ describe('compareLockfileDrift', () => {
     expect(drift(both, ['brace-expansion'], [], linesParent).findings).toEqual(
       [],
     );
+    // Every update that matches a changed copy is used.
+    expect(
+      drift(both, ['brace-expansion', 'brace-expansion@5'], [], linesParent)
+        .unusedUpdates,
+    ).toEqual([]);
   });
 
   it('reports an update that changes nothing', () => {
@@ -596,6 +657,14 @@ describe('compareLockfileDrift', () => {
     ['a later prerelease to an earlier one', '2.0.0-rc.2', '2.0.0-rc.1', true],
     ['an earlier prerelease to a later one', '2.0.0-rc.1', '2.0.0-rc.2', false],
     ['a minor to a lower one, compared as numbers', '1.10.0', '1.9.0', true],
+    ['rc.10 to rc.2, compared as numbers', '2.0.0-rc.10', '2.0.0-rc.2', true],
+    ['rc.2 to rc.10, compared as numbers', '2.0.0-rc.2', '2.0.0-rc.10', false],
+    ['a prerelease to a shorter one', '2.0.0-rc.1', '2.0.0-rc', true],
+    ['a prerelease to a longer one', '2.0.0-rc', '2.0.0-rc.1', false],
+    ['a word identifier to a number', '2.0.0-rc.beta', '2.0.0-rc.1', true],
+    ['a number identifier to a word', '2.0.0-rc.1', '2.0.0-rc.beta', false],
+    ['beta to alpha', '2.0.0-beta', '2.0.0-alpha', true],
+    ['alpha to beta', '2.0.0-alpha', '2.0.0-beta', false],
     ['a version it cannot order', '1.0.0', '1.0', true],
   ])('orders a move from %s', (_name, from, to, downgrade) => {
     const orderParent = lockfile('parent', {
