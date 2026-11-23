@@ -54,7 +54,8 @@
     "db:verify-ledger": "tsx scripts/database/verify-migration-ledger.ts",
     "docs:audit": "tsx scripts/records/documentation-archive.ts",
     "secret:check-header": "tsx scripts/deploy/validate-header-safe-secret.ts",
-    "deps:verify-union": "tsx scripts/dependencies/verify-lockfile-union.ts"
+    "deps:verify-union": "tsx scripts/dependencies/verify-lockfile-union.ts",
+    "deps:verify-drift": "tsx scripts/dependencies/verify-lockfile-drift.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,mts,cjs,json}": [
@@ -111,7 +112,7 @@
     "@vitest/coverage-v8": "^5.0.3",
     "husky": "^9.1.7",
     "istanbul-lib-coverage": "3.2.2",
-    "jsdom": "^30.0.1",
+    "jsdom": "^31.0.1",
     "lint-staged": "~17.5.1",
     "tsx": "^4.20.5",
     "vite": "8.3.8",

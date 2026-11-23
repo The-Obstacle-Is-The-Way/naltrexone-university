@@ -100,7 +100,8 @@ function mappingOrEmpty(value: unknown, what: string, label: string): Mapping {
   return value;
 }
 
-function parseLockfile({ label, text }: LockfileText): Mapping {
+// Also used by the drift check in lockfile-drift.ts.
+export function parseLockfile({ label, text }: LockfileText): Mapping {
   const parsed = parseDocument(text);
   const [firstError] = parsed.errors;
   if (firstError) {
