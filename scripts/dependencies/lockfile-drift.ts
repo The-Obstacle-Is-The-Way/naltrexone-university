@@ -75,6 +75,7 @@ const IMPORTER_FIELDS = [
   'optionalDependencies',
 ];
 const SNAPSHOT_FIELDS = ['dependencies', 'optionalDependencies'];
+const IMPORTER_PREFIX = 'importer ';
 const NAME = '(?:@[^/@>]+/)?[^/@>]+';
 const UPDATE_PATTERN = new RegExp(`^${NAME}(?:@\\d+)?$`);
 const ALLOWANCE_PATTERN = new RegExp(`^[^>]+>${NAME}@[^@>]+$`);
@@ -87,6 +88,12 @@ function isMapping(value: unknown): value is Mapping {
 
 function withoutPeers(spec: string): string {
   return spec.replace(/\(.*$/s, '');
+}
+
+// An entry's key without the peer suffix that only snapshot keys carry. An
+// importer's path is kept whole, parentheses included.
+function entryIdentity(key: string): string {
+  return key.startsWith(IMPORTER_PREFIX) ? key : withoutPeers(key);
 }
 
 // A `name@version` copy's parts; names may be scoped.
@@ -204,7 +211,7 @@ function readLockfile(lockfile: LockfileText): Lockfile {
     }
   };
   for (const [importer, fields] of Object.entries(section('importers'))) {
-    record(`importer ${importer}`, fields, IMPORTER_FIELDS);
+    record(`${IMPORTER_PREFIX}${importer}`, fields, IMPORTER_FIELDS);
   }
   for (const [key, fields] of Object.entries(section('snapshots'))) {
     record(key, fields, SNAPSHOT_FIELDS);
@@ -265,7 +272,7 @@ export function compareLockfileDrift(input: {
   const gone = new Map<string, Dependencies>();
   for (const [key, dependencies] of parent.entries) {
     if (candidate.entries.has(key)) continue;
-    const identity = withoutPeers(key);
+    const identity = entryIdentity(key);
     const merged = gone.get(identity) ?? new Map<string, Set<string>>();
     for (const [name, copies] of dependencies) {
       for (const copy of copies) addUse(merged, name, copy);
@@ -277,7 +284,7 @@ export function compareLockfileDrift(input: {
   // one whose old copy stays in use, or onto an older version.
   const newEntries = new Map<string, Dependencies>();
   for (const [key, dependencies] of candidate.entries) {
-    const identity = withoutPeers(key);
+    const identity = entryIdentity(key);
     const before = parent.entries.get(key) ?? gone.get(identity);
     if (!before) {
       // New peer variants of one package report as one user, so merge their

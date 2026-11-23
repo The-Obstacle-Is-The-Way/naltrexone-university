@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { stringify } from 'yaml';
 import { compareLockfileDrift } from './lockfile-drift';
 import { lockfile } from './lockfile-drift-test-helpers';
 import type { LockfileText } from './lockfile-union';
@@ -220,5 +221,47 @@ describe('compareLockfileDrift with peer variants', () => {
         ],
       },
     ]);
+  });
+
+  it('keeps importer paths whole, parentheses included', () => {
+    const importers = (legacy: string, modern: string): LockfileText => ({
+      label: 'importers',
+      text: stringify({
+        lockfileVersion: '9.0',
+        importers: {
+          '.': {
+            dependencies: { tool: { specifier: '^1.0.0', version: '1.0.0' } },
+          },
+          'packages/app(legacy)': {
+            dependencies: { tool: { specifier: '^1.0.0', version: legacy } },
+          },
+          'packages/app(modern)': {
+            dependencies: { tool: { specifier: '^1.0.0', version: modern } },
+          },
+        },
+        packages: { 'tool@1.0.0': {}, 'tool@1.1.0': {} },
+        snapshots: { 'tool@1.0.0': {}, 'tool@1.1.0': {} },
+      }),
+    });
+    const parentImporters = importers('1.0.0', '1.0.0');
+    const bothMoved = importers('1.1.0', '1.1.0');
+
+    expect(
+      drift(bothMoved, ['other'], [], parentImporters).findings[0]?.moves.map(
+        (move) => move.consumer,
+      ),
+    ).toEqual([
+      'importer packages/app(legacy)',
+      'importer packages/app(modern)',
+    ]);
+    // An allowance for one importer covers that importer only.
+    expect(
+      drift(
+        bothMoved,
+        ['other'],
+        ['importer packages/app(legacy)>tool@1.1.0'],
+        parentImporters,
+      ).findings[0]?.moves.map((move) => move.consumer),
+    ).toEqual(['importer packages/app(modern)']);
   });
 });
