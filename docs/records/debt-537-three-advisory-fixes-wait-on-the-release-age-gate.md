@@ -1,6 +1,6 @@
 # DEBT-537: Four Advisory Fixes Wait on the 7-Day Gate: vite, brace-expansion, ws and Clerk
 
-**Status:** Verifying — after promotion, a production sign-in survives a token refresh, and #1667, #1669 and #1683 close; due 2026-11-25
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-11-25
 **Priority:** P3
 **Date:** 2026-11-13
 
@@ -82,10 +82,15 @@ Nothing reaches users or production. #1667, #1669 and #1683 stay open until the 
 
 ## Verification
 
-- [ ] The bundle merges into `dev`. The lockfile holds `vite` 8.3.7 or later, `brace-expansion` 5.0.13, `ws` 8.23.0 or later and `@clerk/backend` 3.28.0 or later. No override holds a package below a consumer's declared range. On the branch: `vite` 8.3.8, `brace-expansion` 5.0.13, `ws` 8.23.0 and `@clerk/backend` 3.29.0. The `postcss` override is removed: `next` keeps its exact 8.5.23, and Vite and Tailwind take 8.5.33. The `nanoid@3` override is 3.3.20.
+- [x] The bundle merges into `dev`: #1724, as 2a45b536 on 2026-11-22. The lockfile holds `vite` 8.3.7 or later, `brace-expansion` 5.0.13, `ws` 8.23.0 or later and `@clerk/backend` 3.28.0 or later. No override holds a package below a consumer's declared range. On the branch: `vite` 8.3.8, `brace-expansion` 5.0.13, `ws` 8.23.0 and `@clerk/backend` 3.29.0. The `postcss` override is removed: `next` keeps its exact 8.5.23, and Vite and Tailwind take 8.5.33. The `nanoid@3` override is 3.3.20.
 - [x] The four real-SDK Clerk tests fail on 3.28.0 or later before their tokens carry `cat`, and pass after: on 3.29.0, 35 failed, then all passed. The limiter's recheck: Clerk refreshes only a token whose header carries the session category, a subset of what the limiter counts. So the limiter over-counts and never lets a refresh through uncounted, and stays unchanged. A test pins that Clerk calls nothing for an untagged token while the limiter counts it.
-- [ ] Real session tokens carry the session category. The bundle's required E2E signs in through Clerk's development instance on 3.29.0, and passes only if they do; it passed locally. After promotion, a browser signed in to production, the owner's, still loads an `/app` page signed in more than a minute after its last load, which takes a refresh of a real token. Production has little signed-in traffic before launch, so its runtime logs alone could pass on no requests; they must also show no new run of redirects to sign-in. No token is copied or shared for any check.
-- [ ] A promotion carries the bundle to `main`, and #1667, #1669 and #1683 close with it.
+- [x] Real session tokens carry the session category. The bundle's required E2E signs in through Clerk's development instance on 3.29.0, and passes only if they do; it passed locally and in CI. After promotion, a browser signed in to production, the owner's, still loads an `/app` page signed in more than a minute after its last load, which takes a refresh of a real token. Production has little signed-in traffic before launch, so its runtime logs alone could pass on no requests; they must also show no new run of redirects to sign-in. No token is copied or shared for any check. Result, production on 2026-11-23 after promotion:
+  - The owner signed in on `addictionboards.com` at about 01:25Z. `/app/dashboard` sent them, still signed in, to `/pricing` with the banner for a signed-in user without a subscription (`app/pricing/page.tsx`, reason `subscription_required`), not to sign-in.
+  - A reload shortly before 02:44Z, over an hour after sign-in, landed the same way. A session token lasts about a minute, so that request carried a refreshed token.
+  - Clerk 3.29.0 checks the category on every request that carries the cookie, so both prove real production tokens carry it, the refreshed one included.
+  - The runtime logs hold only application output, and production wrote none in the 50 minutes to 02:44Z. So a run of redirects to sign-in cannot be read from them, and this check rests on the two observed loads.
+  - The deployment had no runtime errors in the six hours after it.
+- [x] A promotion carries the bundle to `main`, and #1667, #1669 and #1683 close with it: promotion #1727 (main 8d8b6e6f), whose push CI passed on 2026-11-22. The production deployment took the alias at 20:57Z, and the three issues closed on 2026-11-23.
 
 ## Related
 
@@ -101,4 +106,4 @@ Corrected 2026-11-21: Resolution names the hand-added updates and the deferred s
 
 Corrected 2026-11-22: all four fixes are past the gate; the 2026-11-22 queue review moved the due date to 11-25 and recorded Dependabot #1718's Clerk failures.
 
-Corrected 2026-11-22: the bundle takes #1718, #1717 and #1705, adds the `ws`, `brace-expansion`, `postcss` and `nanoid` changes with the drift check passing on each, tags the test tokens, and is Verifying on merge. The drift check ships in its own pull request.
+Corrected 2026-11-22: the bundle takes #1718, #1717 and #1705, adds the `ws`, `brace-expansion`, `postcss` and `nanoid` changes with the drift check passing on each, tags the test tokens, and is Verifying on merge. The drift check ships in its own pull request, #1726.
