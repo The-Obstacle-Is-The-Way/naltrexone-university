@@ -197,7 +197,6 @@ reviews:
       enabled: false  # We use Biome, not ESLint
 
 chat:
-  enabled: true
   auto_reply: true
 
 knowledge_base:
