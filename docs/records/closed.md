@@ -862,6 +862,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-499 · Nothing Pins What We Send to Sentry, and a Green Major Would Change It · Resolved · 2026-10-05 · docs/_archive/debt/debt-499-sentry-major-widens-data-collection.md
 - DEBT-500 · Vitest 5 Needs a Coordinated Migration · Resolved · 2026-10-14 · docs/records/debt-500-vitest-5-coordinated-migration.md · #1515 · 83dee3ee4cbcde06ee57e2947cbad7a4ac6c6da7
 - DEBT-504 · Request Correlation Duplicates the Hosting Platform · Superseded · 2026-11-15 · docs/records/debt-504-duplicate-request-correlation.md · #1704 · f677db6cbf73b2b7d5897e55105d4096b111c979
+- DEBT-505 · Failures That Are Only Logged Alert Nobody · Resolved · 2026-11-23 · docs/records/debt-505-logged-only-failures-alert-nobody.md · #1734 · f035299e93dfd9c50a2ccf969db0e20abcbf5730
 - DEBT-506 · Dependabot Alerts of 2026-10-06 — Six Fixed, Two Without Published Fixes · Resolved · 2026-10-09 · docs/_archive/debt/debt-506-dependabot-alert-triage-2026-10.md
 - DEBT-508 · Concurrent E2E Runs Share One Clerk Rate Budget and One Stripe Customer · Resolved · 2026-10-23 · docs/records/debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md · #1599 · 250349ced5293e3c486769e72cabc0c9a8c1e9e3
 - DEBT-509 · Pending Next.js Security Fixes Have No Watcher · Resolved · 2026-10-23 · docs/records/debt-509-pending-nextjs-security-fixes-have-no-watcher.md · #1599 · 250349ced5293e3c486769e72cabc0c9a8c1e9e3

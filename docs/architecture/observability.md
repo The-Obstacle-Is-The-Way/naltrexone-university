@@ -62,7 +62,7 @@ A caught error that is only logged is not thereby a Sentry event. An alert on
 such an outcome needs explicit, bounded telemetry or a retained operational
 receipt; do not claim a Sentry search proves its absence.
 DEBT-505 added that
-path for the conditions a person must act on: see Operational alerts below.
+path for the conditions a person must act on: see Operational alerts below. Vercel files each stdout line as `info` whatever its pino level, so search runtime logs by path or text, not by level.
 
 The server samples 5% of traces (`SENTRY_SERVER_SETTINGS` in
 `lib/sentry-data-collection.ts`). The owner kept that rate on 2026-11-15

@@ -62,6 +62,8 @@
 - **One project for the browser and the server.** Anyone holding the public browser key could post events into the project that raises operational alerts (2026-10-08).
 - **The SDK's default data collection.** It sent credentials and the visitor's IP, and Sentry's defaults change between majors (BUG-318, 2026-10-05).
 - **Logs as the only signal.** A failure that is only logged reaches nobody (DEBT-505).
+- **Forwarding every error-level log line to Sentry.** It would overrun the 5,000 errors a month and widen the collection BUG-318 narrowed (DEBT-505).
+- **A log drain to an alerting service.** It needs Vercel Pro, costs money, and still needs alert rules (DEBT-505).
 - **Testing the settings object.** CI stayed green while the SDK sent credentials, so only the SDK's output counts as evidence.
 
 ## Compliance
