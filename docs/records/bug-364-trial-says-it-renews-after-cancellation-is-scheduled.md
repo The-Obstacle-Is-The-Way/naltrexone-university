@@ -1,6 +1,6 @@
 # BUG-364: The Trial Says It Renews After Cancellation Is Scheduled
 
-**Status:** Verifying — the owner's no-card live trial check, which also covers BUG-365, in the owner's pre-sale Stripe session; due 2026-11-22
+**Status:** Resolved — every check recorded 2026-11-24
 **Priority:** P3
 **Date:** 2026-10-22
 
@@ -42,7 +42,14 @@ DEBT-414 F22's decision, built on option 2 and released in promotion #1613 (2026
 
 - [x] Red-first unit, render, controller and Postgres tests for the banner, the Billing line, creation's refusal, both completion checks and the detached default (`tests/integration/stripe-webhook-trial-setup-cancellation.integration.test.ts`); the contract's ninth scenario proves the cleared default against TEST mode.
 - [x] Dev preview on `5c8c9f2b` (2026-10-27 and 10-28), the tree released in #1613: with and without a card, a portal cancel removed the renewal and add-card copy and stated the access end, and an undo restored it. The portal sets `cancel_at` to the trial end with `cancel_at_period_end` false, which the app reads.
-- [ ] Production, before the first live sale: the owner, on their own account, starts a no-card trial and cancels it in the live portal. The frame and Billing say the cancellation is scheduled, with no renewal or add-card copy, and Renew restores the add-card copy. Then, with the app open, the owner cancels it immediately in the live Dashboard, and navigating to the app's dashboard lands on Pricing (BUG-365's half). This checks the live portal's cancellation mode and the live webhook. Starting a live trial is the owner's decision. If they decline the check itself, both records close with that decision recorded; until one or the other, both stay open, as the index's Tracking rule requires.
+- [x] Production, before the first live sale: the owner, on their own account, starts a no-card trial and cancels it in the live portal. The frame and Billing say the cancellation is scheduled, with no renewal or add-card copy, and Renew restores the add-card copy. Then, with the app open, the owner cancels it immediately in the live Dashboard, and navigating to the app's dashboard lands on Pricing (BUG-365's half). This checks the live portal's cancellation mode and the live webhook. Starting a live trial is the owner's decision. If they decline the check itself, both records close with that decision recorded; until one or the other, both stay open, as the index's Tracking rule requires.
+
+  *Done 2026-11-24, on the owner's own production account, whose no-card trial started about 19:56Z.* The owner made each change on the live account. The agent drove the app in the owner's browser and read it after each change.
+  - **Before.** The banner offered **Add a card to keep access**, and Billing said "No card on file." The live portal, with no Sandbox badge, showed "Free trial ends Dec 1" and no payment method.
+  - **Cancel in the live portal (read 20:07:04Z).** The banner read "Cancellation scheduled. Your access ends December 1, 2026 at 7:56 PM UTC", with **Manage billing** and no renewal or add-card copy. Billing showed "Cancellation scheduled … You'll keep access until then."
+  - **Renew (read 20:08:02Z).** The banner and Billing offered the add-card copy again.
+  - **Immediate cancel in the live Dashboard (read 20:15:55Z).** The app was open on Billing. Its **Dashboard** link, followed without a full load, landed on `/pricing?reason=subscription_required` with "Your subscription is inactive. Choose a plan to restart access." This is BUG-365's half.
+  - **The live webhook.** The app showed each portal and Dashboard change, so the live webhook delivered each one.
 
 Corrected 2026-11-15: BUG-365's only open check was this one, word for word, so it is run once and recorded here; BUG-365 stays Verifying until then. Re-dated from 2026-11-08, when the check had not been run: it joins the owner's one pre-sale Stripe session with BUG-343's Dashboard checks and DEBT-501 item 7. Finished build history is in git at 34d9aea0.
 
