@@ -1,6 +1,6 @@
 # DEBT-501: Billing Operations Can Leave Payers Without Access as the Service Grows or Changes
 
-**Status:** Open — build item 9's reconcile watch (not built; no session holds it); then item 7's owner session; due 2026-11-22
+**Status:** Open — build item 9's reconcile watch (not built; no session holds it); then item 7's refund and Link decision (owner); due 2026-11-22
 **Priority:** P2
 **Date:** 2026-10-05
 
@@ -64,7 +64,13 @@ Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped wit
 - **Done.** The live webhook endpoint's events were recorded and fixed on 2026-10-11; since 2026-11-13 the only enabled live endpoint is the Endive one, subscribed to all 13 handled events (`docs/architecture/integrations/stripe.md`). The live default payment-method configuration had card available and on (census, 2026-10-13). Live price IDs stay out of the repository by design (`docs/architecture/environments.md`).
 - **Remaining, before the first live sale:**
   - The owner makes one live purchase, refunds it, and records that it worked end to end and charged the amount the consent text stated. The billing QA procedure is test-mode only (`docs/guides/qa/billing-and-entitlement.md:6`), so this is the owner's own check; DEBT-465 runs that procedure in test mode first.
+    *2026-11-24, purchase done; refund remaining (owner, due 2026-12-01):*
+    - **The purchase.** The owner's production account, whose one trial was already used, paid Pro Monthly on live Checkout at about 20:17Z. Checkout showed "$29.00 per month". The app returned "You're all set — your subscription is active", and Billing read "Pro Monthly · Active".
+    - **The emails.** Stripe's receipt shows $29.00 paid for Nov 24 to Dec 24, a "Manage your subscription … if you would like to update or cancel" link, the support email and a support phone number. The phone is the one in Stripe's public details, which DEBT-414 found in August was the owner's personal number; its replacement is still the owner's to make. The app's acknowledgment at 20:18:45Z states "$29 per month, charged today and renewing automatically every month until canceled", the consent text. So the charge matched the stated amount.
+    - **The cancellation.** The owner then scheduled the cancellation in the live portal, and Billing reads "Cancellation scheduled … December 24, 2026", so the subscription does not renew.
+    - **Left for the owner.** Refund the $29.00 payment in the Dashboard.
   - **Link on Checkout.** Stripe pre-ticks "Save my information with Link for faster checkout" in both flows; seen in TEST mode, expected live. A Link-funded card reports brand `link`; the app reads no card details, so nothing breaks. The owner decides, on the live Checkout page, whether to keep Link or turn it off in the Dashboard. If Link stays, the add-card consent says "card" while Link can fund renewals from a bank account, which goes to counsel with DEBT-414's questions, and a hosted journey that pays through Link is added. The hosted smoke always unticks it (`tests/e2e/helpers/stripe-hosted-checkout.ts:108-112`).
+    *2026-11-24:* the owner's live purchase paid by card, not Link: the portal lists a card as the payment method. The decision to keep Link or turn it off is still the owner's (due 2026-12-01).
 
 ### 8. The checkout guard reads only the customer's first 10 subscriptions (P3) — Won't Fix
 
