@@ -6,7 +6,7 @@
 
 **Scope:** the 24 maintained port/gateway fakes exported by `src/application/test-helpers/fakes/index.ts`, excluding the canned `FakeUseCase` descendants, plus every `Fake*` binding exported from a `test-helpers/` directory under `src/adapters/`, which the register test discovers: `FakeStripeCheckoutClient` and `FakeStripePortalConfigurations`
 
-This is the live fake-fidelity census required by DEBT-472 Part B. A row with “none known” means the fake was inspected and no divergence was found. A dated waiver means there is deliberately no shared fake↔real scenario table; it does not assert parity. `tests/fake-contract-register.test.ts` derives the inventory from the application fake barrel, adds the adapter-owned Stripe fake, and fails when a row is missing, duplicated, or silent about verification or divergence.
+This is the live fake-fidelity census required by DEBT-472 Part B. A row with “none known” means the fake was inspected and no divergence was found. A dated waiver means there is deliberately no shared fake↔real scenario table; it does not assert parity. `tests/fake-contract-register.test.ts` derives the inventory from the application fake barrel and the adapter-owned fakes it discovers, and fails when a row is missing, duplicated, or silent about verification or divergence.
 
 ## Common repository exclusions licensed by ADR-003
 
