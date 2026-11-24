@@ -1,6 +1,6 @@
 # ADR-026: Error Monitoring with Sentry
 
-**Status:** Accepted, as amended 2026-10-13 (error text; see [Amendment](#amendment--2026-10-13))
+**Status:** Accepted, as amended 2026-10-13 (error text; see [Amendment](#amendment--2026-10-13)) and 2026-11-23 (two rejected alternatives; see [Amendment](#amendment--2026-11-23))
 **Date:** 2026-10-12, recording decisions of 2026-10-05 to 2026-10-08
 **Decision Makers:** The owner, who approved the BUG-318 fix on 2026-10-05 and the split into two Sentry projects on 2026-10-08. ADR-023 moved decisions out of records and agent instructions, so they are recorded here.
 **Depends On:** ADR-008 (Logging and Observability)
@@ -82,3 +82,10 @@ Error text, which Decision 3 leaves out. The decision is unchanged.
 
 - `scrubEvent` also redacts credential query parameters in an event's own text: each exception value, linked causes included, the event's message, and every string of its extra data. Our code and libraries write that text, and it can quote a URL with its query (DEBT-513).
 - Internal and Stripe IDs in that text are deliberately not masked. They are pseudonymous, diagnosis needs them, and Sentry receives no user to join them to. That reasoning holds only while events carry no user.
+
+## Amendment — 2026-11-23
+
+Two alternatives DEBT-505 rejected, recorded when it closed. The decision is unchanged.
+
+- **Forwarding every error-level log line to Sentry.** It would overrun the 5,000 errors a month and widen the collection BUG-318 narrowed.
+- **A log drain to an alerting service.** It needs Vercel Pro, costs money, and still needs alert rules.

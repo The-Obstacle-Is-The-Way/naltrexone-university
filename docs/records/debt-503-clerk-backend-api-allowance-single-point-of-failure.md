@@ -13,7 +13,7 @@ Clerk limits each production instance's Backend API calls, documented as 1,000 p
 **Done and released** (built test-first; the build history is in git at 34d9aea0):
 
 - **Item 1.** Session identity comes from `auth()`, with our row and the deletion tombstone read together, and no Backend API call for an existing row (`src/adapters/gateways/clerk-auth-gateway.ts:50-66`); promotion #1427. A source guard keeps `currentUser` out (`tests/clerk-backend-api-boundary.test.ts`). **Accepted residual:** between Clerk's deletion and its `user.deleted` webhook, a still-valid session token (about 60 seconds) is served its own row, and a billing refresh gets Clerk's 404 and is refused (`clerk-auth-gateway.ts:125-136`). It is bounded and changes no ownership.
-- **Item 3.** Alert kinds `clerk_site_limit_reached`, `clerk_backend_calls_refused`, `clerk_signing_keys_unavailable` and `clerk_session_tokens_rejected`, through DEBT-505's path (`lib/clerk-call-failures.ts`; runbook in `docs/architecture/observability.md`). A test event reached the owner on 2026-11-03. A failed refresh logs Clerk's error `code`, added after BUG-374's check saw one server refresh fail on 2026-11-03 with no reason; the `clerk_backend_calls_refused` runbook row reads it (`observability.md:292`). A lone failure, below the alert threshold, needs no check of its own.
+- **Item 3.** Alert kinds `clerk_site_limit_reached`, `clerk_backend_calls_refused`, `clerk_signing_keys_unavailable` and `clerk_session_tokens_rejected`, through DEBT-505's path (`lib/clerk-call-failures.ts`; runbook in `docs/architecture/observability.md`). A test event reached the owner on 2026-11-03. A failed refresh logs Clerk's error `code`, added after BUG-374's check saw one server refresh fail on 2026-11-03 with no reason; the `clerk_backend_calls_refused` runbook row reads it (`observability.md:314`). A lone failure, below the alert threshold, needs no check of its own.
 - **Item 4, steps 1 to 4.** The daily roll-up into `clerk_backend_call_usage` (`src/adapters/jobs/clerk-backend-call-usage.ts`); refreshes of sessions Clerk signed counted in signed-in buckets of 200 a minute (`CLERK_BACKEND_CALL_SIGNED_IN_RATE_LIMIT`); `clerk_signed_in_limit_reached`; and Clerk refreshing only what the limiter counted (BUG-375). Production checks passed on 2026-11-02 and 2026-11-04, and the malformed-cookie firewall rule came out on 2026-11-02.
 - **Item 5.** `clerkMiddleware` gets `jwtKey` from `CLERK_JWT_KEY` (`lib/clerk-jwt-key.ts`), checked on every deploy (`scripts/deploy/check-clerk-jwt-key.ts`), and set in Vercel Production since 2026-10-11. The signed-in production browsing of 2026-11-04 ran with it.
 
@@ -53,7 +53,7 @@ Clerk limits each production instance's Backend API calls, documented as 1,000 p
   - 30 days of `clerk_backend_call_usage` rows after the first real live subscription, from the owner's read-only count; DEBT-501 item 7's refunded purchase does not count.
 
   Then size the three limits from the rows' `busiest_minute` in `address`, `signed-in-address` and `call-failed`.
-- **The usage-row read.** Step 1 reached production on 2026-11-02. The owner reads `clerk_backend_call_usage` with the query in `docs/architecture/observability.md`: a row for each of the seven buckets, each starting where that bucket's previous row ended. An agent cannot, since it never connects to the production database. It was due 2026-11-08. No session held it and the queue review lapsed (due 2026-10-30), so it is re-dated 2026-11-22, to run with DEBT-505's manual renewal run, whose response reports `clerkBackendCallUsage`.
+- **The usage-row read.** Step 1 reached production on 2026-11-02. The owner reads `clerk_backend_call_usage` with the query in `docs/architecture/observability.md`: a row for each of the seven buckets, each starting where that bucket's previous row ended. An agent cannot, since it never connects to the production database. It was due 2026-11-08. No session held it and the queue review lapsed (due 2026-10-30), so it is re-dated 2026-11-22. DEBT-505's manual runs on 2026-11-23 printed no response, so the read stands on its own: the daily jobs write the rows.
 
 ## Verification
 
@@ -68,7 +68,7 @@ Criteria to meet before closing: each item shipped with red-first tests, or left
 
 - BUG-323: the request limits this builds on.
 - BUG-369, BUG-374 and BUG-375: gaps found and fixed under items 3 and 4.
-- DEBT-505: the alert path, and the manual renewal run the usage-row read joins.
+- DEBT-505: the alert path.
 - DEBT-537: its `@clerk/backend` 3.28.0 update rechecks `lib/clerk-backend-call-limit.ts`.
 
 Corrected 2026-11-15: finished build history of items 1, 3, 4 (steps 1 to 4) and 5 stripped (it is in git at 34d9aea0), keeping item 1's accepted deletion race and why a refresh logs its `code` (BUG-374); item 5's signed-in production visit was the 2026-11-04 check; item 3 counts a cookie nonce and item 4 keeps 30 a minute, both decided by the reviewing session at the owner's delegation; item 4 regains the retune of the signed-in limit and failure threshold, with a trigger that shows real people; the usage-row read lapsed 11-08 and is re-dated 2026-11-22 with its reason; priority P3, since every open item is P3.
