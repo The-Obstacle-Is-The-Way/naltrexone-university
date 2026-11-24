@@ -31,8 +31,8 @@ Decided by the reviewing session on 2026-11-17, at the owner's delegation.
 
 ## Verification
 
-- [ ] `pnpm typecheck` passes with the `@ts-expect-error` line, and fails once the default is restored.
-- [ ] With a `gh` stub on `PATH` that writes a marker file, the advisory-watch test files pass and the marker stays absent. A missing `gh` proves nothing, since `raiseUpstreamAdvisories` catches the lookup's error.
+- [x] `pnpm typecheck` passes with the two `@ts-expect-error` lines, one for each function, and failed with `Unused '@ts-expect-error' directive` on both while the defaults stood (2026-11-24).
+- [x] With a `gh` stub on `PATH` that writes a marker file, the advisory-watch test files pass and the marker stays absent (2026-11-24). As a control, the same stub under the old code left the marker. A missing `gh` proves nothing, since `raiseUpstreamAdvisories` catches the lookup's error.
 
 ## Related
 

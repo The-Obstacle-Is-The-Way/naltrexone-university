@@ -89,9 +89,10 @@ it: find the old project with `docker ps` and remove it with
 
 - [x] The resolver mismatch is reproduced with the probe (2026-10-06, again
   2026-11-15), and E2E's Docker startup failure observed (2026-10-06).
-- [ ] The round-trip test, for generated and explicit names, fails before the
-  fix and passes after it.
-- [ ] A short clone's instance is unchanged.
+- [x] The round-trip test, for generated and explicit names, fails before the
+  fix and passes after it (2026-11-24: five cases failed, then all passed).
+- [x] A short clone's instance is unchanged (2026-11-24: this clone resolves
+  to the same instance before and after the fix).
 
 ## Related
 

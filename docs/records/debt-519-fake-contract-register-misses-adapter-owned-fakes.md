@@ -31,8 +31,8 @@ Option 1. In `tests/fake-contract-register-source-scan.ts`, replace `ADAPTER_OWN
 
 ## Verification
 
-- [ ] The scan discovers adapter-owned fakes in any non-test file under `src/adapters/**/test-helpers/`, and a test proves a new one without a row fails.
-- [ ] `FakeStripePortalConfigurations` has its own row naming the tenth contract scenario.
+- [x] The scan discovers adapter-owned fakes in any non-test file under `src/adapters/**/test-helpers/`, and a test proves a new one without a row fails (2026-11-24: the live check failed on `FakeStripePortalConfigurations` until its row was added).
+- [x] `FakeStripePortalConfigurations` has its own row naming the tenth contract scenario (2026-11-24).
 
 ## Related
 
