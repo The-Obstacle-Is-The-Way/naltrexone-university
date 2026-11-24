@@ -1,6 +1,6 @@
 # DEBT-503: Clerk's Shared Backend API Allowance Is a Single Point of Failure
 
-**Status:** Open — build item 3 (count a cookie nonce); the owner's usage-row read, lapsed 11-08, due 2026-11-22; items 2 and 4 wait for triggers
+**Status:** Open — build item 3 (count a cookie nonce); items 2 and 4 wait for triggers
 **Priority:** P3
 **Date:** 2026-10-05
 
@@ -53,14 +53,14 @@ Clerk limits each production instance's Backend API calls, documented as 1,000 p
   - 30 days of `clerk_backend_call_usage` rows after the first real live subscription, from the owner's read-only count; DEBT-501 item 7's refunded purchase does not count.
 
   Then size the three limits from the rows' `busiest_minute` in `address`, `signed-in-address` and `call-failed`.
-- **The usage-row read.** Step 1 reached production on 2026-11-02. The owner reads `clerk_backend_call_usage` with the query in `docs/architecture/observability.md`: a row for each of the seven buckets, each starting where that bucket's previous row ended. An agent cannot, since it never connects to the production database. It was due 2026-11-08. No session held it and the queue review lapsed (due 2026-10-30), so it is re-dated 2026-11-22. DEBT-505's manual runs on 2026-11-23 printed no response, so the read stands on its own: the daily jobs write the rows.
+- **The usage-row read.** Passed 2026-11-24. Run with the query in `docs/architecture/observability.md`, it showed rows for all seven buckets, 46 each, from 2026-11-02 08:50Z to 2026-11-24 09:53Z. Every row starts where its bucket's previous row ended. At the owner's request, an agent ran the query in a read-only transaction against production's database, after checking that the connection's host was production's, not Preview's.
 
 ## Verification
 
 Criteria to meet before closing: each item shipped with red-first tests, or left as a Waiting row with its trigger in the records index.
 
 - [ ] Item 3: a failed nonce lookup is named whether the nonce came in the query or the cookie.
-- [ ] Item 4: the owner's usage-row read is recorded, showing rows for all seven buckets with no gap.
+- [x] Item 4: the owner's usage-row read is recorded, showing rows for all seven buckets with no gap. Passed 2026-11-24.
 - [x] Item 4: the handshake limit's choice is recorded (2026-11-15, keep 30).
 - [ ] Items 2 and 4 become Waiting rows with their triggers when the rest closes.
 
@@ -72,3 +72,5 @@ Criteria to meet before closing: each item shipped with red-first tests, or left
 - DEBT-537: its `@clerk/backend` 3.28.0 update rechecks `lib/clerk-backend-call-limit.ts`.
 
 Corrected 2026-11-15: finished build history of items 1, 3, 4 (steps 1 to 4) and 5 stripped (it is in git at 34d9aea0), keeping item 1's accepted deletion race and why a refresh logs its `code` (BUG-374); item 5's signed-in production visit was the 2026-11-04 check; item 3 counts a cookie nonce and item 4 keeps 30 a minute, both decided by the reviewing session at the owner's delegation; item 4 regains the retune of the signed-in limit and failure threshold, with a trigger that shows real people; the usage-row read lapsed 11-08 and is re-dated 2026-11-22 with its reason; priority P3, since every open item is P3.
+
+Corrected 2026-11-24: the usage-row read passed and is recorded. An agent ran it at the owner's request, so "an agent cannot" no longer holds.

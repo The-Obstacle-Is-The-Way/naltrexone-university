@@ -887,6 +887,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-535 · The `glob` Alert and the `minimatch` Advisory Wait on Sentry's and Stryker's Releases · Resolved · 2026-11-12 · docs/records/debt-535-alerts-108-and-109-wait-on-their-consumers.md · #1676 · e09bcb730d7542f06d1b9dac69a5412760cf7b71
 - DEBT-536 · Stryker 10.1.1 Replaces the Vitest 5 Runner Patch · Resolved · 2026-11-09 · docs/records/debt-536-stryker-10-replaces-the-vitest-5-runner-patch.md · #1662 · c2ef5f0b8404deccfa3f7a6dad371b0f58a668ec
 - DEBT-537 · Four Advisory Fixes Wait on the 7-Day Gate: vite, brace-expansion, ws and Clerk · Resolved · 2026-11-23 · docs/records/debt-537-three-advisory-fixes-wait-on-the-release-age-gate.md · #1728 · 710293f7469a735f04a79e5517dc809904bc5c0c
+- DEBT-538 · Handled Clerk Events Grow Without Pruning, and Only the Owner Can Count Them · Accepted · 2026-11-24 · docs/records/debt-538-handled-clerk-events-grow-unpruned.md · #1737 · 6cbf7e2bf75ff60038839ee906d664517b82cd00
 
 ## Frontend (FE prefix, retired)
 
