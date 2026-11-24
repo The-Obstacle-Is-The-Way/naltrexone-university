@@ -53,7 +53,7 @@ Clerk limits each production instance's Backend API calls, documented as 1,000 p
   - 30 days of `clerk_backend_call_usage` rows after the first real live subscription, from the owner's read-only count; DEBT-501 item 7's refunded purchase does not count.
 
   Then size the three limits from the rows' `busiest_minute` in `address`, `signed-in-address` and `call-failed`.
-- **The usage-row read.** Passed 2026-11-24. Run with the query in `docs/architecture/observability.md`, it showed rows for all seven buckets, 46 each, from 2026-11-02 08:50Z, when step 1 reached production, to 2026-11-24 09:53Z. Every row starts where its bucket's previous row ended. At the owner's request, an agent ran the query in a read-only transaction against production's database, after checking that the connection's host was production's, not Preview's.
+- **The usage-row read.** Passed 2026-11-24. Run with the query in `docs/architecture/observability.md`, it showed rows for all seven buckets, 46 each, from 2026-11-02 08:50Z to 2026-11-24 09:53Z. Every row starts where its bucket's previous row ended. At the owner's request, an agent ran the query in a read-only transaction against production's database, after checking that the connection's host was production's, not Preview's.
 
 ## Verification
 
