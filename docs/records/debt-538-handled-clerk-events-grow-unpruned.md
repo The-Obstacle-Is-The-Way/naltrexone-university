@@ -1,6 +1,6 @@
 # DEBT-538: Handled Clerk Events Grow Without Pruning, and Only the Owner Can Count Them
 
-**Status:** Blocked — the owner runs the read-only `clerk_events` census with DEBT-503's usage-row read and records its two counts; due 2026-11-22
+**Status:** Verifying — the census is recorded under both limits, so DEBT-449's Neon half moves to a Waiting row and the record closes; due 2026-11-25
 **Priority:** P4
 **Date:** 2026-11-20
 
@@ -32,6 +32,7 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
   - two consecutive monthly censuses show at least 1,000,000 handled rows (the query's first count) or 1 GiB for the table and its indexes;
   - Neon reports backup, storage or latency impact attributable to the table. #1704 (DEBT-533) named Neon's storage page and spend alert (DEBT-534) as where that shows.
 - **Decided 2026-11-21 at the owner's delegation: one census, unless it reaches 100,000 handled rows or 100 MB.** The first census runs with DEBT-503's usage-row read, which is due the same day. If it shows under 100,000 handled rows and under 100 MB, the owner declines further censuses, and this record closes. That drops the census half of DEBT-449's trigger, which needs two consecutive censuses. Its other half moves unchanged to a Waiting row: Neon reports backup, storage or latency impact attributable to the table, read on Neon's storage page and spend alert (DEBT-534). Otherwise the monthly censuses continue.
+- **The census, 2026-11-24:** 0 handled rows, and 32,768 bytes for the table and its indexes, far under 100,000 rows and 100 MB. So, as decided on 2026-11-21, further censuses are declined. At the owner's request, an agent ran the query above in a read-only transaction against production's database, after checking that the connection's host was production's, not Preview's.
 - When it fires, the prune goes back to direction review before it is built (DEBT-449). A revived design must:
   - preserve unresolved outcomes;
   - exclude any event with an outstanding `pending_stripe_cancellations` child;
@@ -40,7 +41,7 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
 
 ## Verification
 
-- [ ] The trigger fires, and the prune's direction review opens as its own record; or the owner declines further censuses, and DEBT-449's Neon half becomes a Waiting row.
+- [x] The trigger fires, and the prune's direction review opens as its own record; or the owner declines further censuses, and DEBT-449's Neon half becomes a Waiting row. Done 2026-11-24: the census was under both limits, so further censuses are declined, and the Neon half moves to a Waiting row with the prune's constraints.
 
 ## Related
 
@@ -50,3 +51,5 @@ No harm is recorded. Until a prune ships, the table adds to Neon storage (DEBT-5
 - BUG-246 (closed): the cascade and prune-horizon constraint.
 
 Corrected 2026-11-21: decided at the owner's delegation that one census under 100,000 handled rows and 100 MB ends the monthly censuses, dropping the census half of DEBT-449's trigger and keeping its Neon half; the census moves to 11-22, beside DEBT-503's read.
+
+Corrected 2026-11-24: the census is recorded. An agent ran it at the owner's request, so "only the owner can" no longer holds.

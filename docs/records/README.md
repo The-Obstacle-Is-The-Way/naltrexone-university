@@ -2,11 +2,11 @@
 
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
-**Now** — 2026-11-23.
-- **Verifying, by due date.** BUG-364 and BUG-365 11-22, the owner's live trial check; BUG-377 12-04.
+**Now** — 2026-11-24.
+- **Verifying, by due date.** BUG-364 and BUG-365 11-22, the owner's live trial check; DEBT-538 11-25; BUG-377 12-04.
 - **Next.** BUG-380's hosted-smoke fix, and BUG-343's TEST-mode re-run, 11-22. BUG-378's CSP spec fix and BUG-381's test fix, 11-24. BUG-321's provider-contract case, 11-29. BUG-360's remote-target removal. DEBT-514's read-only Biome hook. DEBT-528's five deletions and DEBT-526's four fixes. DEBT-503 item 3, DEBT-519 and BUG-329. BUG-337 closes at 178 clean runs, about 11-30.
 - **Before the first live sale.** DEBT-501 item 9's reconcile watch, due 11-22 and unassigned: BUG-343's hand refunds rely on it and on BUG-377's drill. DEBT-414 F21 and F19b's trial dates. DEBT-539: the practice QA guide, then the owner's content bootstrap. The owner buys Neon Launch (DEBT-534), and moves production to Vercel Pro at the sale itself (DEBT-512). The owner's Stripe session: BUG-364's live trial, DEBT-501 item 7's purchase and refund (the receipt as Massachusetts' notice, DEBT-414 F19c; Link; the new support address and phone), BUG-343's Dashboard check, BUG-360's read-only E2E-email check. The owner gets a mail-receiving address and a business line, turns on the support mailbox's auto-reply, and engages a New York sales-tax adviser for DEBT-414 Q7, counsel for Q1–Q6, and IP counsel for Q8. By 39 days before the first real renewal or anniversary: DEBT-502, DEBT-511, and F19a's annual reminder; the owner's count dates it (DEBT-511, due 2027-02-12).
-- **Owner actions.** DEBT-503's usage-row read and DEBT-538's `clerk_events` census, 11-22. Clerk's verify-at-sign-up check (DEBT-502). Post BUG-333's drafted evidence to clerk/javascript#10411. BUG-383's content-repository fix. DEBT-414's F08 specimens and F14 entity facts, before counsel's review.
+- **Owner actions.** Clerk's verify-at-sign-up check (DEBT-502). Post BUG-333's drafted evidence to clerk/javascript#10411. BUG-383's content-repository fix. DEBT-414's F08 specimens and F14 entity facts, before counsel's review.
 
 **Queue review due:** 2026-11-29
 
@@ -29,7 +29,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)|Renewal-law gaps and legal review before paid launch|P1|Open — F21's notice tagging, F19b's trial dates, F19a's annual reminder; F07 waits on Resend's first real report; owner, counsel and tax items remain|
 |[DEBT-501](./debt-501-billing-operations-resilience.md)|Billing operations can leave payers without access as the service grows or changes|P2|Open — build item 9's reconcile watch (not built; no session holds it); then item 7's owner session; due 2026-11-22|
 |[DEBT-502](./debt-502-account-identity-and-action-hardening.md)|Rare account states can lock a person out, and payment actions expose test seams|P3|Open — items 3, 1, 2 by 39 days before the first real renewal or anniversary (dated from DEBT-511's count); owner: Clerk's verify-at-sign-up setting|
-|[DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md)|Clerk's shared Backend API allowance is a single point of failure|P3|Open — build item 3 (count a cookie nonce); the owner's usage-row read, lapsed 11-08, due 2026-11-22; items 2 and 4 wait for triggers|
+|[DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md)|Clerk's shared Backend API allowance is a single point of failure|P3|Open — build item 3 (count a cookie nonce); items 2 and 4 wait for triggers|
 |[DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md)|Legal notices go to a stored email that Clerk may have changed|P2|Open — refresh before queuing (option B), after DEBT-502 items 3 and 2; ships 39 days before the first real renewal or anniversary; the owner's count due 2027-02-12|
 |[DEBT-512](./debt-512-production-hosting-plan-forbids-commercial-use.md)|Production runs on a hosting plan whose terms forbid commercial use|P2|Blocked — the owner moves production to Vercel Pro at the first live sale (decided 2026-10-09); then engineering re-checks the Hobby workarounds|
 |[DEBT-514](./debt-514-lint-staged-shared-clone-staging-race.md)|lint-staged can stage another session's work|P2|Open — replace lint-staged with a read-only `biome check --staged` pre-commit hook (option 5, owner 2026-11-15), red first; the 17.5.1 hold stays until it ships|
@@ -37,7 +37,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-526](./debt-526-runtime-environment-has-no-single-owner.md)|Which environment the code runs in is decided in many places, by different rules|P3|Open — delete the dead Clerk instance check, share one production predicate between `lib/env.ts` and the proxy, redact `SENTRY_DSN`, and check the app URL's origin in production|
 |[DEBT-528](./debt-528-entry-points-repeat-the-request-pipeline.md)|Several server entry points repeat policy, and the copies have drifted|P3|Open — five small deletions, each red first: the request-ID helper (from DEBT-504), cron bearer auth, rate-limit refusals, the manage-billing request copy, the bare sign-ups|
 |[DEBT-534](./debt-534-neon-free-plan-can-suspend-production.md)|Neon's Free plan can suspend production's database until the month ends|P2|Blocked — the owner moves `naltrexone-db` to Neon Launch before the first live sale (decided 2026-10-21)|
-|[DEBT-538](./debt-538-handled-clerk-events-grow-unpruned.md)|Handled Clerk events grow without pruning, and only the owner can count them|P4|Blocked — the owner runs the read-only `clerk_events` census with DEBT-503's usage-row read and records its two counts; due 2026-11-22|
+|[DEBT-538](./debt-538-handled-clerk-events-grow-unpruned.md)|Handled Clerk events grow without pruning, and only the owner can count them|P4|Verifying — the census is recorded under both limits, so DEBT-449's Neon half moves to a Waiting row and the record closes; due 2026-11-25|
 |[DEBT-539](./debt-539-production-content-is-not-yet-release-one.md)|Production content is not yet bootstrapped as release one|P2|Blocked — the practice QA guide passes on the dev preview, then the owner runs the content bootstrap, before the first live sale|
 
 ## Waiting
