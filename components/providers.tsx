@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import { useMemo } from 'react';
 import { NotificationProvider } from '@/components/ui/notification-provider';
-import { ROUTES } from '@/lib/routes';
+import { CLERK_AUTH_ROUTES, ROUTES } from '@/lib/routes';
 
 const ClerkProvider = dynamic(
   () => import('@clerk/nextjs').then((m) => m.ClerkProvider),
@@ -71,6 +71,7 @@ export function Providers({
       <ClerkProvider
         dynamic
         {...(nonce !== undefined ? { nonce } : {})}
+        {...CLERK_AUTH_ROUTES}
         signInFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
         signUpFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
         appearance={clerkAppearance}

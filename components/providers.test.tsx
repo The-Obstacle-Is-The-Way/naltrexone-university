@@ -86,6 +86,39 @@ describe('Providers', () => {
     expect(html).toContain('data-nonce="nonce-123"');
   });
 
+  // BUG-378: without them Clerk signs in on its Account Portal, another origin.
+  it("sends Clerk's sign-in and sign-up to the site's own pages", async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    vi.doMock('next/dynamic', () => ({
+      default: () =>
+        function MockClerkProvider({
+          children,
+          signInUrl,
+          signUpUrl,
+        }: {
+          children: ReactNode;
+          signInUrl?: string;
+          signUpUrl?: string;
+        }) {
+          return (
+            <div data-sign-in-url={signInUrl} data-sign-up-url={signUpUrl}>
+              {children}
+            </div>
+          );
+        },
+    }));
+
+    const { Providers } = await import('@/components/providers');
+    const html = renderToStaticMarkup(
+      <Providers>
+        <div>child</div>
+      </Providers>,
+    );
+
+    expect(html).toContain('data-sign-in-url="/sign-in"');
+    expect(html).toContain('data-sign-up-url="/sign-up"');
+  });
+
   it('passes Clerk UI appearance variables using current foreground token names', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
 
