@@ -1,6 +1,6 @@
 # BUG-378: The CSP Reports the Site's Own Scripts and Uses Up Sentry's Error Quota
 
-**Status:** Open — send sign-in redirects to the app's own routes, red first (Finding); check two more page views; due 2026-11-27
+**Status:** Verifying — after promotion, a signed-out Preview `/sign-up` adds no CSP event; a signed-in production `/app` view rides DEBT-501 item 7's purchase; due 2026-11-27
 **Priority:** P2
 **Date:** 2026-11-14
 
@@ -75,7 +75,7 @@ Option 1.
   *Done 2026-11-15, after promotion #1694:* both `/sign-up`s sent the policy with all three reporting headers and no nonce. Views of production's `/`, `/pricing` and `/sign-up` and of the Preview's `/` and signed-in `/app/dashboard` added no CSP event; the old policy sent 16 to 18 a view. A hand-added `example.com` script on production's `/sign-up` arrived as ADDICTION-BOARDS-WEB-2H, and the web project's high-priority workflow emailed the owner.
 - [x] The web project's CSP issues, the archived ones included, are resolved, with the owner's approval. *Done 2026-11-15:* all eleven, WEB-F, -G, -H and -2H included; none is unresolved or archived.
 - [ ] A view of a signed-in page on production, and of `/sign-up` on the Preview, each served with `report-uri` in its `Content-Security-Policy-Report-Only` header, adds no CSP event to the web project. A document whose URL or referrer needs redaction gets no report endpoint (`lib/content-security-policy.ts:146-160`), so its view proves nothing. The 2026-11-15 checks viewed neither; the Preview's `/sign-up` was checked for headers only (#1694). *2026-11-24:* production's `/app` pages send the owner's account, which has no subscription, to `/pricing`, so this view needs DEBT-501 item 7's purchase; a signed-in browser's Preview `/sign-up` goes to `/app/dashboard`. Neither view, at 07:28Z, added an event.
-- [ ] A signed-out router request for a protected page is redirected to `/sign-in` on the site's own origin, through the real Clerk middleware, and sign-in, sign-up and the return to `/pricing?plan=…` still work (Finding, option 1). The signed-in spec keeps its recorder from the start (`tests/e2e/content-security-policy.spec.ts:204`): its local failures were this path, not the spec.
+- [x] A signed-out router request for a protected page is redirected to `/sign-in` on the site's own origin, through the real Clerk middleware, and sign-in, sign-up and the return to `/pricing?plan=…` still work (Finding, option 1). The signed-in spec keeps its recorder from the start (`tests/e2e/content-security-policy.spec.ts:204`): its local failures were this path, not the spec. *Done in #1736:* `proxy-clerk-sign-in-redirect.test.ts`, `components/providers.test.tsx`, the CSP spec's router-request test and `tests/e2e/sign-in-pages.spec.ts` failed on the old configuration and pass on the fix.
 - [x] The watcher's quota finding leaves #1610 as the old reports age out of its 30-day window. *Done:* the watcher closed #1610 at 2026-11-19T19:36:56Z ("Every operational alert check passes again"), the run the 11-15 projection named.
 
 ## Related
