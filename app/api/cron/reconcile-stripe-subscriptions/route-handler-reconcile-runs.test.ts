@@ -67,7 +67,17 @@ describe('reconcile run records', () => {
 
   it('records no finish when every row failed, though the route answers 200', async () => {
     const harness = createHarness({
-      allPagesResult: { ...someFailed, scanned: 2, failed: 2 },
+      allPagesResult: {
+        ...someFailed,
+        scanned: 2,
+        // Both rows, and the later page Stripe rejected.
+        failed: 3,
+        failures: [
+          { stripeSubscriptionId: 'sub_first', error: 'row failed' },
+          { stripeSubscriptionId: 'sub_second', error: 'row failed' },
+          { stripeSubscriptionId: '(page@offset=500)', error: 'page rejected' },
+        ],
+      },
     });
 
     const response = await harness.handle(request({ query: '?dryRun=false' }));
@@ -77,6 +87,24 @@ describe('reconcile run records', () => {
     expect(
       await harness.reconcileRuns.listUnreportedUnfinished(WATCH_TIME),
     ).toHaveLength(1);
+  });
+
+  it('records a finish when a row was repaired before a later page was rejected', async () => {
+    // The rejected page adds to failed but not to scanned: one of the two
+    // rows failed, and the other was repaired.
+    const harness = createHarness({
+      allPagesResult: { ...someFailed, scanned: 2, failed: 2 },
+    });
+
+    await harness.handle(request({ query: '?dryRun=false' }));
+
+    expect(await harness.reconcileRuns.listLatestFinished(5)).toEqual([
+      {
+        id: expect.any(String),
+        startedAt: NOW,
+        failedSubscriptionIds: ['sub_failing'],
+      },
+    ]);
   });
 
   it('records the start of a run the rate limiter refuses, and no finish', async () => {

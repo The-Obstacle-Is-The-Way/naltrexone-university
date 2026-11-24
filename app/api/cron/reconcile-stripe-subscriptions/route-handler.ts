@@ -121,6 +121,12 @@ function getReconciliationScope(url: URL): 'all' | 'page' {
   return 'all';
 }
 
+// A run that stopped early adds a `(page@offset=…)` failure for the rejected
+// page, counted in `failed` but not in `scanned`; only Stripe subscription IDs
+// name a row.
+const isRowFailure = (failure: { stripeSubscriptionId: string }) =>
+  failure.stripeSubscriptionId.startsWith('sub_');
+
 /**
  * A run's reconciliation repaired something, or had nothing to repair: it
  * returned with at least one row that did not fail, or with no rows. A run in
@@ -130,17 +136,18 @@ function getReconciliationScope(url: URL): 'all' | 'page' {
 function reconciliationFinished(
   result: ReconcileAllStripeSubscriptionPagesOutput,
 ): boolean {
-  return result.scanned === 0 || result.failed < result.scanned;
+  const pageFailures = result.failures.filter(
+    (failure) => !isRowFailure(failure),
+  ).length;
+  return result.scanned === 0 || result.failed - pageFailures < result.scanned;
 }
 
-// A run that stopped early adds a `(page@offset=…)` failure for the rejected
-// page; only Stripe subscription IDs name a row that keeps failing.
 function failedSubscriptionIds(
   result: ReconcileAllStripeSubscriptionPagesOutput,
 ): string[] {
   return result.failures
-    .map((failure) => failure.stripeSubscriptionId)
-    .filter((id) => id.startsWith('sub_'));
+    .filter(isRowFailure)
+    .map((failure) => failure.stripeSubscriptionId);
 }
 
 async function recordRunStart(

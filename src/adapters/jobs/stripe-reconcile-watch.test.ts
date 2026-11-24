@@ -22,6 +22,20 @@ class UnreadableStripeReconcileRuns extends FakeStripeReconcileRunRepository {
     throw new Error('database unavailable');
   }
 }
+
+/** The maintained fake, failing only to mark runs reported. */
+class UnmarkableStripeReconcileRuns extends FakeStripeReconcileRunRepository {
+  override async markReported(): Promise<void> {
+    throw new Error('database unavailable');
+  }
+}
+
+/** The maintained fake, failing only to list finished runs. */
+class UnlistableStripeReconcileRuns extends FakeStripeReconcileRunRepository {
+  override async listLatestFinished(): Promise<never> {
+    throw new Error('database unavailable');
+  }
+}
 const SECOND_MS = 1000;
 const HOUR_MS = 60 * 60 * SECOND_MS;
 const ago = (ms: number) => new Date(NOW.getTime() - ms);
@@ -109,15 +123,70 @@ describe('checkStripeReconcileRunning', () => {
     ]);
   });
 
-  it('counts each killed run and a missing start together', async () => {
+  it('counts each killed run and a missing start together, and marks every killed run reported', async () => {
     const { runs, alerts, watch } = setUp();
     await runs.recordStart(ago(50 * HOUR_MS));
     await runs.recordStart(ago(26 * HOUR_MS));
 
     await watch();
+    await watch();
 
     expect(alerts.raised).toEqual([
       { kind: 'stripe_reconcile_stopped', count: 3 },
+      { kind: 'stripe_reconcile_stopped', count: 1 },
+    ]);
+  });
+
+  it('reports a run that started 61 seconds ago with no finish', async () => {
+    const { runs, watch } = setUp();
+    await finishedRun(runs, ago(2 * HOUR_MS));
+    await runs.recordStart(ago(61 * SECOND_MS));
+
+    expect((await watch()).reconcile).toBe('stopped');
+  });
+
+  it('keeps the stop and still checks rows when marking runs reported fails', async () => {
+    const alerts = new FakeOperationalAlerts();
+    const logger = new FakeLogger();
+    const runs = new UnmarkableStripeReconcileRuns();
+    await finishedRun(runs, ago(49 * HOUR_MS), ['sub_stuck']);
+    await finishedRun(runs, ago(25 * HOUR_MS), ['sub_stuck']);
+    await finishedRun(runs, ago(2 * HOUR_MS), ['sub_stuck']);
+    await runs.recordStart(ago(1 * HOUR_MS));
+
+    const outcome = await checkStripeReconcileRunning({
+      now: () => NOW,
+      runs,
+      alerts,
+      logger,
+    });
+
+    expect(outcome).toEqual({ reconcile: 'stopped', failingRows: 1 });
+    expect(alerts.raised.map((alert) => alert.kind)).toEqual([
+      'stripe_reconcile_stopped',
+      'stripe_reconcile_row_failing',
+    ]);
+    expect(logger.errorCalls.map((call) => call.msg)).toContain(
+      'Stripe reconcile runs not marked reported',
+    );
+  });
+
+  it('keeps the stop check when the finished runs cannot be read', async () => {
+    const alerts = new FakeOperationalAlerts();
+    const logger = new FakeLogger();
+    const runs = new UnlistableStripeReconcileRuns();
+    await finishedRun(runs, ago(1 * HOUR_MS));
+
+    const outcome = await checkStripeReconcileRunning({
+      now: () => NOW,
+      runs,
+      alerts,
+      logger,
+    });
+
+    expect(outcome).toEqual({ reconcile: 'running', failingRows: 0 });
+    expect(logger.errorCalls.map((call) => call.msg)).toEqual([
+      'Stripe reconcile finished runs unreadable',
     ]);
   });
 
