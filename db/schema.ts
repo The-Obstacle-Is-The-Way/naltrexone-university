@@ -605,6 +605,30 @@ export const pendingStripeCancellations = pgTable(
   }),
 );
 
+// stripe_reconcile_runs
+// DEBT-501 item 9: one row per scheduled full reconcile run. The route records
+// its start once CRON_SECRET passes, and its finish, with the failed rows'
+// subscription IDs, when the reconciliation returns with a row that did not
+// fail. The renewal job reads them to report a run that never started or
+// never finished, marking it reported once its alert is sent. The timestamps
+// come from the application's clock, so no CHECK orders them.
+export const stripeReconcileRuns = pgTable(
+  'stripe_reconcile_runs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    failedSubscriptionIds: text('failed_subscription_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    reportedAt: timestamp('reported_at', { withTimezone: true }),
+  },
+  (t) => ({
+    startedAtIdx: index('stripe_reconcile_runs_started_at_idx').on(t.startedAt),
+  }),
+);
+
 // clerk_backend_call_usage (composite PK: bucket + period_start)
 // DEBT-503 item 4, step 1: the renewal and reconcile jobs' roll-up of the
 // Clerk limiter's per-minute counters in rate_limits, one row per bucket, with

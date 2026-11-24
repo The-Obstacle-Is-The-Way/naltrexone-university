@@ -32,6 +32,7 @@ import type {
   Logger,
   OperationalAlerts,
   RateLimiter,
+  StripeReconcileRunRepository,
 } from '@/src/application/ports';
 
 const ROUTE = '/api/cron/reconcile-stripe-subscriptions';
@@ -70,6 +71,12 @@ export type ReconcileStripeSubscriptionsCronHandlerDependencies = {
   operationalAlerts: Pick<OperationalAlerts, 'raise'>;
   /** DEBT-503: the daily roll-up of the Clerk limiter's counters; never throws. */
   rollUpClerkBackendCallUsage: () => Promise<ClerkBackendCallUsageOutcome>;
+  /** DEBT-501 item 9: where each scheduled full run records its start and finish. */
+  reconcileRuns: Pick<
+    StripeReconcileRunRepository,
+    'recordStart' | 'recordFinish'
+  >;
+  now: () => Date;
 };
 
 function getAuthorizationToken(req: Request): AuthorizationTokenResult {
@@ -114,6 +121,61 @@ function getReconciliationScope(url: URL): 'all' | 'page' {
   return 'all';
 }
 
+/**
+ * A run's reconciliation repaired something, or had nothing to repair: it
+ * returned with at least one row that did not fail, or with no rows. A run in
+ * which every row failed repaired nothing, so it records no finish (DEBT-501
+ * item 9), though the route still answers 200.
+ */
+function reconciliationFinished(
+  result: ReconcileAllStripeSubscriptionPagesOutput,
+): boolean {
+  return result.scanned === 0 || result.failed < result.scanned;
+}
+
+// A run that stopped early adds a `(page@offset=…)` failure for the rejected
+// page; only Stripe subscription IDs name a row that keeps failing.
+function failedSubscriptionIds(
+  result: ReconcileAllStripeSubscriptionPagesOutput,
+): string[] {
+  return result.failures
+    .map((failure) => failure.stripeSubscriptionId)
+    .filter((id) => id.startsWith('sub_'));
+}
+
+async function recordRunStart(
+  deps: ReconcileStripeSubscriptionsCronHandlerDependencies,
+): Promise<string | null> {
+  try {
+    return await deps.reconcileRuns.recordStart(deps.now());
+  } catch (error) {
+    deps.logger.error(
+      { route: ROUTE, error: projectSafeErrorDiagnostics(error) },
+      'Reconcile run start not recorded',
+    );
+    return null;
+  }
+}
+
+async function recordRunFinish(
+  deps: ReconcileStripeSubscriptionsCronHandlerDependencies,
+  runId: string,
+  result: ReconcileAllStripeSubscriptionPagesOutput,
+): Promise<void> {
+  try {
+    await deps.reconcileRuns.recordFinish(
+      runId,
+      deps.now(),
+      failedSubscriptionIds(result),
+    );
+  } catch (error) {
+    deps.logger.error(
+      { route: ROUTE, error: projectSafeErrorDiagnostics(error) },
+      'Reconcile run finish not recorded',
+    );
+  }
+}
+
 function unauthorized(): NextResponse {
   return NextResponse.json(
     { error: 'Unauthorized' },
@@ -153,6 +215,18 @@ async function handleCronRequest(
     return unauthorized();
   }
 
+  const url = new URL(req.url);
+  const dryRun = parseBoolean(url.searchParams.get('dryRun'), true);
+  const reconciliationScope = getReconciliationScope(url);
+  // DEBT-501 item 9: a scheduled full run (the cron's own query) records its
+  // start as soon as CRON_SECRET passes, so a run the rate limiter refuses or
+  // that is killed later still leaves a start with no finish. A diagnostic dry
+  // or single-page run records nothing, so it cannot mask a stopped one.
+  const runId =
+    reconciliationScope === 'all' && !dryRun
+      ? await recordRunStart(deps)
+      : null;
+
   try {
     const rate = await deps.createRateLimiter().limit({
       key: 'cron:reconcile-stripe-subscriptions',
@@ -186,7 +260,6 @@ async function handleCronRequest(
     );
   }
 
-  const url = new URL(req.url);
   const limit = Math.min(
     parseNonNegativeInt(
       url.searchParams.get('limit'),
@@ -195,7 +268,6 @@ async function handleCronRequest(
     RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
   );
   const offset = parseNonNegativeInt(url.searchParams.get('offset'), 0);
-  const dryRun = parseBoolean(url.searchParams.get('dryRun'), true);
   const pendingCustomerCleanupStaleMinutes = parseNonNegativeInt(
     url.searchParams.get('pendingCustomerCleanupStaleMinutes'),
     PENDING_STRIPE_CUSTOMER_CLEANUP_STALE_AFTER_MINUTES,
@@ -214,7 +286,6 @@ async function handleCronRequest(
           ),
         )
       : null;
-  const reconciliationScope = getReconciliationScope(url);
   // DEBT-503 item 4, step 1: first, so it runs whatever the reconciliation
   // and the drain do; the renewal job runs it too, an hour later.
   const clerkBackendCallUsage = await deps.rollUpClerkBackendCallUsage();
@@ -232,10 +303,15 @@ async function handleCronRequest(
     const allPagesInput =
       concurrency === null ? { limit, dryRun } : { limit, dryRun, concurrency };
 
-    result =
-      reconciliationScope === 'page'
-        ? await deps.reconcilePage(singlePageInput)
-        : await deps.reconcileAllPages(allPagesInput);
+    if (reconciliationScope === 'page') {
+      result = await deps.reconcilePage(singlePageInput);
+    } else {
+      const allPages = await deps.reconcileAllPages(allPagesInput);
+      result = allPages;
+      if (runId !== null && reconciliationFinished(allPages)) {
+        await recordRunFinish(deps, runId, allPages);
+      }
+    }
   } catch (error) {
     reconciliationFailed = true;
     deps.logger.error(

@@ -244,6 +244,9 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  // DEBT-501 item 9: every full run here records a reconcile run; only the
+  // reconcile writes that table, and integration files run one at a time.
+  await db.delete(schema.stripeReconcileRuns);
   for (const subscription of subscriptionsToRestore) {
     await db
       .update(schema.stripeSubscriptions)
@@ -382,6 +385,19 @@ describe('reconcile Stripe subscriptions cron route', () => {
     expect(result.failed).toBe(0);
     expect(result.scanned).toBeGreaterThanOrEqual(1);
     expect(result.updated).toBe(result.scanned);
+    // DEBT-501 item 9: the scheduled full run records its start and finish.
+    const runs = await db
+      .delete(schema.stripeReconcileRuns)
+      .where(eq(schema.stripeReconcileRuns.startedAt, NOW))
+      .returning();
+    expect(runs).toEqual([
+      expect.objectContaining({
+        startedAt: NOW,
+        finishedAt: NOW,
+        failedSubscriptionIds: [],
+        reportedAt: null,
+      }),
+    ]);
     // No request may wait out the SDK's 80-second default.
     expect(subscriptionRequestTimeouts.length).toBeGreaterThan(0);
     expect(new Set(subscriptionRequestTimeouts)).toEqual(new Set([5_000]));

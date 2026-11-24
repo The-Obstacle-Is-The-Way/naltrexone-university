@@ -53,6 +53,7 @@ export function createSendRenewalNoticesCronHandler(
               db: container.db,
               buckets: CLERK_BACKEND_CALL_USAGE_BUCKETS,
             }),
+            reconcileRuns: container.createStripeReconcileRunRepository(),
             annualPlan: {
               planName: PRICING_DATA.annual.name,
               amountCents: PRICING_DATA.annual.amountCents,

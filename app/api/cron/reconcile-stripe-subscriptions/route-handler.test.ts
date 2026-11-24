@@ -1,131 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { ClerkBackendCallUsageOutcome } from '@/src/adapters/jobs/clerk-backend-call-usage';
-import type { DrainPendingStripeCustomerCleanupsOutput } from '@/src/adapters/jobs/drain-pending-stripe-customer-cleanups';
-import type {
-  ReconcileAllStripeSubscriptionPagesInput,
-  ReconcileAllStripeSubscriptionPagesOutput,
-} from '@/src/adapters/jobs/reconcile-all-stripe-subscription-pages';
 import {
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
   RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
-import type {
-  ReconcileStripeSubscriptionsInput,
-  ReconcileStripeSubscriptionsOutput,
-} from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
+import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import {
-  FakeLogger,
-  FakeOperationalAlerts,
-  FakeRateLimiter,
-} from '@/src/application/test-helpers/fakes';
-import {
-  createReconcileStripeSubscriptionsCronRouteHandler,
-  type DrainPendingStripeCustomerCleanupsRequest,
-  type ReconcileStripeSubscriptionsCronHandlerDependencies,
-} from './route-handler';
-
-const ROUTE_URL = 'http://localhost/api/cron/reconcile-stripe-subscriptions';
-const ROUTE = '/api/cron/reconcile-stripe-subscriptions';
-
-const pageResult: ReconcileStripeSubscriptionsOutput = {
-  scanned: 0,
-  updated: 0,
-  failed: 0,
-  failures: [],
-};
-
-const allPagesResult: ReconcileAllStripeSubscriptionPagesOutput = {
-  ...pageResult,
-  pagesScanned: 1,
-  stoppedEarly: false,
-  nextOffset: null,
-};
-
-const drainResult: DrainPendingStripeCustomerCleanupsOutput = {
-  scanned: 0,
-  drained: 0,
-  failed: 0,
-  failures: [],
-  hasMore: false,
-  dryRun: true,
-};
-
-function createHarness(input?: {
-  omitCronSecret?: boolean;
-  cronSecret?: string;
-  rateLimiter?: FakeRateLimiter;
-  pageResult?: ReconcileStripeSubscriptionsOutput;
-  pageError?: Error;
-  allPagesResult?: ReconcileAllStripeSubscriptionPagesOutput;
-  allPagesError?: Error;
-  drainResult?: DrainPendingStripeCustomerCleanupsOutput;
-  drainError?: Error;
-  clerkBackendCallUsage?: ClerkBackendCallUsageOutcome;
-}) {
-  const logger = new FakeLogger();
-  const rateLimiter = input?.rateLimiter ?? new FakeRateLimiter();
-  const pageCalls: ReconcileStripeSubscriptionsInput[] = [];
-  const allPagesCalls: ReconcileAllStripeSubscriptionPagesInput[] = [];
-  const drainCalls: DrainPendingStripeCustomerCleanupsRequest[] = [];
-  let rollUps = 0;
-  const alerts = new FakeOperationalAlerts();
-  const dependencies: ReconcileStripeSubscriptionsCronHandlerDependencies = {
-    cronSecret: input?.omitCronSecret
-      ? undefined
-      : (input?.cronSecret ?? 'test-secret'),
-    logger,
-    createRateLimiter: () => rateLimiter,
-    reconcilePage: async (pageInput) => {
-      pageCalls.push(pageInput);
-      if (input?.pageError) throw input.pageError;
-      return input?.pageResult ?? pageResult;
-    },
-    reconcileAllPages: async (allPagesInput) => {
-      allPagesCalls.push(allPagesInput);
-      if (input?.allPagesError) throw input.allPagesError;
-      return input?.allPagesResult ?? allPagesResult;
-    },
-    drainPendingStripeCustomerCleanups: async (drainInput) => {
-      drainCalls.push(drainInput);
-      if (input?.drainError) throw input.drainError;
-      return input?.drainResult ?? drainResult;
-    },
-    operationalAlerts: alerts,
-    rollUpClerkBackendCallUsage: async () => {
-      rollUps += 1;
-      return input?.clerkBackendCallUsage ?? 'up_to_date';
-    },
-  };
-  return {
-    handle: createReconcileStripeSubscriptionsCronRouteHandler(
-      () => dependencies,
-    ),
-    logger,
-    rateLimiter,
-    pageCalls,
-    allPagesCalls,
-    drainCalls,
-    alerts,
-    rollUps: () => rollUps,
-  };
-}
-
-function request(input?: {
-  query?: string;
-  method?: 'GET' | 'POST';
-  authorization?: string | null;
-}): Request {
-  const headers: Record<string, string> = {};
-  const authorization =
-    input?.authorization === undefined
-      ? 'Bearer test-secret'
-      : input.authorization;
-  if (authorization !== null) headers.authorization = authorization;
-  return new Request(`${ROUTE_URL}${input?.query ?? ''}`, {
-    method: input?.method ?? 'POST',
-    headers,
-  });
-}
+  allPagesResult,
+  createHarness,
+  ROUTE,
+  request,
+} from './route-handler-test-helpers';
 
 describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
   it('clamps request limit to MAX_LIMIT before calling all-pages reconciliation', async () => {

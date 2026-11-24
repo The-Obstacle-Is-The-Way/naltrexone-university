@@ -12,7 +12,9 @@ import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/recon
 import { CLERK_BACKEND_CALL_USAGE_BUCKETS } from '@/src/adapters/shared/clerk-backend-call-keys';
 import { createReconcileStripeSubscriptionsCronRouteHandler } from './route-handler';
 
-// Next.js requires route-segment configuration to be a statically analyzable literal.
+// Next.js requires route-segment configuration to be a statically analyzable
+// literal. DEBT-501 item 9's watch treats a run older than this as finished or
+// killed; a test pins it to RECONCILE_RUN_MAX_DURATION_SECONDS.
 export const maxDuration = 60;
 
 // DEBT-501 item 1: each subscriptions request the job sends is cut off after
@@ -126,6 +128,8 @@ export function createReconcileStripeSubscriptionsCronHandler(
           }),
           logger: container.logger,
         }),
+      reconcileRuns: container.createStripeReconcileRunRepository(),
+      now: container.now,
     };
   });
 }
