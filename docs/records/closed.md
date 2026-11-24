@@ -315,6 +315,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-326 · Error Pages Send Learners and Payers to the Public GitHub Issue Tracker · Resolved · 2026-10-06 · docs/_archive/bugs/bug-326-error-pages-send-people-to-public-issue-tracker.md
 - BUG-327 · Dependabot Branches Are Built on Vercel With Preview Secrets · Resolved · 2026-10-21 · docs/records/bug-327-dependabot-branches-build-with-preview-secrets.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
 - BUG-328 · Public Playwright Reports Still Carry Clerk Development-Instance Tokens · Resolved · 2026-10-06 · docs/_archive/bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md
+- BUG-329 · Long Clone Names Change the Local Test Target in Child Commands · Resolved · 2026-11-24 · docs/records/bug-329-local-test-target-changes-in-child-commands.md · #1740 · d334f97b90e7694af98f8a747452fdd7d75a6d98
 - BUG-330 · Signed-In E2E Fails En Masse When the Stored Clerk Session Cannot Be Restored After Its Token Expires · Resolved · 2026-10-10 · docs/_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md
 - BUG-331 · Server Breadcrumbs and Request Spans Carry Credentials the Scrubbers Miss · Resolved · 2026-10-23 · docs/records/bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 - BUG-332 · A New User's Concurrent First Requests Can Deadlock Provisioning · Resolved · 2026-10-23 · docs/records/bug-332-concurrent-first-requests-can-deadlock-provisioning.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
@@ -358,6 +359,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-375 · A Session Token That Expired Between the Limiter's Check and Clerk's Got an Uncounted Refresh · Resolved · 2026-11-09 · docs/records/bug-375-a-token-expiring-between-checks-got-an-uncounted-refresh.md · #1665 · 466e66f547ea1de924232edec1bd6178218391a2
 - BUG-376 · The E2E Browser Reports Some Completed Responses as Aborted · Resolved · 2026-11-13 · docs/records/bug-376-e2e-browser-reports-completed-responses-as-aborted.md · #1680 · 48c1ffb38d795c77888c975cf62ead82f666d7ae
 - BUG-379 · Native CSP Reports Bypass Checkout URL Redaction · Resolved · 2026-11-15 · docs/records/bug-379-native-csp-reports-bypass-checkout-url-redaction.md · #1700 · f376b524e6107c177d6510708f5ff6da8e5a0ec4
+- BUG-381 · Advisory-Watch Unit Tests Call GitHub's API Through `gh` · Resolved · 2026-11-24 · docs/records/bug-381-advisory-watch-unit-tests-call-githubs-api.md · #1740 · d334f97b90e7694af98f8a747452fdd7d75a6d98
 - BUG-382 · Preview Checkout Cannot Persist Renewal Consent on the Draft 0033 Schema · Resolved · 2026-11-21 · docs/records/bug-382-preview-renewal-consent-schema-drift.md · #1720 · a413e3e02a458de20b1270db88de95ae8f21151b
 
 ## Debt
@@ -872,6 +874,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-516 · CI's Database Image Depends on One Registry · Resolved · 2026-10-17 · docs/records/debt-516-ci-database-image-depends-on-one-registry.md · #1552 · 82dd0948911668ba4ffd969ca93d489a69cc4e3e
 - DEBT-517 · Alerts #77 and #81 Wait on Fixes That Are Not Coming · Resolved · 2026-10-12 · docs/records/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md · #1470 · a6c330ef26cd619520a1f156675d390492ea097a
 - DEBT-518 · Closed Records Outweigh the Code and Bury Current Truth · Resolved · 2026-11-15 · docs/records/debt-518-closed-records-outweigh-the-code-and-bury-current-truth.md · #1704 · 89c74375291d029ec02d1eb362352043e8a0a4b1
+- DEBT-519 · The Fake-Contract Register Misses Adapter-Owned Fakes · Resolved · 2026-11-24 · docs/records/debt-519-fake-contract-register-misses-adapter-owned-fakes.md · #1740 · d334f97b90e7694af98f8a747452fdd7d75a6d98
 - DEBT-520 · ADR-013's Repository-Layout Trigger Has Fired Without a Decision · Resolved · 2026-11-15 · docs/records/debt-520-repository-layout-trigger-has-fired.md · #1704 · f677db6cbf73b2b7d5897e55105d4096b111c979
 - DEBT-521 · Clerk JS Loads Unpinned From Clerk's CDN, So a Clerk Release Can Change Sign-In Without a Deploy · Accepted · 2026-11-15 · docs/records/debt-521-clerk-js-loads-unpinned-from-clerks-cdn.md · #1704 · 89c74375291d029ec02d1eb362352043e8a0a4b1
 - DEBT-522 · Partial Prefetching Is Unset, So Every Build Warns · Resolved · 2026-10-16 · docs/records/debt-522-partial-prefetching-is-unset.md · #1540 · 72bbd5655715d11967b7a82d1dc71a2008398bf7
