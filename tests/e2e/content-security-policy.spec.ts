@@ -161,12 +161,18 @@ test.describe('content security policy, signed out', () => {
     expectReportOnlyPolicy(await page.goto('/'));
     await waitForClerk(page);
 
-    // The headers Next.js's router sends on a prefetch.
+    // The headers Next.js's router sends on a prefetch. Another origin's
+    // response is named in full, so its path alone cannot pass.
     const landedOn = await page.evaluate(() =>
       fetch('/app/dashboard', {
         headers: { rsc: '1', 'next-router-prefetch': '1', 'next-url': '/' },
       }).then(
-        (response) => new URL(response.url).pathname,
+        (response) => {
+          const url = new URL(response.url);
+          return url.origin === window.location.origin
+            ? url.pathname
+            : url.href;
+        },
         (error: unknown) => `fetch failed: ${String(error)}`,
       ),
     );

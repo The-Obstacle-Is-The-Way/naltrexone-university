@@ -49,6 +49,7 @@ test("sign-up's sign-in link stays on the site and keeps the plan", async ({
   page,
 }) => {
   await page.goto(`/sign-up?redirect_url=${encodeURIComponent(PLAN_RETURN)}`);
+  await expect(page).toHaveURL((url) => url.pathname === '/sign-up');
   await waitForClerk(page);
 
   const target = await linkTarget(page, 'Sign in');
@@ -62,6 +63,7 @@ test("sign-in's sign-up link stays on the site and keeps the plan", async ({
   page,
 }) => {
   await page.goto(`/sign-in?redirect_url=${encodeURIComponent(PLAN_RETURN)}`);
+  await expect(page).toHaveURL((url) => url.pathname === '/sign-in');
   await waitForClerk(page);
 
   const target = await linkTarget(page, 'Sign up');
