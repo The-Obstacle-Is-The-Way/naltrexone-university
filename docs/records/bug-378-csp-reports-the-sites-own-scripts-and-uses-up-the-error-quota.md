@@ -1,6 +1,6 @@
 # BUG-378: The CSP Reports the Site's Own Scripts and Uses Up Sentry's Error Quota
 
-**Status:** Open — check two more page views; the signed-in CSP spec records only after sign-in, red first; the quota finding leaves #1610 as reports age out; due 2026-11-24
+**Status:** Open — send sign-in redirects to the app's own routes, red first (Finding); check two more page views; due 2026-11-27
 **Priority:** P2
 **Date:** 2026-11-14
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-Until the 2026-11-15 release (promotion #1694), the report-only Content Security Policy had a script rule no page could satisfy. The rule accepted only scripts that carry the request's nonce, and the prerendered pages' scripts cannot carry one (DEBT-420). So every page view reported the site's own scripts, about 17 reports a view, and Sentry counted each report as an error. In the 30 days to 2026-11-14 these reports were 4,363 of the organization's 4,371 accepted errors. The plan allows 5,000 a month; once they run out, Sentry drops the server's errors too, operational alerts included. The release's policy accepts the site's own scripts, and the page views checked after it sent no report (Verification); two more page views, the signed-in spec's recorder and the watcher's quota finding remain.
+Until the 2026-11-15 release (promotion #1694), the report-only Content Security Policy had a script rule no page could satisfy. The rule accepted only scripts that carry the request's nonce, and the prerendered pages' scripts cannot carry one (DEBT-420). So every page view reported the site's own scripts, about 17 reports a view, and Sentry counted each report as an error. In the 30 days to 2026-11-14 these reports were 4,363 of the organization's 4,371 accepted errors. The plan allows 5,000 a month; once they run out, Sentry drops the server's errors too, operational alerts included. The release's policy accepts the site's own scripts, and the page views checked after it sent no report (Verification). A router request for a protected page, answered signed out, still reports: it is redirected to Clerk's sign-in on another origin (Finding). Two more page views also remain.
 
 ## Evidence
 
@@ -50,6 +50,20 @@ Option 1.
 - **The nonce.** Nothing issues one now. The root layout still reads `x-nonce` through `headers()`, which is undefined unless a client sends the header for its own render, harmless under a policy with no nonce. Removing the read changes how every page renders, which DEBT-522's trigger governs.
 - **Sentry.** After the release check passes, resolve the web project's CSP issues, the three archived ones included, so a recurrence reopens as a regression instead of staying archived.
 
+## Finding: A Protected Page's Router Request Leaves the Site (2026-11-24)
+
+- **The path.** A router request (a prefetch or client navigation, sent with Next.js's `Next-Url` header) for a protected page, answered signed out, is a page request to `auth.protect()`, which redirects it to sign-in (`@clerk/nextjs` 7.9.25, `dist/cjs/server/protect.js:39-40,109-113`). No sign-in URL is configured (DEBT-502 item 6, first bullet), so the redirect goes to Clerk's Account Portal, `${accountsBaseUrl}/sign-in`, on another origin (`@clerk/backend` 3.27.0, `dist/internal.js:487-492`). `connect-src` does not list it, so the browser reports the fetch, naming the original URL (CSP Level 3, §2.4.2).
+- **When.** A session token expires after a minute, and Clerk JS refreshes it in the page. A router request sent with an expired token and no refresh cookie, as a development instance's are (local and the Preview), is answered signed out. A production request with a refresh cookie is refreshed by Clerk's middleware.
+- **Evidence.**
+  - Sentry, read 2026-11-24: from 04:00Z on 2026-11-15 the web project's only CSP events are WEB-26's eight on the Preview, on 2026-11-19 at 20:30Z and 2026-11-20 at 17:07Z, and WEB-2C's two `eval` reports from HeadlessChrome 120 on production's `/` on 2026-11-23. Each of WEB-26's is `connect-src`, from Chrome 157, blocking a same-origin router request (`?_rsc=`) for `/app/dashboard`, `/app/billing`, `/app/history`, `/app/practice` or `/app/practice/quick`. The Preview's reports count against the same quota.
+  - E2E: the signed-in spec failed locally on 2026-11-16 on a `connect-src` report for an RSC prefetch of `/app/dashboard`, which the server answered with Clerk's cross-origin sign-in after `session-token-expired-refresh-non-eligible-no-refresh-cookie`; on 2026-11-23, on #1726's head `596e5d8d`, it failed with the same reason. Its recorder starts before the stored session is restored (`tests/e2e/content-security-policy.spec.ts:204`). Re-runs and CI passed.
+  - Production has sent none.
+- **Options.**
+  1. **Send sign-in to the app's own routes.** One module names `/sign-in` and `/sign-up`; the proxy hands them to `clerkMiddleware` and the root provider to `ClerkProvider`. The redirect stays on the site's origin, so it reports nothing in any environment. This is DEBT-502 item 6's first bullet, which also asks for sign-in, sign-up and the return to `/pricing?plan=…` to be tested.
+  2. **Start the spec's recorder after sign-in** (the previous plan). The spec passes, but browsers keep sending these reports.
+  3. **List the Account Portal in `connect-src`.** It hides the report and keeps the visitor's sign-in off the site.
+- **Decided:** option 1, which takes over DEBT-502 item 6's first bullet. Red first: a signed-out router request for `/app/dashboard`, through the real Clerk middleware, is redirected to the Account Portal.
+
 ## Verification
 
 - [x] Red first: the new E2E test fails on the strict policy and passes on the new one. *Done 2026-11-14:* on the strict policy all five pages reported their own chunks and inline scripts; on the new one, none did.
@@ -60,11 +74,9 @@ Option 1.
 
   *Done 2026-11-15, after promotion #1694:* both `/sign-up`s sent the policy with all three reporting headers and no nonce. Views of production's `/`, `/pricing` and `/sign-up` and of the Preview's `/` and signed-in `/app/dashboard` added no CSP event; the old policy sent 16 to 18 a view. A hand-added `example.com` script on production's `/sign-up` arrived as ADDICTION-BOARDS-WEB-2H, and the web project's high-priority workflow emailed the owner.
 - [x] The web project's CSP issues, the archived ones included, are resolved, with the owner's approval. *Done 2026-11-15:* all eleven, WEB-F, -G, -H and -2H included; none is unresolved or archived.
-- [ ] A view of a signed-in page on production, and of `/sign-up` on the Preview, each served with `report-uri` in its `Content-Security-Policy-Report-Only` header, adds no CSP event to the web project. A document whose URL or referrer needs redaction gets no report endpoint (`lib/content-security-policy.ts:146-160`), so its view proves nothing. The 2026-11-15 checks viewed neither; the Preview's `/sign-up` was checked for headers only (#1694).
-- [ ] The signed-in spec (`tests/e2e/content-security-policy.spec.ts:177`) records violations only after `signInWithClerkPassword` and `ensureSubscribed`. Its recorder starts before sign-in (`:180`), so one local run on 2026-11-16 failed on a report the sign-in caused: a `connect-src` report for an RSC prefetch of `/app/dashboard`, which the server answered with a cross-origin Clerk sign-in redirect because the stored session token had expired (`session-token-expired-refresh-non-eligible-no-refresh-cookie`). The re-run passed. It recurred locally on 2026-11-23 on #1726's head `596e5d8d`, with the same reason; CI and a local re-run on that head passed. Red first: a test that expires only the stored session token (the `__session` cookie) before the spec signs in, leaving the Clerk session active. The helper only restores the stored session, and a failed restore fails every later signed-in test (`tests/e2e/helpers/clerk-auth.ts:137-167`), so the test must still restore it and reach the CSP assertion.
-- [ ] The watcher's quota finding leaves #1610 as the old reports age out of its 30-day window; due 2026-11-24.
-
-  Sentry accepted no error from 04:00Z on 2026-11-15, just after the release, to 23:00Z that day. The totals here are organization-wide, as the watcher counts, and reconstructed from Sentry's hourly accepted-error counts read on 2026-11-15. At each scheduled watcher run from 11-12 to 11-15 (19:05Z, 18:42Z, 17:16Z and 17:56Z), the reconstructed 30-day total falls on the same side of 4,000 as that run's finding. If later runs start between 17:00Z and 19:00Z, as those did, and no error is accepted, the total falls to 3,916 at the 11-19 run, under the 4,000 that clears the finding, and to 2,779 at the 11-24 run. New errors delay it: 84 to 495 move the clearing to 11-21 or 11-22, 496 to 1,220 to 11-23 or 11-24, and 1,221 or more past the due date.
+- [ ] A view of a signed-in page on production, and of `/sign-up` on the Preview, each served with `report-uri` in its `Content-Security-Policy-Report-Only` header, adds no CSP event to the web project. A document whose URL or referrer needs redaction gets no report endpoint (`lib/content-security-policy.ts:146-160`), so its view proves nothing. The 2026-11-15 checks viewed neither; the Preview's `/sign-up` was checked for headers only (#1694). *2026-11-24:* production's `/app` pages send the owner's account, which has no subscription, to `/pricing`, so this view needs DEBT-501 item 7's purchase; a signed-in browser's Preview `/sign-up` goes to `/app/dashboard`. Neither view, at 07:28Z, added an event.
+- [ ] A signed-out router request for a protected page is redirected to `/sign-in` on the site's own origin, through the real Clerk middleware, and sign-in, sign-up and the return to `/pricing?plan=…` still work (Finding, option 1). The signed-in spec keeps its recorder from the start (`tests/e2e/content-security-policy.spec.ts:204`): its local failures were this path, not the spec.
+- [x] The watcher's quota finding leaves #1610 as the old reports age out of its 30-day window. *Done:* the watcher closed #1610 at 2026-11-19T19:36:56Z ("Every operational alert check passes again"), the run the 11-15 projection named.
 
 ## Related
 
@@ -72,6 +84,7 @@ Option 1.
 - BUG-377 and DEBT-505: the alerts the quota protects. #1610 is the watcher's issue.
 - DEBT-521: Clerk JS loads from the Frontend API origin this policy lists.
 - DEBT-522: the root layout's nonce read.
+- DEBT-502 item 6, first bullet: the sign-in URL, now this record's fix.
 - BUG-379: from this fix's adversarial review. Native CSP reports bypass the SDK's redaction, so credential-bearing documents send none; it also added the CSP spec's foreign-script positive control.
 
 *Corrected 2026-11-15 (adversarial review of #1693): the 66 filtered reports were ignored-source matches, not invalid reports; option 4's filter cannot keep foreign-script reports; option 6's cap is not on the current plan; option 1's "a report" meant a script report. Records review: the resolved issues and the period's remaining quota are past tense, and the remaining check dates the finding's clearing from reconstructed hourly usage, with the run hours it assumes and the range new errors would move it to.*

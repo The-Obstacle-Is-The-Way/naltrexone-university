@@ -51,7 +51,7 @@ Item 4, Clerk's rate limit, moved to DEBT-503 on 2026-10-05; item 5, payment act
 
 ### 6. Smaller items (P3)
 
-- **No sign-in URL prop is set** on `ClerkProvider` (`components/providers.tsx:71-77`). Clerk also reads `NEXT_PUBLIC_CLERK_SIGN_IN_URL` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL` (`@clerk/nextjs/dist/cjs/utils/mergeNextClerkPropsWithEnv.js`), so source omission alone does not prove the deployed redirect. Vercel's variable names, read 2026-11-15, include neither. Decided: establish one explicit app-route configuration, then test sign-in, sign-up and the return to `/pricing?plan=…`. The reported accounts-subdomain journey is unverified.
+- **No sign-in URL prop is set** on `ClerkProvider` (`components/providers.tsx:71-77`). Clerk also reads `NEXT_PUBLIC_CLERK_SIGN_IN_URL` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL` (`@clerk/nextjs/dist/cjs/utils/mergeNextClerkPropsWithEnv.js`), so source omission alone does not prove the deployed redirect. Vercel's variable names, read 2026-11-15, include neither. Decided: establish one explicit app-route configuration, then test sign-in, sign-up and the return to `/pricing?plan=…`. The reported accounts-subdomain journey is unverified. **Moved to BUG-378 on 2026-11-24:** a signed-out router request redirected to the Account Portal sent a CSP report, so BUG-378's fix sets the sign-in URL and tests these journeys.
 - **A signed-out "Add a card" loses its way back:** it redirects to sign-up with no return path (`app/(app)/app/trial-payment-method-action-handler.ts:61-62`). Decided: carry a return path.
 - **Deleting an account and signing up again grants a fresh 7-day trial**, because eligibility is per app row (`src/application/use-cases/create-checkout-session.ts:132`). **Won't Fix, decided 2026-11-15 by the reviewing session, at the owner's delegation.** Detecting it means keeping deleted users' emails, which contradicts the privacy policy's promise that deletion removes the user record; a new address gets around it anyway; and the trial is 7 days with no card required (`payment_method_collection: 'if_required'`).
 - **The shared E2E user's seed re-points the row by email** (`tests/e2e/helpers/seed-test-user.ts:214-220`, `ON CONFLICT (email)`), the reassignment BUG-284 removed from production. So the fail-closed identity path is never exercised end to end. Decided: seed by Clerk ID.
@@ -63,7 +63,7 @@ Criteria to meet before closing: each item shipped with red-first tests, or left
 - [ ] Item 3: the owner's Clerk setting is recorded; both selectors refuse an unverified address; checkout and add-card refuse an unverified refreshed primary; and the Billing page tells the user to verify their address.
 - [ ] Item 1: a refresh, and a `user.updated`, whose address a stale owner held succeeds once Clerk confirms that owner moved, and still refuses when Clerk cannot.
 - [ ] Item 2: both interleavings of provisioning and deletion leave no row, for sign-in and for the billing refresh, proven against real Postgres; the operator command and its runbook ship, and the command leaves a pending Stripe customer cleanup that the drain completes.
-- [ ] Item 6: the sign-in URL, the add-card return path and the E2E seed ship.
+- [ ] Item 6: the add-card return path and the E2E seed ship. The sign-in URL moved to BUG-378.
 - [x] Item 6: trial re-use is Won't Fix (2026-11-15).
 
 ## Related

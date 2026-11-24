@@ -151,6 +151,30 @@ test.describe('content security policy, signed out', () => {
     expect(await page.evaluate(() => document.referrer)).toBe('');
   });
 
+  // A router request for a protected page, answered signed out, is redirected
+  // to sign-in. On Clerk's Account Portal, another origin, the redirect was a
+  // fetch the policy's `connect-src` does not list.
+  test('a signed-out router request for a protected page stays on the site', async ({
+    page,
+  }) => {
+    const violations = await recordCspViolations(page);
+    expectReportOnlyPolicy(await page.goto('/'));
+    await waitForClerk(page);
+
+    // The headers Next.js's router sends on a prefetch.
+    const landedOn = await page.evaluate(() =>
+      fetch('/app/dashboard', {
+        headers: { rsc: '1', 'next-router-prefetch': '1', 'next-url': '/' },
+      }).then(
+        (response) => new URL(response.url).pathname,
+        (error: unknown) => `fetch failed: ${String(error)}`,
+      ),
+    );
+
+    expect(landedOn).toBe('/sign-in');
+    expect(violations).toEqual([]);
+  });
+
   for (const path of ['/', '/pricing', '/sign-in', '/sign-up']) {
     test(`${path} loads every script the policy admits`, async ({ page }) => {
       const violations = await recordCspViolations(page);
