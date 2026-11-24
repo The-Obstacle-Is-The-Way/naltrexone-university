@@ -31,7 +31,7 @@ import {
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
 } from '@/lib/public-routes';
-import { ROUTES } from '@/lib/routes';
+import { CLERK_AUTH_ROUTES, ROUTES } from '@/lib/routes';
 import { sentryEnvironmentFor } from '@/lib/sentry-data-collection';
 import { HTTP_UNAUTHORIZED } from '@/src/adapters/shared/http-status';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
@@ -245,6 +245,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
     // /.well-known/oauth-protected-resource, which the limiter does not count
     // (DEBT-503). Count those calls before turning it on.
     {
+      ...CLERK_AUTH_ROUTES,
       ...clerkJwtKeyOption(),
       ...clerkPublishableKeyOption(),
     },

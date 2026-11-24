@@ -18,6 +18,15 @@ export const ROUTES = {
 
 export const AUTH_REDIRECT_QUERY_PARAM = 'redirect_url';
 
+// Clerk's sign-in and sign-up pages, for the proxy and the browser alike.
+// BUG-378: without them Clerk uses its Account Portal, on another origin. A
+// router request for a protected page redirected there is a fetch the CSP's
+// `connect-src` does not list, so the browser reported it to Sentry.
+export const CLERK_AUTH_ROUTES = {
+  signInUrl: ROUTES.SIGN_IN,
+  signUpUrl: ROUTES.SIGN_UP,
+} as const;
+
 export const PRICING_QUERY_PARAMS = {
   checkout: 'checkout',
   plan: 'plan',
