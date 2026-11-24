@@ -62,6 +62,36 @@ describe('fake contract and divergence register', () => {
     ).toEqual(['FakeW', 'FakeY', 'FakeZ']);
   });
 
+  it('finds an adapter-owned fake exported through a destructured constant', () => {
+    expect(
+      collectAdapterOwnedFakeNames([
+        {
+          path: 'src/adapters/jobs/test-helpers/doubles.ts',
+          contents: `
+            const doubles = { FakeA: {}, nested: { FakeB: {} }, list: [{}] };
+            export const { FakeA, nested: { FakeB }, list: [FakeC] } = doubles;
+          `,
+        },
+      ]),
+    ).toEqual(['FakeA', 'FakeB', 'FakeC']);
+  });
+
+  it('skips a locally declared type exported by name', () => {
+    expect(
+      collectAdapterOwnedFakeNames([
+        {
+          path: 'src/adapters/jobs/test-helpers/doubles.ts',
+          contents: `
+            type FakeShape = { id: string };
+            interface FakeContract { id: string }
+            class FakeReal {}
+            export { FakeShape, FakeContract as FakeRenamed, FakeReal };
+          `,
+        },
+      ]),
+    ).toEqual(['FakeReal']);
+  });
+
   it('skips a test file beside the adapter-owned fakes', () => {
     expect(
       collectAdapterOwnedFakeNames([

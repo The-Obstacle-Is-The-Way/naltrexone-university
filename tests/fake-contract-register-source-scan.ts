@@ -24,6 +24,43 @@ const hasExportModifier = (node: ts.Node): boolean =>
     (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
   );
 
+// Every identifier a declaration binds, through object and array patterns.
+function boundNames(name: ts.BindingName): string[] {
+  if (ts.isIdentifier(name)) return [name.text];
+
+  return name.elements.flatMap((element) =>
+    ts.isBindingElement(element) ? boundNames(element.name) : [],
+  );
+}
+
+// Names a file declares only as a type. `export { Name }` needs no `type`
+// keyword for them, so the export alone cannot tell a type from a value.
+function localTypeOnlyNames(parsed: ts.SourceFile): Set<string> {
+  const types = new Set<string>();
+  const values = new Set<string>();
+
+  for (const statement of parsed.statements) {
+    if (
+      ts.isTypeAliasDeclaration(statement) ||
+      ts.isInterfaceDeclaration(statement)
+    ) {
+      types.add(statement.name.text);
+    } else if (
+      (ts.isClassDeclaration(statement) ||
+        ts.isFunctionDeclaration(statement)) &&
+      statement.name
+    ) {
+      values.add(statement.name.text);
+    } else if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        for (const name of boundNames(declaration.name)) values.add(name);
+      }
+    }
+  }
+
+  return new Set([...types].filter((name) => !values.has(name)));
+}
+
 // Value bindings a file exports: classes, functions, constants and named
 // exports. Types are left out, since a type is not a double.
 function exportedBindingNames(source: AdapterTestHelperSource): string[] {
@@ -35,6 +72,7 @@ function exportedBindingNames(source: AdapterTestHelperSource): string[] {
     ts.ScriptKind.TS,
   );
   const names: string[] = [];
+  const typeOnlyNames = localTypeOnlyNames(parsed);
 
   for (const statement of parsed.statements) {
     if (
@@ -49,8 +87,7 @@ function exportedBindingNames(source: AdapterTestHelperSource): string[] {
       hasExportModifier(statement)
     ) {
       for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name))
-          names.push(declaration.name.text);
+        names.push(...boundNames(declaration.name));
       }
     } else if (
       ts.isExportDeclaration(statement) &&
@@ -58,8 +95,14 @@ function exportedBindingNames(source: AdapterTestHelperSource): string[] {
       statement.exportClause &&
       ts.isNamedExports(statement.exportClause)
     ) {
+      // A re-export names another module's binding, which this file cannot
+      // classify, so only a local export is checked against the local types.
+      const isLocal = !statement.moduleSpecifier;
       for (const element of statement.exportClause.elements) {
-        if (!element.isTypeOnly) names.push(element.name.text);
+        const localName = (element.propertyName ?? element.name).text;
+        if (element.isTypeOnly) continue;
+        if (isLocal && typeOnlyNames.has(localName)) continue;
+        names.push(element.name.text);
       }
     }
   }
