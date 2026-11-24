@@ -22,8 +22,12 @@ async function linkTarget(page: Page, name: string): Promise<URL> {
   return new URL(href, page.url());
 }
 
+// A redirect carries the return in its query; a link between Clerk's
+// components carries it in the fragment (`/sign-up#/?redirect_url=…`).
 function returnPath(target: URL): string | null {
-  const back = target.searchParams.get('redirect_url');
+  const fragment = new URLSearchParams(target.hash.replace(/^#\/?\??/, ''));
+  const back =
+    target.searchParams.get('redirect_url') ?? fragment.get('redirect_url');
   if (!back) return null;
   const url = new URL(back, target);
   return `${url.pathname}${url.search}`;
