@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   FakeLogger,
   FakeOperationalAlerts,
+  FakeStripeReconcileRunRepository,
 } from '@/src/application/test-helpers/fakes';
 import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
 import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
@@ -24,6 +25,13 @@ import {
 } from './send-due-renewal-notices';
 
 const now = new Date('2026-08-07T12:00:00.000Z');
+
+/** The maintained fake, reporting that today's reconcile run started an hour ago. */
+class RecentlyRunStripeReconcileRuns extends FakeStripeReconcileRunRepository {
+  override async latestStartedAt(): Promise<Date | null> {
+    return new Date(now.getTime() - HOUR_MS);
+  }
+}
 
 type AnnualRenewals = SendDueRenewalNoticesJobDeps['renewalQueries'];
 
@@ -151,6 +159,8 @@ function createDeps(): {
       },
       // DEBT-503: every bucket was already rolled up, by default.
       clerkBackendCallUsage: { rollUp: async () => 0 },
+      // DEBT-501 item 9: the daily reconcile runs, by default.
+      reconcileRuns: new RecentlyRunStripeReconcileRuns(),
       annualPlan: {
         planName: 'Pro Annual',
         amountCents: 19900,
@@ -308,6 +318,7 @@ describe('sendDueRenewalNotices job', () => {
       durationMs: 250,
       alertDrill: 'not_due',
       scheduledChecks: 'running',
+      stripeReconcile: { reconcile: 'running', failingRows: 0 },
       clerkBackendCallUsage: 'up_to_date',
     });
   });
@@ -705,6 +716,24 @@ describe('the scheduled checks', () => {
     ).rejects.toThrow('query failed');
     expect(alerts.raised).toContainEqual({
       kind: 'scheduled_checks_stopped',
+      count: 1,
+    });
+  });
+});
+
+// DEBT-501 item 9: the job also checks that the daily Stripe reconcile still
+// starts and finishes, as it checks GitHub's schedules.
+describe('the reconcile watch', () => {
+  it('reports a reconcile that never started, before the notices, so a failing notice query does not skip it', async () => {
+    const { deps, alerts, listDue } = createDeps();
+    deps.reconcileRuns = new FakeStripeReconcileRunRepository();
+    listDue.mockRejectedValueOnce(new Error('query failed'));
+
+    await expect(
+      sendDueRenewalNotices({ subscriptionLimit: 10, dispatchLimit: 10 }, deps),
+    ).rejects.toThrow('query failed');
+    expect(alerts.raised).toContainEqual({
+      kind: 'stripe_reconcile_stopped',
       count: 1,
     });
   });

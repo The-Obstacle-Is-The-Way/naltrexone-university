@@ -22,6 +22,7 @@ export { FakeRenewalNoticeDeliveryRepository } from './fake-renewal-notice-deliv
 export { FakeSha256Hasher } from './fake-sha256-hasher';
 export { FakeStripeCustomerRepository } from './fake-stripe-customer-repository';
 export { FakeStripeEventRepository } from './fake-stripe-event-repository';
+export { FakeStripeReconcileRunRepository } from './fake-stripe-reconcile-run-repository';
 export { FakeSubscriptionRepository } from './fake-subscription-repository';
 export { FakeTagRepository } from './fake-tag-repository';
 export { FakeTransactionalEmailGateway } from './fake-transactional-email-gateway';

@@ -12,6 +12,7 @@ import {
   DrizzleRenewalNoticeDeliveryRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
+  DrizzleStripeReconcileRunRepository,
   DrizzleSubscriptionRepository,
   DrizzleTagRepository,
   DrizzleTrialPaymentMethodSetupOperationRepository,
@@ -41,6 +42,8 @@ export function createRepositoryFactories(
     createPendingStripeCustomerCleanupRepository: (
       dbOverride = primitives.db,
     ) => new DrizzlePendingStripeCustomerCleanupRepository(dbOverride),
+    createStripeReconcileRunRepository: (dbOverride = primitives.db) =>
+      new DrizzleStripeReconcileRunRepository(dbOverride),
     createPracticeSessionRepository: (dbOverride = primitives.db) =>
       new DrizzlePracticeSessionRepository(
         dbOverride,

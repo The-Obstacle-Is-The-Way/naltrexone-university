@@ -35,6 +35,12 @@ export const OPERATIONAL_ALERT_KINDS = [
   // DEBT-501 item 1: the Stripe reconcile run stopped before its last page,
   // and nothing resumes it, so later rows go unrepaired.
   'stripe_reconcile_stopped_early',
+  // DEBT-501 item 9: no scheduled full reconcile run started in a day, or one
+  // started and never finished, so nothing is repairing subscription drift.
+  'stripe_reconcile_stopped',
+  // DEBT-501 item 9: one subscription failed in each of the last three
+  // finished reconcile runs; a failing row never reaches duplicate detection.
+  'stripe_reconcile_row_failing',
   // BUG-343: a customer holds, or held, a second live Stripe subscription. A
   // Checkout completed beside another, the webhook kept the stored one over an
   // entitled competitor, or the daily reconcile found duplicates.

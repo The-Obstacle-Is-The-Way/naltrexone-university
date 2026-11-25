@@ -255,7 +255,7 @@ describe('fake contract and divergence register', () => {
     const names = readMaintainedBehaviorDoubleNames();
     const entries = readFakeContractRegister();
 
-    expect(names).toHaveLength(26);
+    expect(names).toHaveLength(27);
     expect(names).toContain('FakeStripeCheckoutClient');
     expect(names).toContain('FakeStripePortalConfigurations');
     expect(collectFakeContractRegisterIssues(names, entries)).toEqual([]);
