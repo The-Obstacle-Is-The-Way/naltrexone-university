@@ -60,12 +60,17 @@ The owner's live trial on 2026-11-24 received such an email about a minute after
 
 ## Resolution (decided)
 
-Option 1, decided on 2026-11-24 at the owner's delegation. It removes both side doors from every email a trial receives, leaves paid billing recovery as it is, and needs no code.
+Option 1, decided on 2026-11-24 at the owner's delegation, with its second half replaced on 2026-11-25:
+- **Stripe's trial reminder is off,** as option 1 says.
+- **Stripe's emails stop linking to the login page,** but the login link itself stays on. The Dashboard's default portal configuration, which the login page uses, offers cancellation and no card or plan change, as the app's trial profile does.
+- It removes both side doors from every email a trial receives, closes the login page to cards, leaves paid billing recovery as it is, and needs no code.
 
-**Corrected 2026-11-25: the login link stays on, and its configuration offers no card.** Stripe's Checkout setting "Limit customers to one subscription" works only while the portal's login link is on: "Disabling the login link disables this feature, which means that customers can create multiple subscriptions" ([Limit customers to one subscription](https://docs.stripe.com/payments/checkout/limit-subscriptions)). `docs/architecture/integrations/stripe.md` and BUG-343 keep that setting on as a guard against a second subscription. So turning the login link off traded this gap for BUG-343's. The record and its challenge missed that dependency.
-- Instead, the emails stop linking to the login page, and the login page's configuration matches the app's trial profile.
-- The login link uses the Dashboard's default configuration. The app never does: every session it opens names its own profile (`src/adapters/gateways/stripe/stripe-portal.ts:28-39`).
-- So restricting the default configuration closes the login page without touching the app's sessions.
+Why the login link stays on:
+- Stripe's Checkout setting "Limit customers to one subscription" works only while the link is on: "Disabling the login link disables this feature, which means that customers can create multiple subscriptions" ([Limit customers to one subscription](https://docs.stripe.com/payments/checkout/limit-subscriptions)).
+- `docs/architecture/integrations/stripe.md` and BUG-343 keep that setting on as a guard against a second subscription.
+- The login link uses the Dashboard's default configuration. The app never does: every session it opens names its own profile (`src/adapters/gateways/stripe/stripe-portal.ts:28-39`). So restricting the default configuration closes the login page to cards without touching the app's sessions.
+
+Corrected 2026-11-25: option 1 also turned the login link off, which turns off Checkout's one-subscription limit; the record and its challenge missed that dependency.
 
 ## Done in live mode, 2026-11-25 (the owner, from about 17:46Z)
 
@@ -98,9 +103,10 @@ Option 1, decided on 2026-11-24 at the owner's delegation. It removes both side 
   - The live Dashboard, read at about 19:18Z, lists no trialing subscription. So no such trial exists, and nothing waits for 2026-12-02.
 - [ ] The owner starts a live trial from an address they read. It gets the app's acknowledgment and no Stripe trial reminder, and the owner then cancels it.
 - [x] ADR-027 decision 2's note reads that the app's acknowledgment is the trial notice.
-- [x] No live trial gained a payment method outside the add-card flow (live Dashboard, about 19:18Z).
+- [x] No live trial gained a payment method outside the add-card flow (live Dashboard, 2026-11-25).
   - Live mode holds 9 subscriptions. Two are the owner's from 2026-11-24 (DEBT-501 item 7).
-  - The other 7 are trials from 2026-08-09 to 2026-10-04. Each was canceled exactly seven days after it was created, at its trial end, which Stripe does only when the trial has no payment method.
+  - The other 7 are trials from 2026-08-09 to 2026-10-04. Each was canceled at its trial end, seven days after it was created.
+  - A cancellation at trial end alone would not show that no card was added, since a trial with a card can also be canceled at period end. So each of the 7 customers' pages was read at about 21:25Z: each lists no payment method and no payment.
 - [x] "Limit customers to 1 subscription" reads on in live mode, with the login link on (21:03Z).
 
 ## Related

@@ -53,7 +53,7 @@ Options 2, 3, 5 and 6, decided 2026-10-14, each for the case the one before cann
 - **The Dashboard checks are kept** (reviewing session, 2026-11-15), in the owner's pre-sale Stripe session: in live and test mode, whether "limit customers to one subscription" is on with the portal's login link enabled; which portal configuration that link uses, and whether a card added there becomes the customer's default; and whether the former live trials ended `canceled` with no payment method. Keep the setting on, as `docs/architecture/integrations/stripe.md` says. *Answered 2026-11-25 (BUG-384):*
   - *Live mode: the setting read off, after the login link had been deactivated for about four minutes that day, and the owner turned it on; it read on at 21:03Z, with the link on. The link opens the Dashboard's default configuration, which since that day offers no payment-method update, so no card can be added there.*
   - *Test mode: the setting is off, and the login page was off when read on 2026-11-24.*
-  - *The 7 former live trials each ended `canceled` at their trial end, which Stripe does only when a trial has no payment method.*
+  - *The 7 former live trials each ended `canceled` at their trial end, and each customer's page lists no payment method and no payment.*
 
 ## Verification
 
