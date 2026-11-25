@@ -1,6 +1,6 @@
 # BUG-343: A Second Checkout Can Leave a Hidden Second Subscription
 
-**Status:** Verifying — an agent re-runs the TEST-mode reproduction on released code, once BUG-380's fix lets the helpers complete Stripe's page; due 2026-12-09
+**Status:** Verifying — an agent re-runs the TEST-mode reproduction on released code, after BUG-380's fix; the owner checks the Dashboard in the pre-sale Stripe session; due 2026-12-09
 **Priority:** P2
 **Date:** 2026-10-13
 
