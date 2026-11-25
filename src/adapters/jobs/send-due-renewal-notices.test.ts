@@ -26,13 +26,6 @@ import {
 
 const now = new Date('2026-08-07T12:00:00.000Z');
 
-/** The maintained fake, reporting that today's reconcile run started an hour ago. */
-class RecentlyRunStripeReconcileRuns extends FakeStripeReconcileRunRepository {
-  override async latestStartedAt(): Promise<Date | null> {
-    return new Date(now.getTime() - HOUR_MS);
-  }
-}
-
 type AnnualRenewals = SendDueRenewalNoticesJobDeps['renewalQueries'];
 
 // DEBT-505, DEBT-523: the watcher and the watches all ran lately.
@@ -160,7 +153,12 @@ function createDeps(): {
       // DEBT-503: every bucket was already rolled up, by default.
       clerkBackendCallUsage: { rollUp: async () => 0 },
       // DEBT-501 item 9: the daily reconcile runs, by default.
-      reconcileRuns: new RecentlyRunStripeReconcileRuns(),
+      reconcileRuns: new FakeStripeReconcileRunRepository([
+        {
+          startedAt: new Date(now.getTime() - HOUR_MS),
+          finishedAt: new Date(now.getTime() - HOUR_MS),
+        },
+      ]),
       annualPlan: {
         planName: 'Pro Annual',
         amountCents: 19900,
