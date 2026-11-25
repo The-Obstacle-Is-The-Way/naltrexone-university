@@ -12,17 +12,40 @@ type StoredRun = {
   reportedAt: Date | null;
 };
 
-/** In-memory reconcile runs; `stripe-reconcile-run-contract.ts` pins it to Postgres. */
+/** A run to seed: its start and, when it finished, its finish. */
+export type SeededStripeReconcileRun = {
+  startedAt: Date;
+  finishedAt: Date | null;
+  failedSubscriptionIds?: readonly string[];
+};
+
+/**
+ * In-memory reconcile runs; `stripe-reconcile-run-contract.ts` pins it to
+ * Postgres. Like Postgres, it copies every Date it stores or returns.
+ */
 export class FakeStripeReconcileRunRepository
   implements StripeReconcileRunRepository
 {
   private readonly runs = new Map<string, StoredRun>();
 
+  constructor(seed: readonly SeededStripeReconcileRun[] = []) {
+    for (const run of seed) {
+      const id = crypto.randomUUID();
+      this.runs.set(id, {
+        id,
+        startedAt: new Date(run.startedAt),
+        finishedAt: run.finishedAt ? new Date(run.finishedAt) : null,
+        failedSubscriptionIds: [...(run.failedSubscriptionIds ?? [])],
+        reportedAt: null,
+      });
+    }
+  }
+
   async recordStart(startedAt: Date): Promise<string> {
     const id = crypto.randomUUID();
     this.runs.set(id, {
       id,
-      startedAt,
+      startedAt: new Date(startedAt),
       finishedAt: null,
       failedSubscriptionIds: [],
       reportedAt: null,
@@ -39,7 +62,7 @@ export class FakeStripeReconcileRunRepository
     if (!run) return;
     this.runs.set(runId, {
       ...run,
-      finishedAt,
+      finishedAt: new Date(finishedAt),
       failedSubscriptionIds: [...failedSubscriptionIds],
     });
   }
@@ -61,7 +84,7 @@ export class FakeStripeReconcileRunRepository
           run.startedAt < startedBefore,
       )
       .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
-      .map(({ id, startedAt }) => ({ id, startedAt }));
+      .map(({ id, startedAt }) => ({ id, startedAt: new Date(startedAt) }));
   }
 
   async listLatestFinished(
@@ -73,7 +96,7 @@ export class FakeStripeReconcileRunRepository
       .slice(0, limit)
       .map(({ id, startedAt, failedSubscriptionIds }) => ({
         id,
-        startedAt,
+        startedAt: new Date(startedAt),
         failedSubscriptionIds: [...failedSubscriptionIds],
       }));
   }
@@ -84,7 +107,7 @@ export class FakeStripeReconcileRunRepository
   ): Promise<void> {
     for (const id of runIds) {
       const run = this.runs.get(id);
-      if (run) this.runs.set(id, { ...run, reportedAt });
+      if (run) this.runs.set(id, { ...run, reportedAt: new Date(reportedAt) });
     }
   }
 }
