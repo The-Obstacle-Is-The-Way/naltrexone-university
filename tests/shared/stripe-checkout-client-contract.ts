@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { listStripeBlockingCustomerSubscriptions } from '@/src/adapters/gateways/stripe/stripe-customer-subscriptions';
 import { portalConfigurationParams } from '@/src/adapters/gateways/stripe/stripe-portal-configurations';
 import type {
   CheckoutSessionCreateParams,
@@ -8,6 +9,7 @@ import type {
   StripeClient,
   StripeCustomerSearchResult,
 } from '@/src/adapters/shared/stripe-types';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from './stripe-checkout-client-contract-cases';
 
 type ContractSuite = (name: string, factory: () => void) => void;
@@ -36,6 +38,10 @@ type StripePaymentMethodsClient = NonNullable<StripeClient['paymentMethods']>;
 // minute. The real half shares one 60-second visibility bound across the
 // case's reads, so this budget covers that wait plus the requests.
 const CUSTOMER_SEARCH_CASE_TIMEOUT_MS = 120_000;
+
+// The blocking-Subscriptions case maps the harness price to the monthly plan;
+// no Subscription it seeds carries this one.
+const UNUSED_ANNUAL_PRICE_ID = 'price_contract_unused_annual';
 
 // The port marks list, cancel, update and detach optional; both halves
 // implement them, so the contract requires them instead of guarding at run
@@ -692,6 +698,47 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       expect(readErrorField(missing, 'param')).toBe('session');
       expect(readErrorField(missing, 'message')).toBe(
         `No such checkout session: '${missingId}'`,
+      );
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[12],
+    // BUG-321: when Stripe refuses a checkout as already subscribed, the app
+    // records what Stripe holds through this adapter: one listing, the
+    // blocking filter, a fresh retrieve of each blocking Subscription, the
+    // normalizer's schema and the customer check. The fifth scenario proves
+    // the listing and the retrieve apart; this one runs the adapter's own
+    // code over them, so a field its schema requires and Stripe does not
+    // send, or the fake does not model, fails here.
+    async run(harness) {
+      const seeded = await harness.seedSubscription();
+      await harness.seedCanceledSubscription();
+      const monthlyPriceId = harness.subscriptionParams.line_items[0]?.price;
+      if (!monthlyPriceId) {
+        throw new Error('Contract harness omitted its Subscription price');
+      }
+
+      const observations = await listStripeBlockingCustomerSubscriptions({
+        stripe: { subscriptions: harness.subscriptions },
+        externalCustomerId: seeded.customer,
+        priceIds: { monthly: monthlyPriceId, annual: UNUSED_ANNUAL_PRICE_ID },
+        logger: new FakeLogger(),
+      });
+
+      // The canceled Subscription is listed (`status: 'all'`) and left out.
+      expect(observations).toHaveLength(1);
+      const [observation] = observations;
+      // Compared without printing the ids in a failure message.
+      expect(observation?.externalSubscriptionId === seeded.id).toBe(true);
+      expect(observation?.externalCustomerId === seeded.customer).toBe(true);
+      expect(observation?.userId).toBe('debt472_contract_user');
+      expect(observation?.plan).toBe('monthly');
+      expect(observation?.status).toBe('active');
+      expect(observation?.cancelAtPeriodEnd).toBe(false);
+      const startedAtMs = observation?.startedAt.getTime() ?? Number.NaN;
+      expect(observation?.billingCycleAnchor.getTime()).toBe(startedAtMs);
+      expect(observation?.currentPeriodEnd.getTime()).toBeGreaterThan(
+        startedAtMs,
       );
     },
   },

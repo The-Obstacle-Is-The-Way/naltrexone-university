@@ -207,9 +207,10 @@ export function assertProviderContractsExecuted(
   };
 }
 
-// The two trial-clock cases and ten Checkout client contract cases normally
-// finish in under two minutes (the eleven-case run took 79 seconds locally). Five minutes bounds a stuck provider process
-// tree while leaving equal headroom inside the workflow's 10-minute job budget.
+// The two trial-clock cases and the Checkout client contract cases normally
+// finish in about two minutes (an eleven-case run took 79 seconds locally).
+// Five minutes bounds a stuck provider process tree while leaving equal
+// headroom inside the workflow's 10-minute job budget.
 const STRIPE_PROVIDER_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
 const STRIPE_PROVIDER_SIGNAL_GRACE_MS = 10 * 1000;
 

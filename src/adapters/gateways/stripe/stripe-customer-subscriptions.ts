@@ -1,5 +1,5 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
-import type { StripeClient } from '@/src/adapters/shared/stripe-types';
+import type { StripeSubscriptionsClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { SubscriptionObservation } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
@@ -29,7 +29,7 @@ const SYNC_SOURCE = {
  * transient retry. Refused clicks are rate limited to 10 a minute.
  */
 export async function listStripeBlockingCustomerSubscriptions(input: {
-  stripe: StripeClient;
+  stripe: StripeSubscriptionsClient;
   externalCustomerId: string;
   priceIds: StripePriceIds;
   logger: Logger;
