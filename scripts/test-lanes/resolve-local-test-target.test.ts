@@ -152,6 +152,59 @@ describe('resolveLocalTestTarget', () => {
   });
 });
 
+// BUG-329: E2E hands the resolved target to a child database command, which
+// resolves it again. A name that changes on the second pass starts a second
+// Docker project on the same ports.
+describe('re-resolving a target from its own environment', () => {
+  const resolveTwice = (input: {
+    cwd: string;
+    env: Record<string, string>;
+  }) => {
+    const target = resolveLocalTestTarget(input);
+    const again = resolveLocalTestTarget({
+      cwd: input.cwd,
+      env: createLocalTestTargetEnv(target),
+    });
+    return { target, again };
+  };
+
+  it.each([
+    ['39 characters', 'a'.repeat(39)],
+    ['40 characters', 'a'.repeat(40)],
+    ['48 characters', 'a'.repeat(48)],
+    ['60 characters', 'a'.repeat(60)],
+    [
+      'a separator as its 39th character',
+      `${'a'.repeat(38)}-${'b'.repeat(10)}`,
+    ],
+  ])('keeps a clone whose basename has %s on one target', (_, basename) => {
+    const { target, again } = resolveTwice({
+      cwd: `/repo/${basename}`,
+      env: {},
+    });
+
+    expect(again).toEqual(target);
+    expect(target.instanceId).toMatch(/^[a-z0-9-]*[a-z0-9]-[0-9a-f]{8}$/);
+    expect(target.instanceId.length).toBeLessThanOrEqual(48);
+  });
+
+  it('keeps an explicit instance whose 48th character is a separator on one target', () => {
+    const { target, again } = resolveTwice({
+      cwd: '/repo/clone-a',
+      env: { LOCAL_TEST_INSTANCE: `${'a'.repeat(47)}-${'b'.repeat(5)}` },
+    });
+
+    expect(again).toEqual(target);
+    expect(target.instanceId).toBe('a'.repeat(47));
+  });
+
+  it('leaves a short clone name as its sanitized basename and hash', () => {
+    const { target } = resolveTwice({ cwd: '/repo/Clone_A', env: {} });
+
+    expect(target.instanceId).toMatch(/^clone-a-[0-9a-f]{8}$/);
+  });
+});
+
 describe('isTruthyEnvFlag', () => {
   it('recognizes accepted truthy values and rejects absent or falsey values', () => {
     expect(isTruthyEnvFlag('true')).toBe(true);
