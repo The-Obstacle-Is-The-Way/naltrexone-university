@@ -26,6 +26,7 @@ const successResult = {
   durationMs: 250,
   alertDrill: 'not_due',
   scheduledChecks: 'running',
+  stripeReconcile: { reconcile: 'running', failingRows: 0 },
   clerkBackendCallUsage: 'rolled_up',
 } as const;
 

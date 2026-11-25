@@ -16,7 +16,11 @@ import {
 } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
-import type { Logger, OperationalAlerts } from '@/src/application/ports';
+import type {
+  Logger,
+  OperationalAlerts,
+  StripeReconcileRunRepository,
+} from '@/src/application/ports';
 import { RENEWAL_NOTICE_MINIMUM_DAYS } from '@/src/application/shared/renewal-notice-schedule';
 import type {
   ScheduledRenewalNotice,
@@ -41,6 +45,10 @@ import {
   type ScheduledChecksOutcome,
   type ScheduledWorkflows,
 } from './scheduled-checks';
+import {
+  checkStripeReconcileRunning,
+  type StripeReconcileWatchOutcome,
+} from './stripe-reconcile-watch';
 
 export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 40;
 export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 80;
@@ -344,6 +352,8 @@ export type SendDueRenewalNoticesJobDeps = {
   scheduledWorkflows: ScheduledWorkflows;
   /** The daily roll-up of the Clerk limiter's counters (DEBT-503). */
   clerkBackendCallUsage: ClerkBackendCallUsageRollUps;
+  /** The scheduled reconcile's runs, which the watch reads (DEBT-501 item 9). */
+  reconcileRuns: StripeReconcileRunRepository;
   annualPlan: PlanNoticeTerms;
   monthlyPlan: PlanNoticeTerms;
 };
@@ -365,6 +375,7 @@ export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   durationMs: number;
   alertDrill: OperationalAlertDrillOutcome;
   scheduledChecks: ScheduledChecksOutcome;
+  stripeReconcile: StripeReconcileWatchOutcome;
   clerkBackendCallUsage: ClerkBackendCallUsageOutcome;
 };
 
@@ -389,6 +400,14 @@ export async function sendDueRenewalNotices(
   const scheduledChecks = await checkScheduledChecksRunning({
     now: deps.now,
     workflows: deps.scheduledWorkflows,
+    alerts: deps.alerts,
+    logger: deps.logger,
+  });
+  // DEBT-501 item 9: the reconcile is the repair path behind the webhooks, and
+  // nothing else notices it stop.
+  const stripeReconcile = await checkStripeReconcileRunning({
+    now: deps.now,
+    runs: deps.reconcileRuns,
     alerts: deps.alerts,
     logger: deps.logger,
   });
@@ -484,6 +503,7 @@ export async function sendDueRenewalNotices(
     durationMs: Math.max(0, deps.monotonicNow() - startedAt),
     alertDrill,
     scheduledChecks,
+    stripeReconcile,
     clerkBackendCallUsage,
   };
 }

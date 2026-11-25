@@ -11,6 +11,7 @@ export * from './renewal-consent-record-repository';
 export * from './renewal-notice-delivery-repository';
 export * from './stripe-customer-repository';
 export * from './stripe-event-repository';
+export * from './stripe-reconcile-run-repository';
 export * from './subscription-repository';
 export * from './tag-repository';
 export * from './trial-payment-method-setup-operation-repository';

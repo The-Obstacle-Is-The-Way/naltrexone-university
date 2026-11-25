@@ -31,6 +31,7 @@ import {
   createIntegrationDb,
   createUser,
 } from './helpers';
+import { resetToRecentReconcileRun } from './stripe-reconcile-run-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
@@ -241,9 +242,11 @@ let suiteStartedAt: Date;
 beforeAll(async () => {
   const [row] = await db.execute<{ now: string }>(drizzleSql`SELECT now()`);
   suiteStartedAt = new Date(row?.now ?? Number.NaN);
+  await resetToRecentReconcileRun(db, NOW);
 });
 
 afterEach(async () => {
+  await resetToRecentReconcileRun(db, NOW);
   for (const subscription of subscriptionsToRestore) {
     await db
       .update(schema.stripeSubscriptions)
@@ -382,6 +385,12 @@ describe('reconcile Stripe subscriptions cron route', () => {
     expect(result.failed).toBe(0);
     expect(result.scanned).toBeGreaterThanOrEqual(1);
     expect(result.updated).toBe(result.scanned);
+    // DEBT-501 item 9: the scheduled full run records its start and finish.
+    await expect(
+      db.query.stripeReconcileRuns.findMany({
+        where: eq(schema.stripeReconcileRuns.startedAt, NOW),
+      }),
+    ).resolves.toMatchObject([{ finishedAt: NOW, failedSubscriptionIds: [] }]);
     // No request may wait out the SDK's 80-second default.
     expect(subscriptionRequestTimeouts.length).toBeGreaterThan(0);
     expect(new Set(subscriptionRequestTimeouts)).toEqual(new Set([5_000]));
@@ -620,6 +629,7 @@ describe('send renewal notices cron route', () => {
       // gives its cycle back for the next run.
       alertDrill: 'not_sent',
       scheduledChecks: 'running',
+      stripeReconcile: { reconcile: 'running', failingRows: 0 },
       clerkBackendCallUsage: ROLLED_UP_OR_CURRENT,
     });
     await expect(
