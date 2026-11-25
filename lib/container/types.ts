@@ -32,6 +32,7 @@ import type {
   RenewalNoticeDeliveryRepository,
   StripeCustomerRepository,
   StripeEventRepository,
+  StripeReconcileRunRepository,
   SubscriptionRepository,
   TagRepository,
   TrialPaymentMethodSetupOperationRepository,
@@ -109,6 +110,9 @@ export type RepositoryFactories = {
   createPendingStripeCustomerCleanupRepository: (
     dbOverride?: DrizzleDb,
   ) => PendingStripeCustomerCleanupRepository;
+  createStripeReconcileRunRepository: (
+    dbOverride?: DrizzleDb,
+  ) => StripeReconcileRunRepository;
   createPracticeSessionRepository: (
     dbOverride?: DrizzleDb,
   ) => PracticeSessionRepository;
