@@ -34,6 +34,24 @@ afterEach(() => {
 });
 
 describe('raising upstream advisories', () => {
+  // BUG-381: a call without a database once fell back to GitHub's live API
+  // through `gh`. The compiler is the guard, so these calls are never run.
+  it('cannot be called without an advisory database', () => {
+    const withoutDatabase = [
+      () =>
+        // @ts-expect-error the advisory database is required
+        raiseUpstreamAdvisories([advisory()], manifest, new MemoryIssues()),
+      () =>
+        // @ts-expect-error the advisory database is required
+        watchUpstreamAdvisories(
+          { direct: [], indirect: [] },
+          manifest,
+          new MemoryIssues(),
+        ),
+    ];
+    expect(withoutDatabase).toHaveLength(2);
+  });
+
   it('opens one issue for an advisory published after the watch start', async () => {
     const issues = new MemoryIssues();
     expect(
@@ -56,6 +74,7 @@ describe('raising upstream advisories', () => {
         [advisory({ publishedAt: '2026-09-30T16:15:36Z' })],
         manifest,
         issues,
+        unreviewed,
       ),
     ).toEqual({ raised: [], failed: [], ruledOut: [], unreviewed: [] });
     expect(issues.issues).toEqual([]);
@@ -75,7 +94,12 @@ describe('raising upstream advisories', () => {
         comments: [],
       });
       expect(
-        await raiseUpstreamAdvisories([advisory()], manifest, issues),
+        await raiseUpstreamAdvisories(
+          [advisory()],
+          manifest,
+          issues,
+          unreviewed,
+        ),
       ).toEqual({ raised: [], failed: [], ruledOut: [], unreviewed: [] });
       expect(issues.issues).toHaveLength(1);
     },
@@ -83,7 +107,7 @@ describe('raising upstream advisories', () => {
 
   it('copies the advisory facts verbatim, including malformed version ranges', async () => {
     const issues = new MemoryIssues();
-    await raiseUpstreamAdvisories([advisory()], manifest, issues);
+    await raiseUpstreamAdvisories([advisory()], manifest, issues, unreviewed);
     const body = issues.issues[0]?.body ?? '';
     expect(body).toContain('Remote code execution in a fixture');
     expect(body).toContain(
@@ -116,6 +140,7 @@ describe('raising upstream advisories', () => {
       ],
       manifest,
       issues,
+      unreviewed,
     );
     const [issue] = issues.issues;
     expect(issue?.title).toBe(
@@ -146,6 +171,7 @@ describe('raising upstream advisories', () => {
       ],
       manifest,
       issues,
+      unreviewed,
     );
     expect(issues.issues[0]?.body).toContain(
       '`undici` is an indirect dependency; `pnpm-lock.yaml` resolves `6.21.0`, `7.29.1`',
@@ -168,6 +194,7 @@ describe('raising upstream advisories', () => {
       ],
       manifest,
       issues,
+      unreviewed,
     );
     expect(issues.issues[0]?.body).toContain(
       '`constructor` is not in `pnpm-lock.yaml`',
@@ -201,7 +228,12 @@ describe('raising upstream advisories', () => {
     ['low', false],
   ] as const)('marks a %s advisory urgent: %s', async (severity, urgent) => {
     const issues = new MemoryIssues();
-    await raiseUpstreamAdvisories([advisory({ severity })], manifest, issues);
+    await raiseUpstreamAdvisories(
+      [advisory({ severity })],
+      manifest,
+      issues,
+      unreviewed,
+    );
     expect(issues.issues.map((issue) => issue.urgent)).toEqual([urgent]);
   });
 
@@ -239,7 +271,7 @@ describe('raising upstream advisories', () => {
       throw new Error('GitHub unavailable');
     };
     await expect(
-      raiseUpstreamAdvisories([advisory()], manifest, issues),
+      raiseUpstreamAdvisories([advisory()], manifest, issues, unreviewed),
     ).rejects.toThrow('GitHub unavailable');
   });
 });

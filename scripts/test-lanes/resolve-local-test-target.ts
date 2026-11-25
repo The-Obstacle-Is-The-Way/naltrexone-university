@@ -37,6 +37,10 @@ const LOCAL_TEST_APP_BASE_PORT = 3100;
 const LOCAL_TEST_DB_BASE_PORT = 55400;
 const LOCAL_TEST_POOLER_BASE_PORT = 45400;
 const LOCAL_TEST_PORT_SLOTS = 10_000;
+const INSTANCE_ID_MAX_LENGTH = 48;
+const INSTANCE_HASH_LENGTH = 8;
+// The hash and the hyphen before it.
+const INSTANCE_HASH_SUFFIX_LENGTH = INSTANCE_HASH_LENGTH + 1;
 const TRUTHY_ENV_VALUES = new Set(['1', 'true', 'yes']);
 
 export function isTruthyEnvFlag(value: string | undefined): boolean {
@@ -117,9 +121,15 @@ export function formatLocalTestTargetOutput(
   return JSON.stringify(target, null, 2);
 }
 
+// A generated instance must resolve to itself when a child command resolves
+// it again as an explicit one (BUG-329), so the basename leaves room for the
+// whole suffix inside the explicit limit.
 function deriveInstanceIdFromWorktree(absoluteCwd: string): string {
-  const name = sanitizeInstanceId(basename(absoluteCwd));
-  const hash = hashText(absoluteCwd).slice(0, 8);
+  const name = sanitizeInstanceId(
+    basename(absoluteCwd),
+    INSTANCE_ID_MAX_LENGTH - INSTANCE_HASH_SUFFIX_LENGTH,
+  );
+  const hash = hashText(absoluteCwd).slice(0, INSTANCE_HASH_LENGTH);
   return `${name}-${hash}`;
 }
 
@@ -165,13 +175,19 @@ function hashText(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function sanitizeInstanceId(value: string): string {
+// Trailing hyphens go after the cut, so a cut that ends on a separator cannot
+// leave one for the next resolution to strip.
+function sanitizeInstanceId(
+  value: string,
+  maxLength = INSTANCE_ID_MAX_LENGTH,
+): string {
   const sanitized = value
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
+    .replace(/^-+/, '')
+    .slice(0, maxLength)
+    .replace(/-+$/, '');
 
   return sanitized || 'local';
 }

@@ -284,7 +284,7 @@ export async function raiseUpstreamAdvisories(
   advisories: readonly UpstreamAdvisory[],
   dependencies: DependencyVersions,
   issues: AdvisoryIssues,
-  database: AdvisoryDatabase = githubAdvisoryDatabase(),
+  database: AdvisoryDatabase,
   start = WATCH_START,
 ): Promise<RaiseOutcome> {
   const startAt = Date.parse(start);
@@ -877,7 +877,7 @@ export async function watchUpstreamAdvisories(
   issues: AdvisoryIssues,
   list: (repository: string) => Promise<UpstreamAdvisory[]> = (repository) =>
     listUpstreamAdvisories(repository),
-  database: AdvisoryDatabase = githubAdvisoryDatabase(),
+  database: AdvisoryDatabase,
 ): Promise<WatchOutcome> {
   const advisories: UpstreamAdvisory[] = [];
   const unreadable: string[] = [];
