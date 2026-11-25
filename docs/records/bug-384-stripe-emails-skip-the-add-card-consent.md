@@ -66,6 +66,7 @@ Option 1, decided on 2026-11-24 at the owner's delegation. It removes both side 
 
 - [ ] The owner, in live mode, turns off "Send a reminder email 7 days before a free trial ends" (Settings → Billing → Subscriptions and emails) and the customer portal's login link (Settings → Billing → Customer portal). The Dashboard then shows both off.
 - [ ] `billing.stripe.com/p/login/…` from an old email reports the link inactive.
+- [ ] A hosted payment-method link from a trial reminder sent before the change reports inactive, or the record states the remaining validity window and the residual risk.
 - [ ] The next live trial gets the app's acknowledgment and no Stripe trial reminder.
 - [ ] ADR-027 decision 2's note reads that the app's acknowledgment is the trial notice.
 - [ ] The owner checks the live Dashboard for any earlier trial that gained a payment method outside the add-card flow, and records what it finds.
