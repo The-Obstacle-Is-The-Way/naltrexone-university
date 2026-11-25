@@ -93,7 +93,7 @@ it: find the old project with `docker ps` and remove it with
   fix and passes after it (2026-11-24: five cases failed, then all passed).
 - [x] A short clone's instance is unchanged (2026-11-24: this clone resolves
   to the same instance before and after the fix).
-- [ ] After promotion, `main`'s required `test` check passes with the fix.
+- [x] After promotion, `main`'s required `test` check passes with the fix (2026-11-25: promotion #1745, `main` 06a60fe4, CI run 45662182952).
 
 ## Related
 
