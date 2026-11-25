@@ -255,13 +255,14 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/domain/services/subscription-canonicalization.test.ts`: `sorts by later period end within the same entitlement tier`
 - `src/adapters/jobs/reconcile-stripe-subscriptions-duplicates.test.ts`: `cancels duplicate blocking subscriptions when dryRun is disabled`
 
-### R32. A checkout hands back only the customer's newest open subscription Checkout page. Before it hands one back, whether it created the page or found it open, it ends the customer's other open pages among the ten it lists, and refuses when it cannot end one. A page another request creates after that listing stays open until a later request ends it (BUG-343).
+### R32. A checkout hands back only the customer's newest open subscription Checkout page. Before it hands one back, whether it created the page or found it open, it ends the customer's other open pages among the ten it lists, and refuses when it cannot end one. A page another request creates after that listing stays open until a later request hands it back, after ending the older ones, or ends it. (BUG-343).
 
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `leaves one open Session when a trial checkout that could neither read nor expire the earlier page is retried`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `leaves one open Session when a checkout that could not expire the other plan's page is retried`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `refuses a reuse that cannot expire another open Session`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `leaves a concurrent create's Session open and unreturned beside the one a reuse handed back, until a later request expires the first`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `hands back a newer Session a concurrent request created for the other plan, and expires the one it found`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `reuses the only open Session after one more open-Session listing and no expire`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-concurrency.test.ts`: `expires superseded concurrent different-plan creates so one completable session survives`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-reconciliation.test.ts`: `throws when reconciliation cannot expire a superseded checkout session`
 

@@ -723,6 +723,11 @@ async function reconcileOpenCheckoutSessions({
       !hasCheckoutRenewalMetadata(session) &&
       !isInactiveAtReconciliation(session),
   );
+  // The held Session stays a candidate even when this listing omits it: it
+  // may have completed, and then the others must still be expired. If another
+  // request expired it meanwhile, this request expires the Session that one
+  // kept and hands back a link that no longer completes; both buyers start
+  // again, and no two pages stay open (BUG-343).
   const candidates = withoutDuplicateCheckoutSessions(
     isInactiveAtReconciliation(heldSession)
       ? listedActiveCandidates
@@ -974,15 +979,16 @@ async function refuseIfSubscriptionAppeared({
   );
 }
 
-// BUG-343 option 9: the one exit for every Session this adapter hands back,
-// whether the request created it or found it open. Handing back a found
-// Session without looking for others is how a customer came to hold two
-// completable pages: a request that failed after its create had left its
-// Session open beside an earlier one. So the exit keeps the newest open
-// Session and expires the others, checks the customer's subscriptions again,
-// and returns that Session's URL. A failed expire fails the request. Requests
-// whose listings see the same Sessions keep the same one; were each to keep
-// its own, each would expire the other's.
+// BUG-343 option 9: the one exit for every subscription Checkout Session
+// createStripeCheckoutSession hands back, whether the request created it or
+// found it open. Handing back a found Session without looking for others is
+// how a customer came to hold two completable pages: a request that failed
+// after its create had left its Session open beside an earlier one. So the
+// exit keeps the newest open Session and expires the others, checks the
+// customer's subscriptions again, and returns that Session's URL. A failed
+// listing or expire fails the request. Requests whose listings see the same
+// Sessions keep the same one; were each to keep its own, each would expire
+// the other's.
 async function handBackNewestOpenCheckoutSession({
   stripe,
   input,

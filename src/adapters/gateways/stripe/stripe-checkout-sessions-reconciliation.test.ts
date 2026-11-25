@@ -154,6 +154,24 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
     expect(stripe.expireCalls).toEqual([]);
   });
 
+  it('leaves alone a Session the request set aside as ended, though the open listing still returns it', async () => {
+    const logger = new FakeLogger();
+    const stripe = createFake();
+    await createCheckout(stripe, logger);
+    // The first Session reads as complete while Stripe's open listing still
+    // returns it, renewal metadata and all: the request sets it aside and
+    // creates another, and the reconcile must not take it for an open one.
+    stripe.setRetrieveOverride((session) =>
+      session.id === 'cs_fake_1' ? { ...session, status: 'complete' } : session,
+    );
+
+    await expect(createCheckout(stripe, logger)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
+    });
+
+    expect(stripe.expireCalls).toEqual([]);
+  });
+
   it('ignores inactive listed sessions when choosing the canonical checkout session', async () => {
     const logger = new FakeLogger();
     const stripe = createFake();

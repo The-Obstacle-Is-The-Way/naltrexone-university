@@ -251,6 +251,37 @@ describe('createStripeCheckoutSession hands back one open Session', () => {
     expect(await openSessionIds(stripe)).toEqual([]);
   });
 
+  it('hands back a dead link, and leaves no page open, when another request expired the Session a reuse found', async () => {
+    const stripe = createFake();
+    // A monthly page, and a newer annual page a failed request left open.
+    await createCheckout(stripe, monthly);
+    fakeNowMs += SECOND_MS;
+    await stripe.checkout.sessions.create(await annualCreateParams(), {
+      idempotencyKey: 'leftover-annual-checkout',
+    });
+    // While the annual request reads the annual page it found, a monthly
+    // request runs whole: it expires that page for the other plan, and hands
+    // back the monthly page its create replays.
+    let staged = false;
+    let monthlyResult: { url: string } | undefined;
+    stripe.setRetrieveOverride(async (session) => {
+      if (staged) return session;
+      staged = true;
+      monthlyResult = await createCheckout(stripe, monthly);
+      return session;
+    });
+
+    // The known limit: the annual request still ranks the page it found
+    // newest, so it expires the monthly page and hands back a dead link.
+    // Both buyers start again; what matters is that no two pages stay open.
+    await expect(createCheckout(stripe, annual)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
+    });
+
+    expect(monthlyResult).toEqual({ url: sessionUrl('cs_fake_1') });
+    expect(await openSessionIds(stripe)).toEqual([]);
+  });
+
   it('reuses the only open Session after one more open-Session listing and no expire', async () => {
     const stripe = createFake();
     await createCheckout(stripe, monthly);

@@ -42,6 +42,10 @@ const CUSTOMER_SEARCH_CASE_TIMEOUT_MS = 120_000;
 // The blocking-Subscriptions case maps the harness price to the monthly plan;
 // no Subscription it seeds carries this one.
 const UNUSED_ANNUAL_PRICE_ID = 'price_contract_unused_annual';
+// Stripe's shortest billing interval is a day, and its longest here a leap
+// year.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const LONGEST_BILLING_PERIOD_MS = 366 * DAY_MS;
 
 // The port marks list, cancel, update and detach optional; both halves
 // implement them, so the contract requires them instead of guarding at run
@@ -725,7 +729,9 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
         logger: new FakeLogger(),
       });
 
-      // The canceled Subscription is listed (`status: 'all'`) and left out.
+      // The adapter lists with `status: 'all'`, which returns the canceled
+      // Subscription too (the fifth scenario); its blocking filter leaves
+      // that one out.
       expect(observations).toHaveLength(1);
       const [observation] = observations;
       // Compared without printing the ids in a failure message.
@@ -735,11 +741,19 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       expect(observation?.plan).toBe('monthly');
       expect(observation?.status).toBe('active');
       expect(observation?.cancelAtPeriodEnd).toBe(false);
+      // Stripe stamps a new Subscription's start and billing anchor itself,
+      // so the case requires their order, not their equality. The period's
+      // length pins the scale of both ends: seconds read as milliseconds
+      // would make it under an hour, and one end alone, decades.
       const startedAtMs = observation?.startedAt.getTime() ?? Number.NaN;
-      expect(observation?.billingCycleAnchor.getTime()).toBe(startedAtMs);
-      expect(observation?.currentPeriodEnd.getTime()).toBeGreaterThan(
-        startedAtMs,
+      const periodEndMs = observation?.currentPeriodEnd.getTime() ?? Number.NaN;
+      const anchorMs = observation?.billingCycleAnchor.getTime() ?? Number.NaN;
+      expect(periodEndMs - startedAtMs).toBeGreaterThanOrEqual(DAY_MS);
+      expect(periodEndMs - startedAtMs).toBeLessThanOrEqual(
+        LONGEST_BILLING_PERIOD_MS,
       );
+      expect(anchorMs).toBeGreaterThanOrEqual(startedAtMs);
+      expect(anchorMs).toBeLessThan(periodEndMs);
     },
   },
 ];

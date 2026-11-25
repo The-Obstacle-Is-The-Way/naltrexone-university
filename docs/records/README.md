@@ -4,7 +4,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 
 **Now** — 2026-11-25.
 - **Verifying, by due date.** BUG-321 11-30; BUG-377 12-04; BUG-343 12-09.
-- **Next.** BUG-380's hosted-smoke fix, 11-22, which BUG-343's TEST-mode re-run waits for. BUG-360's remote-target removal. DEBT-514's read-only Biome hook. DEBT-528's five deletions and DEBT-526's four fixes. DEBT-503 item 3. BUG-337 closes at 178 clean runs, about 11-30.
+- **Next.** BUG-380's hosted-smoke fix, 11-22, which BUG-343's TEST-mode re-run waits for. BUG-360's remote-target removal. DEBT-514's read-only Biome hook. DEBT-528's five deletions and DEBT-526's four fixes. DEBT-503 item 3. DEBT-540's first mutation wave, the checkout adapter. BUG-337 closes at 178 clean runs, about 11-30.
 - **Before the first live sale.** BUG-377's drill, which BUG-343's hand refunds rely on. DEBT-414 F21 and F19b's trial dates. DEBT-539: the practice QA guide, then the owner's content bootstrap. The owner buys Neon Launch (DEBT-534), and moves production to Vercel Pro at the sale itself (DEBT-512). The owner's Stripe session: DEBT-501 item 7's refund of the 2026-11-24 purchase and its Link decision, due 12-01 (the purchase and receipt are recorded; accepting the receipt as Massachusetts' notice is DEBT-414 F19c); the new support address and phone in Stripe's public details, which receipts show; BUG-343's Dashboard check and BUG-360's read-only E2E-email check. The owner gets a mail-receiving address and a business line, turns on the support mailbox's auto-reply, and engages a New York sales-tax adviser for DEBT-414 Q7, counsel for Q1–Q6, and IP counsel for Q8. By 39 days before the first real renewal or anniversary: DEBT-502, DEBT-511, and F19a's annual reminder; the owner's count dates it (DEBT-511, due 2027-02-12).
 - **Owner actions.** BUG-384's two Stripe settings: the trial reminder and the portal's login link off, by 12-01. Clerk's verify-at-sign-up check (DEBT-502). Post BUG-333's drafted evidence to clerk/javascript#10411. BUG-383's content-repository fix. DEBT-414's F08 specimens and F14 entity facts, before counsel's review.
 
@@ -33,6 +33,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-528](./debt-528-entry-points-repeat-the-request-pipeline.md)|Several server entry points repeat policy, and the copies have drifted|P3|Open — five small deletions, each red first: the request-ID helper (from DEBT-504), cron bearer auth, rate-limit refusals, the manage-billing request copy, the bare sign-ups|
 |[DEBT-534](./debt-534-neon-free-plan-can-suspend-production.md)|Neon's Free plan can suspend production's database until the month ends|P2|Blocked — the owner moves `naltrexone-db` to Neon Launch before the first live sale (decided 2026-10-21)|
 |[DEBT-539](./debt-539-production-content-is-not-yet-release-one.md)|Production content is not yet bootstrapped as release one|P2|Blocked — the practice QA guide passes on the dev preview, then the owner runs the content bootstrap, before the first live sale|
+|[DEBT-540](./debt-540-mutation-testing-skips-the-stripe-gateway.md)|Mutation testing skips the Stripe gateway|P3|Open — add `src/adapters/gateways/stripe/` to the weekly mutation run by waves, the checkout adapter first, after measuring the job's time with static mutants|
 
 ## Waiting
 
