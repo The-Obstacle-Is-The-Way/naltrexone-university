@@ -1,6 +1,6 @@
 # BUG-384: Stripe's Customer Emails Let a Trial Gain a Card Without the App's Consent
 
-**Status:** Blocked — the owner turns off Stripe's trial reminder and the portal's login link in live mode; due 2026-12-01
+**Status:** Verifying — the owner starts a live trial from an address they read: the app's acknowledgment arrives and Stripe's trial reminder does not; due 2026-12-01
 **Priority:** P2
 **Date:** 2026-11-24
 
@@ -44,7 +44,7 @@ The owner's live trial on 2026-11-24 received such an email about a minute after
 - **A trial can convert without its consent record.** A trialing customer who follows either link converts to paid with only the trial's own consent. The add-card step's opt-in, record and acknowledgment are skipped, though ADR-027 and DEBT-414 F03b require them when a card is added.
 - **The app keeps offering a card.** It shows that customer "Add a card" until the trial converts.
 - **Paid customers bypass the paid profile too.** Through the login link, a paid customer also gets the default configuration's cancellation and plan settings instead of the app's paid profile (ADR-027 decision 9). That holds wherever the live default differs from the profile.
-- **Earlier live trials are unchecked.** Whether any earlier live trial followed either link has not been checked. In the live Dashboard, such a trial shows a payment method on a subscription whose customer never completed the app's add-card flow. The owner's own trial was canceled without a card.
+- **Earlier live trials are unchecked.** Whether any earlier live trial followed either link has not been checked. In the live Dashboard, such a trial shows a payment method on a subscription whose customer never completed the app's add-card flow. The owner's own trial was canceled without a card. *Checked 2026-11-25: none did (Verification).*
 
 ## Options
 
@@ -60,16 +60,48 @@ The owner's live trial on 2026-11-24 received such an email about a minute after
 
 ## Resolution (decided)
 
-Option 1, decided on 2026-11-24 at the owner's delegation. It removes both side doors from every email a trial receives, leaves paid billing recovery as it is, and needs no code. The ADR-027 note changes in the pull request that records the owner's settings.
+Option 1, decided on 2026-11-24 at the owner's delegation. It removes both side doors from every email a trial receives, leaves paid billing recovery as it is, and needs no code.
+
+**Corrected 2026-11-25: the login link stays on, and its configuration offers no card.** Stripe's Checkout setting "Limit customers to one subscription" works only while the portal's login link is on: "Disabling the login link disables this feature, which means that customers can create multiple subscriptions" ([Limit customers to one subscription](https://docs.stripe.com/payments/checkout/limit-subscriptions)). `docs/architecture/integrations/stripe.md` and BUG-343 keep that setting on as a guard against a second subscription. So turning the login link off traded this gap for BUG-343's. The record and its challenge missed that dependency.
+- Instead, the emails stop linking to the login page, and the login page's configuration matches the app's trial profile.
+- The login link uses the Dashboard's default configuration. The app never does: every session it opens names its own profile (`src/adapters/gateways/stripe/stripe-portal.ts:28-39`).
+- So restricting the default configuration closes the login page without touching the app's sessions.
+
+## Done in live mode, 2026-11-25 (the owner, from about 17:46Z)
+
+- **Settings → Billing → Subscriptions and emails.**
+  - "Send a reminder email 7 days before a trial ends" is off.
+  - "Include a link for customers to manage their subscriptions" is off, so Stripe's emails no longer carry the login link.
+  - Payment method updates stay on "Link to a Stripe-hosted page", for failed payments.
+  - The other customer emails (upcoming renewals, expiring cards, failed card and bank-debit payments) stay on. So does the "trial over" statement descriptor.
+- **Settings → Billing → Customer portal.**
+  - The login link was deactivated at about 17:50Z. The old link then answered HTTP 404.
+  - It was re-activated at about 17:54Z, with the same URL, once the dependency above was found.
+  - The default configuration then had plan switching turned off. Stripe requires payment-method updates while plan switching is on.
+  - Payment-method updates were then turned off.
+  - Cancellation stays on, at the end of the billing period.
+  - The Dashboard's preview of the configuration shows "Cancel subscription" and no "Add payment method" or "Update subscription".
+- **Checkout's "Limit customers to 1 subscription"** (Settings → Payments → Checkout and Payment Links).
+  - An agent read it in the owner's signed-in Dashboard at about 19:18Z: off in live mode, and off in test mode.
+  - Stripe turns it off when the login link is deactivated, so the 17:50Z deactivation probably did. Whether it was on before is not known; BUG-245 recorded the owner's note that it was.
+  - While it was off, the app's own guards (BUG-343's options 2, 3, 5 and 6) still ran, and the only active live subscription was the owner's.
+  - The owner then turned it on and saved it, with "Customer portal" as the place customers manage their subscription. An agent's fresh load read it on in live mode at 21:03Z.
 
 ## Verification
 
-- [ ] The owner, in live mode, turns off "Send a reminder email 7 days before a free trial ends" (Settings → Billing → Subscriptions and emails) and the customer portal's login link (Settings → Billing → Customer portal). The Dashboard then shows both off.
-- [ ] `billing.stripe.com/p/login/…` from an old email reports the link inactive.
-- [ ] A hosted payment-method link from a trial reminder sent before the change reports inactive, or the record states the remaining validity window and the residual risk.
-- [ ] The next live trial gets the app's acknowledgment and no Stripe trial reminder.
-- [ ] ADR-027 decision 2's note reads that the app's acknowledgment is the trial notice.
-- [ ] The owner checks the live Dashboard for any earlier trial that gained a payment method outside the add-card flow, and records what it finds.
+- [x] The owner, in live mode, turns off Stripe's trial reminder and its emails' link to the login page, and the Dashboard shows both off (2026-11-25, above).
+- [x] The login page offers no way to add a card. The default configuration's payment-method updates and plan switching are off (2026-11-25, Dashboard preview).
+- [x] A hosted payment-method link from a trial reminder sent before the change can no longer add a card.
+  - The owner's own link, from the 2026-11-24 reminder, now redirects to Stripe's `update_payment_method/error` page. That trial was canceled, so this does not show that the setting change ends other trials' links.
+  - Stripe documents its shared payment-update links as working only while a subscription is active, past due or trialing ([Subscription invoices](https://docs.stripe.com/billing/invoices/subscription)), and gives no expiry for the links in its emails.
+  - So a trial whose reminder went out before about 17:47Z on 2026-11-25 could still add a card through it until that trial ends.
+  - The live Dashboard, read at about 19:18Z, lists no trialing subscription. So no such trial exists, and nothing waits for 2026-12-02.
+- [ ] The owner starts a live trial from an address they read. It gets the app's acknowledgment and no Stripe trial reminder, and the owner then cancels it.
+- [x] ADR-027 decision 2's note reads that the app's acknowledgment is the trial notice.
+- [x] No live trial gained a payment method outside the add-card flow (live Dashboard, about 19:18Z).
+  - Live mode holds 9 subscriptions. Two are the owner's from 2026-11-24 (DEBT-501 item 7).
+  - The other 7 are trials from 2026-08-09 to 2026-10-04. Each was canceled exactly seven days after it was created, at its trial end, which Stripe does only when the trial has no payment method.
+- [x] "Limit customers to 1 subscription" reads on in live mode, with the login link on (21:03Z).
 
 ## Related
 
