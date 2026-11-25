@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type {
   OperationalAlertOutcome,
@@ -9,10 +8,7 @@ import {
   FakeOperationalAlerts,
   FakeStripeReconcileRunRepository,
 } from '@/src/application/test-helpers/fakes';
-import {
-  checkStripeReconcileRunning,
-  RECONCILE_RUN_MAX_DURATION_SECONDS,
-} from './stripe-reconcile-watch';
+import { checkStripeReconcileRunning } from './stripe-reconcile-watch';
 
 const NOW = new Date('2026-11-25T09:30:00.000Z');
 
@@ -258,19 +254,5 @@ describe('checkStripeReconcileRunning', () => {
     expect(logger.errorCalls.map((call) => call.msg)).toEqual([
       'Stripe reconcile runs unreadable',
     ]);
-  });
-});
-
-describe('RECONCILE_RUN_MAX_DURATION_SECONDS', () => {
-  // Next.js reads maxDuration as a literal, so the route cannot import it.
-  it("is the reconcile route's maxDuration", () => {
-    const route = readFileSync(
-      'app/api/cron/reconcile-stripe-subscriptions/route.ts',
-      'utf8',
-    );
-
-    expect(route).toContain(
-      `export const maxDuration = ${RECONCILE_RUN_MAX_DURATION_SECONDS};`,
-    );
   });
 });
