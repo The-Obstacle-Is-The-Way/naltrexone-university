@@ -52,4 +52,5 @@ Then dispatch a hosted run on the fix branch.
 - BUG-340: Stripe renamed Checkout's save-information box on 2026-10-12.
 - DEBT-414: F03b and F04 are the journeys this lane observes.
 - BUG-377: assigned issues for scheduled jobs.
+- BUG-343: its TEST-mode re-run completes hosted Checkout pages through these helpers, so it waits for this fix.
 - BUG-373: the add-card button twice failed locally (2026-11-01 and 11-02) to open its dialog, its traces lost. If the fixed lane fails at "Add a card to keep access", keep the trace and file a bug.
