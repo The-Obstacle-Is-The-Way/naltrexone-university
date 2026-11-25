@@ -70,6 +70,31 @@ export function runStripeReconcileRunContract(
       ]);
     });
 
+    it('keeps a recorded start when the caller changes its Date afterwards', async () => {
+      const { repository } = await createHarness();
+      const startedAt = at(0);
+      const id = await repository.recordStart(startedAt);
+
+      startedAt.setTime(at(30).getTime());
+
+      expect(await repository.listUnreportedUnfinished(at(60))).toEqual([
+        { id, startedAt: at(0) },
+      ]);
+    });
+
+    it('keeps a recorded start when a listed copy is changed', async () => {
+      const { repository } = await createHarness();
+      const id = await repository.recordStart(at(0));
+      await repository.recordFinish(id, at(1), []);
+
+      const [finished] = await repository.listLatestFinished(1);
+      finished?.startedAt.setTime(at(30).getTime());
+
+      expect(await repository.listLatestFinished(1)).toEqual([
+        { id, startedAt: at(0), failedSubscriptionIds: [] },
+      ]);
+    });
+
     it('lists finished runs newest start first, with their failed subscription IDs, up to the limit', async () => {
       const { repository } = await createHarness();
       const oldest = await repository.recordStart(at(0));
