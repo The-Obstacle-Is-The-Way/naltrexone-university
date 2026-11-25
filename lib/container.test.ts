@@ -20,6 +20,7 @@ import {
   DrizzleRenewalNoticeDeliveryRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
+  DrizzleStripeReconcileRunRepository,
   DrizzleSubscriptionRepository,
   DrizzleTagRepository,
   DrizzleTrialPaymentMethodSetupOperationRepository,
@@ -232,6 +233,9 @@ describe('container factories', () => {
     expect(
       container.createPendingStripeCustomerCleanupRepository(),
     ).toBeInstanceOf(DrizzlePendingStripeCustomerCleanupRepository);
+    expect(container.createStripeReconcileRunRepository()).toBeInstanceOf(
+      DrizzleStripeReconcileRunRepository,
+    );
     expect(container.createPracticeSessionRepository()).toBeInstanceOf(
       DrizzlePracticeSessionRepository,
     );

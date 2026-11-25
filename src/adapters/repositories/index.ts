@@ -11,6 +11,7 @@ export { DrizzleRenewalConsentRecordRepository } from './drizzle-renewal-consent
 export { DrizzleRenewalNoticeDeliveryRepository } from './drizzle-renewal-notice-delivery-repository';
 export { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repository';
 export { DrizzleStripeEventRepository } from './drizzle-stripe-event-repository';
+export { DrizzleStripeReconcileRunRepository } from './drizzle-stripe-reconcile-run-repository';
 export { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
 export { DrizzleTagRepository } from './drizzle-tag-repository';
 export { DrizzleTrialPaymentMethodSetupOperationRepository } from './drizzle-trial-payment-method-setup-operation-repository';
