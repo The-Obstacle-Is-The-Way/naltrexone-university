@@ -28,7 +28,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - **Renaming a test that proves a rule** means updating its line here.
 - **Parameterized or shared tests** also use `{ meta: { ruleProof: { file: 'path', title: 'exact test title' } } }` as literal declaration options. Update both fields with the register when moving or renaming the proof.
 - **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
-- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343, R30 with BUG-349, and R31 with BUG-351.
+- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24, R25 and R32 with BUG-343, R30 with BUG-349, and R31 with BUG-351.
 
 ## Practice sessions
 
@@ -254,6 +254,16 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/domain/services/subscription-canonicalization.test.ts`: `sorts entitled candidates ahead of later non-entitled candidates`
 - `src/domain/services/subscription-canonicalization.test.ts`: `sorts by later period end within the same entitlement tier`
 - `src/adapters/jobs/reconcile-stripe-subscriptions-duplicates.test.ts`: `cancels duplicate blocking subscriptions when dryRun is disabled`
+
+### R32. A checkout hands back only the customer's newest open subscription Checkout page. Before it hands one back, whether it created the page or found it open, it ends the customer's other open pages among the ten it lists, and refuses when it cannot end one. A page another request creates after that listing stays open until a later request ends it (BUG-343).
+
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `leaves one open Session when a trial checkout that could neither read nor expire the earlier page is retried`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `leaves one open Session when a checkout that could not expire the other plan's page is retried`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `refuses a reuse that cannot expire another open Session`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `leaves a concurrent create's Session open and unreturned beside the one a reuse handed back, until a later request expires the first`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-one-exit.test.ts`: `hands back a newer Session a concurrent request created for the other plan, and expires the one it found`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-concurrency.test.ts`: `expires superseded concurrent different-plan creates so one completable session survives`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-reconciliation.test.ts`: `throws when reconciliation cannot expire a superseded checkout session`
 
 ### R30. The first observed subscription termination starts the retention clock; a replay changes no consent record. Consent evidence is kept for at least three UTC calendar years after acceptance or one year after that termination, whichever is later. A longer stored floor is preserved. February 29 plus one year is March 1.
 
