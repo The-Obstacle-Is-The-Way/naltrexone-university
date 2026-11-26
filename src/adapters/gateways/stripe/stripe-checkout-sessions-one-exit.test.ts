@@ -9,6 +9,7 @@ import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
 const SECOND_MS = 1_000;
+const HOUR_MS = 60 * 60 * SECOND_MS;
 
 // BUG-343 option 9: a request that fails after creating its page leaves that
 // page open beside an earlier one, and a later request for the same plan and
@@ -51,6 +52,7 @@ describe('createStripeCheckoutSession hands back one open Session', () => {
   function createCheckout(
     stripe: FakeStripeCheckoutClient,
     input: CheckoutInput,
+    nowMs: () => number = () => fixedNowMs,
   ): Promise<{ url: string }> {
     return createStripeCheckoutSession({
       stripe,
@@ -58,7 +60,7 @@ describe('createStripeCheckoutSession hands back one open Session', () => {
       priceIds,
       logger,
       operationalAlerts: new FakeOperationalAlerts(),
-      nowMs: () => fixedNowMs,
+      nowMs,
     });
   }
 
@@ -280,6 +282,23 @@ describe('createStripeCheckoutSession hands back one open Session', () => {
 
     expect(monthlyResult).toEqual({ url: sessionUrl('cs_fake_1') });
     expect(await openSessionIds(stripe)).toEqual([]);
+  });
+
+  it('refuses a reuse whose found Session expires before the reconcile, with no other Session open', async () => {
+    const stripe = createFake();
+    await createCheckout(stripe, monthly);
+    // The found Session is still live when the reuse checks it, and past its
+    // 24-hour expiry when the reconcile reads the clock.
+    const nowValues = [fixedNowMs, fixedNowMs + 25 * HOUR_MS];
+    const nowMs = () => nowValues.shift() ?? fixedNowMs + 25 * HOUR_MS;
+
+    await expect(createCheckout(stripe, monthly, nowMs)).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe Checkout Session is expired or inactive',
+    });
+
+    expect(stripe.expireCalls).toEqual([]);
+    expect(stripe.createCalls).toHaveLength(1);
   });
 
   it('reuses the only open Session after one more open-Session listing and no expire', async () => {

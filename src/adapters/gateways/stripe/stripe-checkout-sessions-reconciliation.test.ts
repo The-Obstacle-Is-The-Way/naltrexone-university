@@ -172,6 +172,22 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
     expect(stripe.expireCalls).toEqual([]);
   });
 
+  it('refuses when the created Session expires before reconciliation and no other Session is open', async () => {
+    const logger = new FakeLogger();
+    const stripe = createFake();
+    // The clock passes the Session's 24-hour expiry between the adapter's
+    // own check and the reconcile: nothing live is left to hand back.
+    const nowValues = [fixedNowMs, fixedNowMs + 25 * HOUR_MS];
+    const nowMs = () => nowValues.shift() ?? fixedNowMs + 25 * HOUR_MS;
+
+    await expect(createCheckout(stripe, logger, nowMs)).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe Checkout Session is expired or inactive',
+    });
+
+    expect(stripe.expireCalls).toEqual([]);
+  });
+
   it('ignores inactive listed sessions when choosing the canonical checkout session', async () => {
     const logger = new FakeLogger();
     const stripe = createFake();

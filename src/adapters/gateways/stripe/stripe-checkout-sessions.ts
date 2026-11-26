@@ -734,7 +734,14 @@ async function reconcileOpenCheckoutSessions({
       : [heldSession, ...listedActiveCandidates],
   );
   const canonicalSession = getCanonicalOpenCheckoutSession(candidates);
-  if (!canonicalSession) return heldSession;
+  if (!canonicalSession) {
+    // The held Session expired by the clock during this request and no other
+    // is open, so there is no live page to hand back. The buyer starts again.
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe Checkout Session is expired or inactive',
+    );
+  }
 
   const supersededSessions = withoutDuplicateCheckoutSessions([
     ...candidates.filter((session) => session.id !== canonicalSession.id),
