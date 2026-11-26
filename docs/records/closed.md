@@ -315,6 +315,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-326 · Error Pages Send Learners and Payers to the Public GitHub Issue Tracker · Resolved · 2026-10-06 · docs/_archive/bugs/bug-326-error-pages-send-people-to-public-issue-tracker.md
 - BUG-327 · Dependabot Branches Are Built on Vercel With Preview Secrets · Resolved · 2026-10-21 · docs/records/bug-327-dependabot-branches-build-with-preview-secrets.md · #1592 · a8cb95d0fffba34f1977103933d666cff768456e
 - BUG-328 · Public Playwright Reports Still Carry Clerk Development-Instance Tokens · Resolved · 2026-10-06 · docs/_archive/bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md
+- BUG-329 · Long Clone Names Change the Local Test Target in Child Commands · Resolved · 2026-11-25 · docs/records/bug-329-local-test-target-changes-in-child-commands.md · #1747 · 1f8a20d0a55961b99d6985d63f8650634432b5dd
 - BUG-330 · Signed-In E2E Fails En Masse When the Stored Clerk Session Cannot Be Restored After Its Token Expires · Resolved · 2026-10-10 · docs/_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md
 - BUG-331 · Server Breadcrumbs and Request Spans Carry Credentials the Scrubbers Miss · Resolved · 2026-10-23 · docs/records/bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
 - BUG-332 · A New User's Concurrent First Requests Can Deadlock Provisioning · Resolved · 2026-10-23 · docs/records/bug-332-concurrent-first-requests-can-deadlock-provisioning.md · #1599 · 65ce09a1d40166a562037dcc0762ca1e6ca79cd1
@@ -361,6 +362,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-376 · The E2E Browser Reports Some Completed Responses as Aborted · Resolved · 2026-11-13 · docs/records/bug-376-e2e-browser-reports-completed-responses-as-aborted.md · #1680 · 48c1ffb38d795c77888c975cf62ead82f666d7ae
 - BUG-378 · The CSP Reports the Site's Own Scripts and Uses Up Sentry's Error Quota · Resolved · 2026-11-24 · docs/records/bug-378-csp-reports-the-sites-own-scripts-and-uses-up-the-error-quota.md · #1740 · a18491c35ac7552284a5f2b298f9dd8591af20d1
 - BUG-379 · Native CSP Reports Bypass Checkout URL Redaction · Resolved · 2026-11-15 · docs/records/bug-379-native-csp-reports-bypass-checkout-url-redaction.md · #1700 · f376b524e6107c177d6510708f5ff6da8e5a0ec4
+- BUG-381 · Advisory-Watch Unit Tests Call GitHub's API Through `gh` · Resolved · 2026-11-25 · docs/records/bug-381-advisory-watch-unit-tests-call-githubs-api.md · #1747 · 1f8a20d0a55961b99d6985d63f8650634432b5dd
 - BUG-382 · Preview Checkout Cannot Persist Renewal Consent on the Draft 0033 Schema · Resolved · 2026-11-21 · docs/records/bug-382-preview-renewal-consent-schema-drift.md · #1720 · a413e3e02a458de20b1270db88de95ae8f21151b
 
 ## Debt
