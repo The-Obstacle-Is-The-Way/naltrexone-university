@@ -1,6 +1,6 @@
 # BUG-380: The Hosted Checkout Smoke Cannot See Stripe's Iframed Form
 
-**Status:** Open — find the hosted Checkout controls in any frame with `page.frameLocator()`, and open an owner-assigned issue on a failed scheduled run; due 2026-11-22
+**Status:** Open — find the hosted Checkout controls in any frame with `page.frameLocator()`, and open an owner-assigned issue on a failed scheduled run; due 2026-12-02
 **Priority:** P3
 **Date:** 2026-11-15
 
@@ -52,4 +52,7 @@ Then dispatch a hosted run on the fix branch.
 - BUG-340: Stripe renamed Checkout's save-information box on 2026-10-12.
 - DEBT-414: F03b and F04 are the journeys this lane observes.
 - BUG-377: assigned issues for scheduled jobs.
+- BUG-343: its TEST-mode re-run completes hosted Checkout pages through these helpers, so it waits for this fix.
 - BUG-373: the add-card button twice failed locally (2026-11-01 and 11-02) to open its dialog, its traces lost. If the fixed lane fails at "Add a card to keep access", keep the trace and file a bug.
+
+Corrected 2026-11-26: the 2026-11-22 date lapsed while BUG-343's and BUG-321's fixes went first. This fix is the next code pull request, now due 2026-12-02.

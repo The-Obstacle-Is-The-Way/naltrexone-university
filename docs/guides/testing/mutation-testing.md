@@ -88,6 +88,8 @@ Chosen 2026-08-13 for consequence-per-minute: small, fast, unit-tested, mostly p
 
 The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). The third wave, triaged on 2026-09-30, covers every production file under `src/domain/**` through a glob, which excludes tests, barrels and test helpers, so a new domain module joins with its first run. Type-only modules produce no mutants. Wave 4a, triaged the same day, covers `src/application/shared/**` by the same kind of glob. Next come `src/application/use-cases/**`, subject to the §2 exclusions, in more than one wave. Wave 4b, triaged on 2026-10-01, added six small use cases by name. Wave 4c, triaged the same day, added 21 more and moved the folder to a glob. The use cases not yet triaged are excluded by name until their wave, so a new use case joins with its first run. Wave 4d, triaged the same day, added six more. Wave 4e added three. Wave 4f, `finalize-exam-answers.ts`, completed the folder. The glob now excludes no file by name, only the tests, barrels and test helpers that §2 never mutates.
 
+The Stripe gateway, `src/adapters/gateways/stripe/**`, is not in scope yet, although the unit lane pins most of it: DEBT-540 holds its 2026-11-25 baseline and the plan to add it by waves.
+
 ## 5. Triage — what each survivor means
 
 Work the HTML report per file; classify every survivor and `NoCoverage` mutant:

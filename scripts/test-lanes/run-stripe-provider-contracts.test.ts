@@ -78,7 +78,7 @@ describe('createStripeProviderContractInvocation', () => {
     expect(invocation.env.STRIPE_CHECKOUT_CONTRACT_PRICE_ID).toBe(
       'price_contract_only',
     );
-    expect(STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES).toHaveLength(12);
+    expect(STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES).toHaveLength(14);
   });
 
   it('targets only the provider contracts through a database-free config', () => {
@@ -175,7 +175,7 @@ describe('runStripeProviderContracts execution proof', () => {
 
     await expect(
       runStripeProviderContracts({ env: validEnvironment(), runVitest }),
-    ).resolves.toEqual({ executed: 14, passed: 14, skipped: 0 });
+    ).resolves.toEqual({ executed: 16, passed: 16, skipped: 0 });
     expect(runVitest).toHaveBeenCalledOnce();
   });
 

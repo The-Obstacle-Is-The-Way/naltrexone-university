@@ -60,7 +60,7 @@ If the database is unreachable, the test setup fails fast with a clear error mes
 
 ### Live Stripe Provider Contracts (TEST Mode)
 
-The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its fourteen live Stripe cases are reported as skipped. To request all fourteen cases explicitly, use the dedicated fail-closed entry point:
+The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its sixteen live Stripe cases are reported as skipped. To request all sixteen cases explicitly, use the dedicated fail-closed entry point:
 
 ```bash
 pnpm test:stripe-provider
@@ -71,10 +71,10 @@ The runner loads `.env.local` with `override: false`, so an explicitly exported 
 The success receipt is:
 
 ```text
-[stripe-provider] PASS executed=14 passed=14 skipped=0
+[stripe-provider] PASS executed=16 passed=16 skipped=0
 ```
 
-The 2026-10-14 run produced that exact receipt (04:59:25Z–05:00:44Z), after the twelfth Checkout contract scenario, Session expiry (BUG-343), raised the requirement to fourteen cases. The 2026-09-25 PaymentMethod and Subscription-default run produced the eleven-case receipt (10:21:44Z–10:23:03Z), after the eighth and ninth Checkout contract scenarios raised the requirement from nine cases. The customer Search runs earlier that day produced the nine-case receipt (07:56:32Z–07:57:33Z, 07:57:51Z–07:59:01Z, and 08:38:19Z–08:39:17Z after the shared-bound review correction), after the seventh scenario raised it from eight. The Subscription-cancel run earlier that day produced the eight-case receipt (00:13:39Z–00:14:19Z), the 2026-09-24 run the seven-case receipt at 16:53:58Z, and the 2026-08-26 activation run the six-case one. Any `PROVIDER_KEY_INVALID` or `PROVIDER_PRICE_INVALID` result is a configuration failure; do not treat it as an expected skip and do not use a live-mode key.
+The 2026-11-26 run produced that exact receipt (03:42:13Z–03:43:31Z), after the fourteenth Checkout contract scenario, the checkout adapter's retry that leaves one of two open Sessions (BUG-343 option 9), raised the requirement to sixteen cases. The 2026-11-25 run produced the fifteen-case receipt (23:51:56Z–23:53:21Z), after the thirteenth scenario, the checkout-refusal adapter's read of blocking Subscriptions (BUG-321), raised it from fourteen. The 2026-10-14 run produced the fourteen-case receipt (04:59:25Z–05:00:44Z), after the twelfth scenario, Session expiry (BUG-343), raised it from thirteen. The 2026-09-25 PaymentMethod and Subscription-default run produced the eleven-case receipt (10:21:44Z–10:23:03Z), after the eighth and ninth Checkout contract scenarios raised the requirement from nine cases. The customer Search runs earlier that day produced the nine-case receipt (07:56:32Z–07:57:33Z, 07:57:51Z–07:59:01Z, and 08:38:19Z–08:39:17Z after the shared-bound review correction), after the seventh scenario raised it from eight. The Subscription-cancel run earlier that day produced the eight-case receipt (00:13:39Z–00:14:19Z), the 2026-09-24 run the seven-case receipt at 16:53:58Z, and the 2026-08-26 activation run the six-case one. Any `PROVIDER_KEY_INVALID` or `PROVIDER_PRICE_INVALID` result is a configuration failure; do not treat it as an expected skip and do not use a live-mode key.
 
 ### One-Liner (Full Setup)
 

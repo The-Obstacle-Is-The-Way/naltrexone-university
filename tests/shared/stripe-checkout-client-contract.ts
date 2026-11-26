@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { createStripeCheckoutSession } from '@/src/adapters/gateways/stripe/stripe-checkout-sessions';
+import { listStripeBlockingCustomerSubscriptions } from '@/src/adapters/gateways/stripe/stripe-customer-subscriptions';
 import { portalConfigurationParams } from '@/src/adapters/gateways/stripe/stripe-portal-configurations';
 import type {
   CheckoutSessionCreateParams,
@@ -8,6 +10,11 @@ import type {
   StripeClient,
   StripeCustomerSearchResult,
 } from '@/src/adapters/shared/stripe-types';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from './stripe-checkout-client-contract-cases';
 
 type ContractSuite = (name: string, factory: () => void) => void;
@@ -22,8 +29,14 @@ type PaymentOrSubscriptionParams = Extract<
   { customer: string }
 >;
 
-type SubscriptionParams = Omit<PaymentOrSubscriptionParams, 'mode'> & {
+// Every contract Session and Subscription is for one price, so a case reads
+// it without a guard.
+type SubscriptionParams = Omit<
+  PaymentOrSubscriptionParams,
+  'mode' | 'line_items'
+> & {
   mode: 'subscription';
+  line_items: [PaymentOrSubscriptionParams['line_items'][number]];
 };
 
 type StripeSubscriptionsClient = NonNullable<StripeClient['subscriptions']>;
@@ -36,6 +49,18 @@ type StripePaymentMethodsClient = NonNullable<StripeClient['paymentMethods']>;
 // minute. The real half shares one 60-second visibility bound across the
 // case's reads, so this budget covers that wait plus the requests.
 const CUSTOMER_SEARCH_CASE_TIMEOUT_MS = 120_000;
+
+// The blocking-Subscriptions case maps the harness price to the monthly plan;
+// no Subscription it seeds carries this one.
+const UNUSED_ANNUAL_PRICE_ID = 'price_contract_unused_annual';
+// Stripe's shortest billing interval is a day, and its longest here a leap
+// year.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const LONGEST_BILLING_PERIOD_MS = 366 * DAY_MS;
+// The app's trial length; the reuse case starts trial checkouts, since a paid
+// checkout for the same plan replays its first Session instead of adding one.
+const TRIAL_PERIOD_DAYS = 7;
+const OPEN_SESSION_LISTING_LIMIT = 10;
 
 // The port marks list, cancel, update and detach optional; both halves
 // implement them, so the contract requires them instead of guarding at run
@@ -693,6 +718,137 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       expect(readErrorField(missing, 'message')).toBe(
         `No such checkout session: '${missingId}'`,
       );
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[12],
+    // BUG-321: when Stripe refuses a checkout as already subscribed, the app
+    // records what Stripe holds through this adapter: one listing, the
+    // blocking filter, a fresh retrieve of each blocking Subscription, the
+    // normalizer's schema and the customer check. The fifth scenario proves
+    // the listing and the retrieve apart; this one runs the adapter's own
+    // code over them, so a field its schema requires and Stripe does not
+    // send, or the fake does not model, fails here.
+    async run(harness) {
+      const seeded = await harness.seedSubscription();
+      await harness.seedCanceledSubscription();
+      const monthlyPriceId = harness.subscriptionParams.line_items[0].price;
+
+      const observations = await listStripeBlockingCustomerSubscriptions({
+        stripe: { subscriptions: harness.subscriptions },
+        externalCustomerId: seeded.customer,
+        priceIds: { monthly: monthlyPriceId, annual: UNUSED_ANNUAL_PRICE_ID },
+        logger: new FakeLogger(),
+      });
+
+      // The adapter lists with `status: 'all'`, which returns the canceled
+      // Subscription too (the fifth scenario); its blocking filter leaves
+      // that one out.
+      expect(observations).toHaveLength(1);
+      const [observation] = observations;
+      // Compared without printing the ids in a failure message.
+      expect(observation?.externalSubscriptionId === seeded.id).toBe(true);
+      expect(observation?.externalCustomerId === seeded.customer).toBe(true);
+      expect(observation?.userId).toBe('debt472_contract_user');
+      expect(observation?.plan).toBe('monthly');
+      expect(observation?.status).toBe('active');
+      expect(observation?.cancelAtPeriodEnd).toBe(false);
+      // Stripe stamps a new Subscription's start and billing anchor itself,
+      // so the case requires their order, not their equality. The period's
+      // length pins the scale of both ends: seconds read as milliseconds
+      // would make it under an hour, and one end alone, decades.
+      const startedAtMs = observation?.startedAt.getTime() ?? Number.NaN;
+      const periodEndMs = observation?.currentPeriodEnd.getTime() ?? Number.NaN;
+      const anchorMs = observation?.billingCycleAnchor.getTime() ?? Number.NaN;
+      expect(periodEndMs - startedAtMs).toBeGreaterThanOrEqual(DAY_MS);
+      expect(periodEndMs - startedAtMs).toBeLessThanOrEqual(
+        LONGEST_BILLING_PERIOD_MS,
+      );
+      expect(anchorMs).toBeGreaterThanOrEqual(startedAtMs);
+      expect(anchorMs).toBeLessThan(periodEndMs);
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[13],
+    // BUG-343 option 9: a checkout that fails after creating its Session
+    // leaves that Session open beside an earlier one, and the retry must hand
+    // back one of them and expire the other. This runs the production adapter
+    // over the client under test: its open-Session listings, the renewal
+    // metadata it reads from listed Sessions, its expire and its
+    // subscription listings. Stripe cannot be made to refuse a read or an
+    // expire on demand, so the case fails those calls itself for the one
+    // request that must fail; every other call reaches the client.
+    async run(harness) {
+      const { customer } = harness.subscriptionParams;
+      let failReadsAndExpires = false;
+      const sessions: StripeClient['checkout']['sessions'] = {
+        ...harness.sessions,
+        retrieve: async (sessionId, params) => {
+          if (failReadsAndExpires) throw new Error('Contract-injected fault');
+          return harness.sessions.retrieve(sessionId, params);
+        },
+        expire: async (sessionId, params, options) => {
+          if (failReadsAndExpires) throw new Error('Contract-injected fault');
+          return harness.sessions.expire(sessionId, params, options);
+        },
+      };
+      const input = {
+        userId: randomUUID(),
+        externalCustomerId: customer,
+        ...createTestRenewalTerms('monthly', true),
+        trialPeriodDays: TRIAL_PERIOD_DAYS,
+        successUrl: harness.subscriptionParams.success_url,
+        cancelUrl: harness.subscriptionParams.cancel_url,
+      };
+      const startTrialCheckout = () =>
+        createStripeCheckoutSession({
+          stripe: {
+            checkout: { sessions },
+            subscriptions: harness.subscriptions,
+          },
+          input,
+          priceIds: {
+            monthly: harness.subscriptionParams.line_items[0].price,
+            annual: UNUSED_ANNUAL_PRICE_ID,
+          },
+          logger: new FakeLogger(),
+          operationalAlerts: new FakeOperationalAlerts(),
+        });
+      const listOpenSessions = async () => {
+        const listed = await harness.sessions.list({
+          customer,
+          status: 'open',
+          limit: OPEN_SESSION_LISTING_LIMIT,
+        });
+        return listed.data;
+      };
+
+      await startTrialCheckout();
+      // The second Session must be the newer by Stripe's whole-second clock.
+      await harness.advanceCreationTime();
+
+      // The second request can neither read nor expire the first Session. It
+      // creates its own under a recovery key, then fails to expire the first.
+      failReadsAndExpires = true;
+      let refused: unknown;
+      try {
+        await startTrialCheckout();
+      } catch (error) {
+        refused = error;
+      }
+      failReadsAndExpires = false;
+      expect(readErrorField(refused, 'code')).toBe('STRIPE_ERROR');
+      const leftOpen = await listOpenSessions();
+      expect(leftOpen).toHaveLength(2);
+
+      const retried = await startTrialCheckout();
+
+      // The retry hands back the newer Session, which the listing puts first,
+      // and expires the earlier one. Compared without printing ids or URLs.
+      const stillOpen = await listOpenSessions();
+      expect(stillOpen).toHaveLength(1);
+      expect(stillOpen[0]?.id === leftOpen[0]?.id).toBe(true);
+      expect(stillOpen[0]?.url === retried.url).toBe(true);
     },
   },
 ];
