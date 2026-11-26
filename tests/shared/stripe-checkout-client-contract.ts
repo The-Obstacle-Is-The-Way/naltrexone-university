@@ -24,8 +24,14 @@ type PaymentOrSubscriptionParams = Extract<
   { customer: string }
 >;
 
-type SubscriptionParams = Omit<PaymentOrSubscriptionParams, 'mode'> & {
+// Every contract Session and Subscription is for one price, so a case reads
+// it without a guard.
+type SubscriptionParams = Omit<
+  PaymentOrSubscriptionParams,
+  'mode' | 'line_items'
+> & {
   mode: 'subscription';
+  line_items: [PaymentOrSubscriptionParams['line_items'][number]];
 };
 
 type StripeSubscriptionsClient = NonNullable<StripeClient['subscriptions']>;
@@ -717,10 +723,7 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
     async run(harness) {
       const seeded = await harness.seedSubscription();
       await harness.seedCanceledSubscription();
-      const monthlyPriceId = harness.subscriptionParams.line_items[0]?.price;
-      if (!monthlyPriceId) {
-        throw new Error('Contract harness omitted its Subscription price');
-      }
+      const monthlyPriceId = harness.subscriptionParams.line_items[0].price;
 
       const observations = await listStripeBlockingCustomerSubscriptions({
         stripe: { subscriptions: harness.subscriptions },
