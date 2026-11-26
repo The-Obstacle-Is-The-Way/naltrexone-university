@@ -1,6 +1,6 @@
 # BUG-321: Stripe's "Already Subscribed" Answer Is Discarded for Signed-In Users
 
-**Status:** Verifying — the scheduled Stripe provider contracts run on `main` logs `executed=16 passed=16 skipped=0`; due 2026-11-30
+**Status:** Verifying — the scheduled Stripe provider contracts run on `main` logs `executed=16 passed=16 skipped=0`; due 2026-11-29
 **Priority:** P2
 **Date:** 2026-10-05
 
