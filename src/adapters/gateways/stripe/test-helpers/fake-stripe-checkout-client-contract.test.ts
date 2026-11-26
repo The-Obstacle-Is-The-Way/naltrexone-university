@@ -5,7 +5,11 @@ import { FakeStripeCheckoutClient } from './fake-stripe-checkout-client';
 const SUBSCRIPTION_PERIOD_SECONDS = 30 * 24 * 60 * 60;
 
 runStripeCheckoutClientContract('FakeStripeCheckoutClient', async () => {
-  let nowMs = Date.UTC(2026, 7, 23, 12, 0, 0);
+  // The fake stamps Sessions by this clock. The contract's last scenario runs
+  // the checkout adapter with its own clock, the wall clock, which decides
+  // whether a Session has expired, so the two start together. No case asserts
+  // an absolute time.
+  let nowMs = Date.now();
   let subscriptionSequence = 0;
   let paymentMethodSequence = 0;
   const stripe = new FakeStripeCheckoutClient(() => nowMs);

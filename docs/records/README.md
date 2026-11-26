@@ -14,7 +14,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 
 |ID|Title|Priority|Status|
 |----|-------|----------|--------|
-|[BUG-321](./bug-321-already-subscribed-answer-discarded.md)|Stripe's "already subscribed" answer is discarded for signed-in users|P2|Verifying — the scheduled Stripe provider contracts run on `main` logs `executed=15 passed=15 skipped=0`; due 2026-11-30|
+|[BUG-321](./bug-321-already-subscribed-answer-discarded.md)|Stripe's "already subscribed" answer is discarded for signed-in users|P2|Verifying — the scheduled Stripe provider contracts run on `main` logs `executed=16 passed=16 skipped=0`; due 2026-11-30|
 |[BUG-337](./bug-337-session-first-question-can-fail-to-fetch.md)|A session's first question can fail to load with "Failed to fetch"|P3|Open — E2E's `__client_uat` keeper is a mitigation; close after 178 consecutive clean required CI E2E runs (58 by 2026-11-15); due 2026-12-01|
 |[BUG-343](./bug-343-a-second-checkout-can-leave-a-hidden-second-subscription.md)|A second checkout can leave a hidden second subscription|P2|Verifying — an agent re-runs the TEST-mode reproduction on released code, once BUG-380's fix lets the helpers complete Stripe's page; due 2026-12-09|
 |[BUG-360](./bug-360-deploy-target-e2e-can-reset-production.md)|Deploy-target E2E can reset production|P3|Open — refuse every non-local E2E and integration target, the app server's included, and delete the remote mode (option 1)|

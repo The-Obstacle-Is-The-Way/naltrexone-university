@@ -30,6 +30,7 @@ describe('Stripe Checkout client contract registration', () => {
       'retrieves a Customer by id with its metadata, answers a deleted one as deleted without metadata, and refuses an unknown id as resource_missing',
       'expires an open Session, replays a same-key repeat, and refuses a fresh expire of an expired Session or of an unknown id',
       "reads a customer's blocking Subscriptions, normalized, through the checkout-refusal adapter and leaves out a canceled one",
+      'leaves one open Session, the newer, when the checkout adapter retries a request that could not expire the earlier one',
     ]);
   });
 
@@ -55,6 +56,7 @@ describe('Stripe Checkout client contract registration', () => {
       undefined,
       undefined,
       120_000,
+      undefined,
       undefined,
       undefined,
       undefined,

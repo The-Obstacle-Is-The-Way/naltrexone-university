@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { createStripeCheckoutSession } from '@/src/adapters/gateways/stripe/stripe-checkout-sessions';
 import { listStripeBlockingCustomerSubscriptions } from '@/src/adapters/gateways/stripe/stripe-customer-subscriptions';
 import { portalConfigurationParams } from '@/src/adapters/gateways/stripe/stripe-portal-configurations';
 import type {
@@ -9,7 +10,11 @@ import type {
   StripeClient,
   StripeCustomerSearchResult,
 } from '@/src/adapters/shared/stripe-types';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from './stripe-checkout-client-contract-cases';
 
 type ContractSuite = (name: string, factory: () => void) => void;
@@ -52,6 +57,10 @@ const UNUSED_ANNUAL_PRICE_ID = 'price_contract_unused_annual';
 // year.
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LONGEST_BILLING_PERIOD_MS = 366 * DAY_MS;
+// The app's trial length; the reuse case starts trial checkouts, since a paid
+// checkout for the same plan replays its first Session instead of adding one.
+const TRIAL_PERIOD_DAYS = 7;
+const OPEN_SESSION_LISTING_LIMIT = 10;
 
 // The port marks list, cancel, update and detach optional; both halves
 // implement them, so the contract requires them instead of guarding at run
@@ -757,6 +766,89 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       );
       expect(anchorMs).toBeGreaterThanOrEqual(startedAtMs);
       expect(anchorMs).toBeLessThan(periodEndMs);
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[13],
+    // BUG-343 option 9: a checkout that fails after creating its Session
+    // leaves that Session open beside an earlier one, and the retry must hand
+    // back one of them and expire the other. This runs the production adapter
+    // over the client under test: its open-Session listings, the renewal
+    // metadata it reads from listed Sessions, its expire and its
+    // subscription listings. Stripe cannot be made to refuse a read or an
+    // expire on demand, so the case fails those calls itself for the one
+    // request that must fail; every other call reaches the client.
+    async run(harness) {
+      const { customer } = harness.subscriptionParams;
+      let failReadsAndExpires = false;
+      const sessions: StripeClient['checkout']['sessions'] = {
+        ...harness.sessions,
+        retrieve: async (sessionId, params) => {
+          if (failReadsAndExpires) throw new Error('Contract-injected fault');
+          return harness.sessions.retrieve(sessionId, params);
+        },
+        expire: async (sessionId, params, options) => {
+          if (failReadsAndExpires) throw new Error('Contract-injected fault');
+          return harness.sessions.expire(sessionId, params, options);
+        },
+      };
+      const input = {
+        userId: randomUUID(),
+        externalCustomerId: customer,
+        ...createTestRenewalTerms('monthly', true),
+        trialPeriodDays: TRIAL_PERIOD_DAYS,
+        successUrl: harness.subscriptionParams.success_url,
+        cancelUrl: harness.subscriptionParams.cancel_url,
+      };
+      const startTrialCheckout = () =>
+        createStripeCheckoutSession({
+          stripe: {
+            checkout: { sessions },
+            subscriptions: harness.subscriptions,
+          },
+          input,
+          priceIds: {
+            monthly: harness.subscriptionParams.line_items[0].price,
+            annual: UNUSED_ANNUAL_PRICE_ID,
+          },
+          logger: new FakeLogger(),
+          operationalAlerts: new FakeOperationalAlerts(),
+        });
+      const listOpenSessions = async () => {
+        const listed = await harness.sessions.list({
+          customer,
+          status: 'open',
+          limit: OPEN_SESSION_LISTING_LIMIT,
+        });
+        return listed.data;
+      };
+
+      await startTrialCheckout();
+      // The second Session must be the newer by Stripe's whole-second clock.
+      await harness.advanceCreationTime();
+
+      // The second request can neither read nor expire the first Session. It
+      // creates its own under a recovery key, then fails to expire the first.
+      failReadsAndExpires = true;
+      let refused: unknown;
+      try {
+        await startTrialCheckout();
+      } catch (error) {
+        refused = error;
+      }
+      failReadsAndExpires = false;
+      expect(readErrorField(refused, 'code')).toBe('STRIPE_ERROR');
+      const leftOpen = await listOpenSessions();
+      expect(leftOpen).toHaveLength(2);
+
+      const retried = await startTrialCheckout();
+
+      // The retry hands back the newer Session, which the listing puts first,
+      // and expires the earlier one. Compared without printing ids or URLs.
+      const stillOpen = await listOpenSessions();
+      expect(stillOpen).toHaveLength(1);
+      expect(stillOpen[0]?.id === leftOpen[0]?.id).toBe(true);
+      expect(stillOpen[0]?.url === retried.url).toBe(true);
     },
   },
 ];

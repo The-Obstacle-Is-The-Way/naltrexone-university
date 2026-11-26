@@ -8,7 +8,7 @@ import {
   isValidStripeSubscriptionStatus,
   type StripeCheckoutSession,
   type StripeCheckoutSessionList,
-  type StripeClient,
+  type StripeCheckoutSessionsClient,
   type StripeListedSubscription,
   type StripeSubscriptionStatus,
 } from '@/src/adapters/shared/stripe-types';
@@ -145,7 +145,7 @@ async function findUniqueNewestMatchingCheckoutSession({
   logger,
   budget,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -258,7 +258,7 @@ export async function createStripeTrialPaymentMethodSetupSession({
   budget,
   stateSecret,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: TrialPaymentMethodSetupSessionInput;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -439,7 +439,7 @@ async function expireCheckoutSession({
   logger,
   budget,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   sessionId: string;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -641,7 +641,7 @@ async function expireSupersededCheckoutSession({
   logger,
   budget,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   sessionId: string;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -686,7 +686,7 @@ async function reconcileOpenCheckoutSessions({
   nowMs,
   ignoredSessionIds,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   heldSession: StripeCheckoutSession;
   logger: Logger;
@@ -780,7 +780,7 @@ async function retrieveLiveCheckoutSessionAfterCreate({
   budget,
   policy,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   session: StripeCheckoutSession;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -852,7 +852,7 @@ async function listBlockingSubscriptions({
   logger,
   budget,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -892,7 +892,7 @@ async function refuseIfSubscriptionAppeared({
   budget,
   operationalAlerts,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   session: StripeCheckoutSession;
   logger: Logger;
@@ -999,7 +999,7 @@ async function handBackNewestOpenCheckoutSession({
   nowMs,
   ignoredSessionIds,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   session: StripeCheckoutSession;
   logger: Logger;
@@ -1058,7 +1058,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
   budget,
   operationalAlerts,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: {
     externalCustomerId: string;
     keepSessionId: string;
@@ -1085,9 +1085,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
         'Too many open checkout sessions to sweep',
       );
     }
-    let listed: Awaited<
-      ReturnType<StripeClient['checkout']['sessions']['list']>
-    >;
+    let listed: StripeCheckoutSessionList;
     try {
       listed = await callStripeWithRetry({
         operation: 'checkout.sessions.list',
@@ -1194,7 +1192,7 @@ export async function createStripeCheckoutSession({
   operationalAlerts,
   nowMs = Date.now,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   priceIds: StripePriceIds;
   logger: Logger;
