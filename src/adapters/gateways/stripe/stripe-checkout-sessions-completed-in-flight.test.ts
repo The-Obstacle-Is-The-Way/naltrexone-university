@@ -336,7 +336,8 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
       const [created] = await openSessionIds(stripe);
       if (!created) throw new Error('Expected the created Session');
       completeCheckout(stripe, created, 'active');
-      // Stripe sends the Subscription as an object when a read expands it.
+      // The settling read asks for no expansion, so Stripe sends an id. This
+      // pins the branch for an expanded object, which the port's type allows.
       stripe.setRetrieveOverride((session) =>
         typeof session.subscription === 'string'
           ? { ...session, subscription: { id: session.subscription } }
@@ -351,8 +352,8 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
     expect(operationalAlerts.raised).toEqual([]);
   });
 
-  // A Session that ends by expiring holds no subscription, so the one that
-  // appeared is the customer's only one: nothing to alert on.
+  // A Session that ends by expiring created no subscription, so it adds no
+  // duplicate to alert on.
   it.each([
     ['was still open', (_stripe: FakeStripeCheckoutClient): void => undefined],
     [
@@ -371,8 +372,10 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
             new Error(`No such checkout session: '${sessionId}'`),
             {
               type: 'StripeInvalidRequestError',
+              rawType: 'invalid_request_error',
               code: 'resource_missing',
               statusCode: 404,
+              param: 'session',
             },
           );
         });

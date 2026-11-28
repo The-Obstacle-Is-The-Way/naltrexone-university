@@ -30,6 +30,16 @@ describe('FakeStripeCheckoutClient saved expire failures', () => {
     await expect(
       stripe.checkout.sessions.expire(created.id, undefined, keyed),
     ).rejects.toBe(serverError);
+    // A second server error under the key does not replace the first answer.
+    stripe.setExpireFault(() => {
+      throw Object.assign(new Error('Service unavailable'), {
+        type: 'StripeAPIError',
+        statusCode: 503,
+      });
+    });
+    await expect(
+      stripe.checkout.sessions.expire(created.id, undefined, keyed),
+    ).rejects.toThrow('Service unavailable');
     stripe.setExpireFault(null);
 
     await expect(
