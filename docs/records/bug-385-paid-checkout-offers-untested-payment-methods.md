@@ -16,7 +16,7 @@ The app's tests, the hosted smoke and the billing QA procedure pay only by card.
 
 ## Evidence
 
-- **Checkout.** `createStripeCheckoutSession` builds a `mode: 'subscription'` Session with no `allowed_payment_method_types` and no `payment_method_configuration` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1441-1457`). Only the setup-mode add-card Session sets `allowed_payment_method_types: ['card']` (`:282-290`). The port type allows the field only for setup mode (`src/adapters/shared/stripe-types.ts:41-62`).
+- **Checkout.** `createStripeCheckoutSession` builds a `mode: 'subscription'` Session with no `allowed_payment_method_types` and no `payment_method_configuration` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1441-1457`). Only the setup-mode add-card Session sets `allowed_payment_method_types: ['card']` (`:282-290`). The port type allows the field only for setup mode (`src/adapters/shared/stripe-types.ts:41-62`). A unit test pins the paid Session to dynamic methods, as BUG-310 decided (`stripe-checkout-sessions.test.ts:113-124`).
 - **The portal.**
   - The paid portal profile enables `payment_method_update` and names no configuration (`src/adapters/gateways/stripe/stripe-portal-configurations.ts:34`).
   - Without one, Stripe uses the default payment-method configuration.
@@ -65,13 +65,20 @@ The app's tests, the hosted smoke and the billing QA procedure pay only by card.
 
 Options 1 and 2 together, decided 2026-11-28 at the owner's delegation. It is the call DEBT-501 item 7 made for Link: offer what is tested, and revisit a method once sales show demand for it.
 
+It overturns a recorded choice. BUG-310 kept paid Checkout on dynamic methods for three reasons:
+- its copy and consent say "payment method";
+- subscription mode offers only methods that support recurring billing;
+- access waits on the subscription's status, so a method that settles later never grants access early.
+
+All three still hold, but none covers what this record found. No test exercises those methods' renewals, refunds or disputes, and Klarna is a credit product. BUG-310 limited the trial's add-card flow to cards partly because renewal on those methods was untested. The paid copy needs no change, since a card is a payment method.
+
 - **First, the Dashboard (option 2).**
   - The owner, or an agent at the owner's explicit yes, turns off Cash App Pay, Amazon Pay and Klarna in live mode's default payment-method configuration, and in the invoice default configuration if it is separate.
   - A fresh read of the Review preview for a $29 subscription then shows only Card.
   - It stays off permanently for the hosted invoice pages.
 - **Then the code (option 1), red first.**
-  - A unit test asserts `allowed_payment_method_types: ['card']` on the paid and trial-start Session parameters.
-  - Another asserts that the paid portal profile names the card-only configuration, with `PORTAL_CONFIGURATION_VERSION` bumped.
+  - A unit test asserts `allowed_payment_method_types: ['card']` on the paid and trial-start Session parameters, replacing the test that pins dynamic methods.
+  - Another asserts that the paid portal profile names the card-only configuration, with `PORTAL_CONFIGURATION_VERSION` bumped. A payment-method configuration carries no metadata, so the adapter finds its own by name, and uses it only after checking that only cards are on.
   - Widen the port type in `src/adapters/shared/stripe-types.ts`.
   - Carry the field through `FakeStripeCheckoutClient` and its contract scenario.
   - Update the register row in `docs/guides/testing/fake-contracts.md`.
@@ -88,7 +95,7 @@ Options 1 and 2 together, decided 2026-11-28 at the owner's delegation. It is th
 
 ## Related
 
-- BUG-310: the add-card Session's card-only restriction.
+- BUG-310: the add-card Session's card-only restriction, and the choice, overturned here, to keep paid Checkout on dynamic methods.
 - BUG-384: the hosted payment-method page kept for failed payments.
 - DEBT-501 item 7: Link turned off in live mode.
 - DEBT-414: the renewal-law review, for any method kept later.
