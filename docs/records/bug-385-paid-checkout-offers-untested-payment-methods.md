@@ -55,7 +55,7 @@ The app's tests, the hosted smoke and the billing QA procedure pay only by card.
 1. **Cards only, in the app's code, for everything the app opens.**
    - Set `allowed_payment_method_types: ['card']` on the subscription Sessions, as the add-card Session does. Card wallets such as Apple Pay and Google Pay stay, per Stripe's wallet docs. The `link` type is filtered out.
    - Have the paid portal profile name a card-only payment-method configuration that the adapter creates and versions, as it does its portal configurations.
-   - An allow-list in code can only narrow what the Dashboard enables, so a Dashboard toggle cannot widen it.
+   - A method outside the allow-list never appears, even if someone turns it on later in the Dashboard (Stripe's integration-options page). Stripe's pages differ on whether the Dashboard also bounds the list: the API reference calls it a filter on the eligible set, and a support article calls it an opt-out from Dashboard-managed methods. The add-card Session keeps cards enabled in the Dashboard either way (BUG-310).
    - Hosted invoice pages stay outside the app's reach, so the Dashboard restriction in option 2 stays for them, permanently.
 2. **Turn the three methods off in the live Dashboard.** It is quick and needs no release. But it is the owner's setting, a later toggle undoes it silently, and nothing tests it.
 3. **Exclude the three by name** (`excluded_payment_method_types`). A method enabled later would still appear.
@@ -82,6 +82,7 @@ Options 1 and 2 together, decided 2026-11-28 at the owner's delegation. It is th
 ## Verification
 
 - [ ] The Dashboard change: the live Review preview of a $29 subscription shows only Card.
+- [ ] The invoice default payment-method configuration, read in the live Dashboard, has only cards and card wallets enabled, so hosted invoice pages offer nothing else. If it is the same configuration as Checkout's, the record says so. If it still has another method enabled, that method is turned off before this box is ticked.
 - [ ] The code merged with its red-first tests, the provider contract asserts card-only, and the billing QA's paid checkout and portal steps passed on the dev preview.
 - [ ] The code holds on its own. Read the Review preview of a subscription Session that the fixed code created, by its Session ID, in test mode, where the methods stay enabled. It shows only cards, allowing for Link's save box, which test mode still pre-ticks.
 
