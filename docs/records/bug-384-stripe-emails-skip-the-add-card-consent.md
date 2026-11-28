@@ -1,6 +1,6 @@
 # BUG-384: Stripe's Customer Emails Let a Trial Gain a Card Without the App's Consent
 
-**Status:** Verifying — the owner starts a live trial from an address they read: the app's acknowledgment arrives and Stripe's trial reminder does not; due 2026-12-01
+**Status:** Resolved — every check recorded 2026-11-28
 **Priority:** P2
 **Date:** 2026-11-24
 
@@ -101,7 +101,12 @@ Corrected 2026-11-25: option 1 also turned the login link off, which turns off C
   - Stripe documents its shared payment-update links as working only while a subscription is active, past due or trialing ([Subscription invoices](https://docs.stripe.com/billing/invoices/subscription)), and gives no expiry for the links in its emails.
   - So a trial whose reminder went out before about 17:47Z on 2026-11-25 could still add a card through it until that trial ends.
   - The live Dashboard, read at about 19:18Z, lists no trialing subscription. So no such trial exists, and nothing waits for 2026-12-02.
-- [ ] The owner starts a live trial from an address they read. It gets the app's acknowledgment and no Stripe trial reminder, and the owner then cancels it.
+- [x] The owner starts a live trial from an address they read. It gets the app's acknowledgment and no Stripe trial reminder, and the owner then cancels it (2026-11-28).
+  - The owner started a live Pro Monthly trial with no card, accepting the terms at 02:30:51Z.
+  - The app's acknowledgment, "Your Addiction Boards subscription terms", arrived at 02:30:54Z. It states the plan, "$29.00 USD every month", the trial end and cancellation deadline (2026-12-05 02:30Z, also given in EST and PST), the Billing page link and the support address.
+  - No email from Stripe reached that inbox, its spam or its trash, read at 02:31:40Z, 02:41:51Z and 02:48:21Z, 18 minutes after the start. The 2026-11-24 reminder had come about a minute after its trial began.
+  - The live Dashboard read the subscription as Trialing, Pro Monthly, at about 02:32Z.
+  - The owner then canceled it through Billing's "Manage billing", in the portal's trial profile, at about 02:47Z. Billing reads "Cancellation scheduled … December 5, 2026 at 2:30 AM UTC", and the Dashboard reads it as canceling at the trial's end, so it ends with no charge.
 - [x] ADR-027 decision 2's note reads that the app's acknowledgment is the trial notice.
 - [x] No live trial gained a payment method outside the add-card flow (live Dashboard, 2026-11-25).
   - Live mode holds 9 subscriptions. Two are the owner's from 2026-11-24 (DEBT-501 item 7).
