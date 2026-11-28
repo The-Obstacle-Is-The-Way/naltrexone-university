@@ -10,7 +10,7 @@
 
 The app's subscription Checkout Session names no payment methods. So Stripe offers every method that the account's default payment-method configuration enables and that suits a subscription. In live mode that is Cash App Pay, Amazon Pay and Klarna as well as cards.
 
-The paid customer portal profile and Stripe's hosted invoice pages also follow a Dashboard configuration. So a paying customer can add some of those methods later.
+The paid customer portal profile and Stripe's hosted invoice pages also follow a Dashboard configuration. So a paying customer can add those methods later.
 
 The app's tests, the hosted smoke and the billing QA procedure pay only by card. Three methods, one of them a buy-now-pay-later product, have never been exercised through Checkout, the webhook, the success sync, renewals or refunds. The trial's add-card Session already offers only cards (BUG-310).
 
@@ -20,11 +20,11 @@ The app's tests, the hosted smoke and the billing QA procedure pay only by card.
 - **The portal.**
   - The paid portal profile enables `payment_method_update` and names no configuration (`src/adapters/gateways/stripe/stripe-portal-configurations.ts:34`).
   - Without one, Stripe uses the default payment-method configuration.
-  - Cash App Pay and Amazon Pay support the customer portal; Klarna does not.
+  - Stripe lists all three as portal payment methods.
 - **Hosted invoice pages.**
   - These are the pages Stripe's failed-payment emails link to, which BUG-384 kept.
   - They take their methods from the invoice default payment-method configuration in the Dashboard.
-  - `subscription_data` cannot carry `payment_settings`, so a Checkout-created subscription cannot narrow them.
+  - `subscription_data` cannot carry `payment_settings`, so Checkout cannot narrow them.
 - **What a live buyer sees.**
   - Stripe's Dashboard preview (Settings → Payment methods → Review, by Checkout Session ID) was read on 2026-11-28 at about 04:20Z, with that morning's settings.
   - The Session was the owner's live $29.00 purchase of 2026-11-24, which went through Link before DEBT-501 item 7 turned Link off.
@@ -33,7 +33,7 @@ The app's tests, the hosted smoke and the billing QA procedure pay only by card.
   - A partial read of its methods list, the same morning, showed Cards, Apple Pay, Amazon Pay and Cash App Pay enabled, and Google Pay and Link disabled.
   - Klarna's own row was not read. Its place in the preview shows it enabled and eligible.
 - **What has been tested.**
-  - The hosted smoke fills a card (`tests/e2e/helpers/stripe-hosted-checkout.ts:54-87`).
+  - The hosted smoke fills a card (`tests/e2e/helpers/stripe-hosted-checkout.ts:54-104`).
   - The billing QA procedure pays with test card 4242 (`docs/guides/qa/billing-and-entitlement.md`, step 12).
   - No test, contract or QA step pays through Cash App Pay, Amazon Pay or Klarna.
 - **The trial-start Session.** It collects a payment method only if required (`payment_method_collection: 'if_required'`), so a trial sees none of these today.
@@ -41,7 +41,7 @@ The app's tests, the hosted smoke and the billing QA procedure pay only by card.
 
 ## Impact
 
-- **Untested paths.** All three redirect the buyer to the provider's own page. Stripe documents immediate confirmation for each, but no test shows that the success sync, entitlement, renewals, failed-payment emails, portal updates and refunds behave for them as they do for cards.
+- **Untested paths.** Stripe documents immediate confirmation for all three, but no test shows that the success sync, entitlement, renewals, failed-payment emails, portal updates and refunds behave for them as they do for cards.
 - **Refunds and disputes differ.**
   - A Cash App Pay refund is asynchronous and can take up to 10 business days.
   - A Klarna refund cancels the buyer's remaining installments.
@@ -53,10 +53,10 @@ The app's tests, the hosted smoke and the billing QA procedure pay only by card.
 ## Options
 
 1. **Cards only, in the app's code, for everything the app opens.**
-   - Set `allowed_payment_method_types: ['card']` on the subscription Sessions, as the add-card Session does. Card wallets such as Apple Pay and Google Pay stay, per Stripe's wallet docs. The `link` type is filtered out.
+   - Set `allowed_payment_method_types: ['card']` on the subscription Sessions, as the add-card Session does. Card wallets stay, per Stripe's wallet docs.
    - Have the paid portal profile name a card-only payment-method configuration that the adapter creates and versions, as it does its portal configurations.
    - A method outside the allow-list never appears, even if someone turns it on later in the Dashboard (Stripe's integration-options page). Stripe's pages differ on whether the Dashboard also bounds the list: the API reference calls it a filter on the eligible set, and a support article calls it an opt-out from Dashboard-managed methods. The add-card Session keeps cards enabled in the Dashboard either way (BUG-310).
-   - Hosted invoice pages stay outside the app's reach, so the Dashboard restriction in option 2 stays for them, permanently.
+   - Checkout cannot narrow hosted invoice pages, so the Dashboard restriction in option 2 stays for them.
 2. **Turn the three methods off in the live Dashboard.** It is quick and needs no release. But it is the owner's setting, a later toggle undoes it silently, and nothing tests it.
 3. **Exclude the three by name** (`excluded_payment_method_types`). A method enabled later would still appear.
 4. **Keep them, and test each.** It needs a hosted journey and a QA step per method, counsel's view on Klarna, refund notes and support notes. That cost buys nothing until buyers show they want them.
