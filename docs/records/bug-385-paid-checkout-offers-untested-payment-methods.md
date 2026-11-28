@@ -16,7 +16,7 @@ The app's tests, the hosted smoke and the billing QA procedure pay only by card.
 
 ## Evidence
 
-- **Checkout.** `createStripeCheckoutSession` builds a `mode: 'subscription'` Session with no `allowed_payment_method_types` and no `payment_method_configuration` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1435-1450`). Only the setup-mode add-card Session sets `allowed_payment_method_types: ['card']` (`:280-288`). The port type allows the field only for setup mode (`src/adapters/shared/stripe-types.ts:41-62`).
+- **Checkout.** `createStripeCheckoutSession` builds a `mode: 'subscription'` Session with no `allowed_payment_method_types` and no `payment_method_configuration` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:1441-1457`). Only the setup-mode add-card Session sets `allowed_payment_method_types: ['card']` (`:282-290`). The port type allows the field only for setup mode (`src/adapters/shared/stripe-types.ts:41-62`).
 - **The portal.**
   - The paid portal profile enables `payment_method_update` and names no configuration (`src/adapters/gateways/stripe/stripe-portal-configurations.ts:34`).
   - Without one, Stripe uses the default payment-method configuration.
@@ -76,7 +76,7 @@ Options 1 and 2 together, decided 2026-11-28 at the owner's delegation. It is th
   - Carry the field through `FakeStripeCheckoutClient` and its contract scenario.
   - Update the register row in `docs/guides/testing/fake-contracts.md`.
 - **Provider proof.** The provider contract, which already retrieves the app's Session (`tests/e2e/helpers/checkout-success-provider-contract.ts`), asserts `payment_method_types` is `['card']`, as `tests/e2e/helpers/checkout-consent.ts` does for the add-card Session. Apple Pay rests on Stripe's docs, since a test browser cannot show it.
-- **Open Sessions.** The reuse match compares price, variant and consent metadata only (`stripe-checkout-sessions.ts:1288-1306`), so an open Session from before the change is handed back for up to 24 hours. Release the code at least 24 hours after the Dashboard change, or compare the Session's payment-method types in the reuse match and expire a mismatch, red first.
+- **Open Sessions.** The reuse match compares price, variant and consent metadata only (`stripe-checkout-sessions.ts:1294-1306`), so an open Session from before the change is handed back for up to 24 hours. Release the code at least 24 hours after the Dashboard change, or compare the Session's payment-method types in the reuse match and expire a mismatch, red first.
 - **Release.** The billing QA procedure's paid checkout (step 12) and portal steps run on the dev preview before promotion. `stripe.md`'s Checkout Rules say that every app-opened Session and the paid portal offer only cards, and why.
 
 ## Verification
