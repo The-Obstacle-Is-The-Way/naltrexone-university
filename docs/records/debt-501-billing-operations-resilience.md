@@ -1,6 +1,6 @@
 # DEBT-501: Billing Operations Can Leave Payers Without Access as the Service Grows or Changes
 
-**Status:** Blocked — the owner refunds item 7's 2026-11-24 purchase and decides on Link; due 2026-12-01
+**Status:** Resolved — every check recorded 2026-11-28; items 1, 2 and 3 move to Waiting
 **Priority:** P2
 **Date:** 2026-10-05
 
@@ -8,11 +8,11 @@
 
 ## Summary
 
-The owner-requested adversarial hunt of the payment flows (2026-10-05) found no defect that charges an ordinary Checkout buyer without granting access. It did find gaps in billing operations. Each can leave a payer without access, or charge someone twice, when the service grows, an operator changes something, or timing is unlucky. Each item names its trigger. No live purchase has been recorded working end to end.
+The owner-requested adversarial hunt of the payment flows (2026-10-05) found no defect that charges an ordinary Checkout buyer without granting access. It did find gaps in billing operations. Each can leave a payer without access, or charge someone twice, when the service grows, an operator changes something, or timing is unlucky. Each item names its trigger. One live purchase, the owner's on 2026-11-24, is recorded working end to end (item 7).
 
 ## Items
 
-Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped with BUG-364. **Before the first live sale** (decided 2026-10-08 and 2026-10-30): item 9, live since 2026-11-25, then item 7. Items 1, 2 and 3 wait for their triggers and become Waiting rows when this record closes. Item 4's expiry bound is declined and item 8 is Won't Fix.
+Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped with BUG-364. **Before the first live sale** (decided 2026-10-08 and 2026-10-30): item 9, live since 2026-11-25, and item 7, done 2026-11-28. Items 1, 2 and 3 wait for their triggers and become Waiting rows when this record closes. Item 4's expiry bound is declined and item 8 is Won't Fix.
 
 **Shared billing contract (adopted 2026-10-17, DEBT-524).** The first implementation of item 2, or of BUG-343's option 4a if the Waiting row BUG-343 leaves at closing revives it, defines it before extracting code: fact authority, the observation-version fence, deletion lock order, and each caller's consent and cancellation permissions. ADR-014's read-only refused-checkout sync and ADR-027's webhook consent evidence stay unless those ADRs are amended. ADR-002's single local row does not prevent two provider subscriptions.
 - Share observation and persistence policy only where those changes need it; keep SDK normalization and retries in adapters, and preserve each caller's side effects.
@@ -59,18 +59,23 @@ Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped wit
 - **The gap left.** The add-card Session still uses Stripe's 24-hour default (`createStripeTrialPaymentMethodSetupSession`, `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:254-300`, no `expires_at`). A completion processed after Stripe canceled the trial but before the cancellation webhook updates the stored row passes the check, attaches the card (controller `:364-377`), and then fails to set it as the subscription's default (`:387-398`, through `src/adapters/gateways/stripe-payment-gateway.ts:232-249`), since Stripe allows only metadata and cancellation details to change on a canceled subscription. The delivery fails until the cancellation webhook is processed; then the check ends it as `subscription_inactive`. No provider test covers this path.
 - **Declined** by the reviewing session, 2026-11-15, at the owner's delegation: the expiry bound (the earlier of trial end and 24 hours). Its outcome holds once the setup's completion is processed: that path detaches the card, and nothing is charged, since the trial is no longer entitled. Until then the card stays attached to a trial that will not charge it.
 
-### 7. Live Stripe settings and the live purchase (P3, owner)
+### 7. Live Stripe settings and the live purchase (P3, owner) — done 2026-11-28
 
 - **Done.** The live webhook endpoint's events were recorded and fixed on 2026-10-11; since 2026-11-13 the only enabled live endpoint is the Endive one, subscribed to all 13 handled events (`docs/architecture/integrations/stripe.md`). The live default payment-method configuration had card available and on (census, 2026-10-13). Live price IDs stay out of the repository by design (`docs/architecture/environments.md`).
-- **Remaining, before the first live sale:**
-  - The owner makes one live purchase, refunds it, and records that it worked end to end and charged the amount the consent text stated. The billing QA procedure is test-mode only (`docs/guides/qa/billing-and-entitlement.md:6`), so this is the owner's own check; DEBT-465 runs that procedure in test mode first.
-    *2026-11-24, purchase done; refund remaining (owner, due 2026-12-01):*
-    - **The purchase.** The owner's production account, whose one trial was already used, paid Pro Monthly on live Checkout at about 20:17Z. Checkout showed "$29.00 per month". The app returned "You're all set — your subscription is active", and Billing read "Pro Monthly · Active".
-    - **The emails.** Stripe's receipt shows $29.00 paid for Nov 24 to Dec 24, a "Manage your subscription … if you would like to update or cancel" link, the support email and a support phone number. The phone is the one in Stripe's public details, which DEBT-414 found in August was the owner's personal number; its replacement is still the owner's to make. The app's acknowledgment at 20:18:45Z states "$29 per month, charged today and renewing automatically every month until canceled", the consent text. So the charge matched the stated amount.
-    - **The cancellation.** The owner then scheduled the cancellation in the live portal, and Billing reads "Cancellation scheduled … December 24, 2026", so the subscription does not renew.
-    - **Left for the owner.** Refund the $29.00 payment in the Dashboard.
-  - **Link on Checkout.** Stripe pre-ticks "Save my information with Link for faster checkout" in both flows; seen in TEST mode, expected live. A Link-funded card reports brand `link`; the app reads no card details, so nothing breaks. The owner decides, on the live Checkout page, whether to keep Link or turn it off in the Dashboard. If Link stays, the add-card consent says "card" while Link can fund renewals from a bank account, which goes to counsel with DEBT-414's questions, and a hosted journey that pays through Link is added. The hosted smoke always unticks it (`tests/e2e/helpers/stripe-hosted-checkout.ts:108-112`).
-    *2026-11-24:* the owner's live purchase paid by card, not Link: the portal lists a card as the payment method. The decision to keep Link or turn it off is still the owner's (due 2026-12-01).
+- **The live purchase.** The owner makes one live purchase, refunds it, and records that it worked end to end and charged the amount the consent text stated. The billing QA procedure is test-mode only (`docs/guides/qa/billing-and-entitlement.md:6`), so this is the owner's own check; DEBT-465 runs that procedure in test mode first. Done:
+  - **The purchase, 2026-11-24.** The owner's production account, whose one trial was already used, paid Pro Monthly on live Checkout at about 20:17Z. Checkout showed "$29.00 per month". The app returned "You're all set — your subscription is active", and Billing read "Pro Monthly · Active".
+  - **The emails.** Stripe's receipt shows $29.00 paid for Nov 24 to Dec 24, a "Manage your subscription … if you would like to update or cancel" link, the support email and a support phone number. The phone is the one in Stripe's public details, which DEBT-414 found in August was the owner's personal number; its replacement is still the owner's to make. The app's acknowledgment at 20:18:45Z states "$29 per month, charged today and renewing automatically every month until canceled", the consent text. So the charge matched the stated amount.
+  - **The cancellation.** The owner then scheduled the cancellation in the live portal, and Billing reads "Cancellation scheduled … December 24, 2026", so the subscription does not renew.
+  - **The refund, 2026-11-28.** The owner refunded the $29.00 in full in the Dashboard at 02:22:50Z, giving "Requested by customer" as the reason, and the payment reads Refunded. Stripe kept its $1.14 processing fee, as its refund dialog states. The app handles no refund event, so the owner's access runs to the scheduled December 24 cancellation.
+- **Link on Checkout, turned off 2026-11-28.**
+  - Stripe pre-ticks "Save my information with Link for faster checkout" in both flows (seen in TEST mode). A Link-funded card reports brand `link`; the app reads no card details, so nothing breaks. The hosted smoke always unticks it (`tests/e2e/helpers/stripe-hosted-checkout.ts:108-112`).
+  - The owner's own live purchase went through Link: the Dashboard's payment page lists the payment method as Link, saved for future off-session payments. So a buyer can use Link without noticing it.
+  - **Decided at the owner's delegation, with the owner's explicit yes: off.**
+    - The add-card consent says "card", and Stripe's own Link panel says Link includes Instant Bank Payments from a US bank account.
+    - Keeping it would need counsel's answer (DEBT-414 Q1) and a hosted journey that pays through Link.
+    - Turning it off is reversible. Revisit it after the first sales, if conversion suggests Link is worth those two steps.
+  - **Done.** An agent turned Link off in live mode's default payment-method configuration at about 02:24Z. Stripe's notice listed Link in the Card Element, the Payment Request Button and the Hosted Invoice Page as turned off, along with Link itself. A fresh load at about 02:25Z reads Link Disabled, with Cards and Apple Pay Enabled. Test mode is unchanged.
+  - The owner's subscription keeps its Link payment method, but it cancels on December 24, so nothing more is charged.
 
 ### 8. The checkout guard reads only the customer's first 10 subscriptions (P3) — Won't Fix
 
@@ -93,7 +98,9 @@ Items 5 and 6 are done (2026-10-09), and item 4's completion recheck shipped wit
 
 ## Verification
 
-Before closing: item 9 built with red-first tests; item 7's live purchase and Link decision recorded; items 1, 2 and 3 as Waiting rows with their triggers.
+- [x] Item 9 built with red-first tests, and live since 2026-11-25.
+- [x] Item 7's live purchase, its refund and the Link decision recorded (2026-11-28).
+- [x] Items 1, 2 and 3 become Waiting rows with their triggers when this record closes. Item 4's expiry bound is declined and item 8 is Won't Fix, each by its decision maker.
 
 Corrected 2026-11-15: items 5 and 6, item 4's completion recheck (BUG-364) and item 7's endpoint census are done, so their build history is in git at 34d9aea0. Line references drifted and are corrected. Item 7's live purchase is the owner's own check, not the test-mode QA procedure's, and live price IDs stay out of the repository. Item 2 moved to Waiting (owner); its premise is corrected, since the former live trials' rows already exist. Item 3 moves to Waiting; item 4's expiry bound is declined, with the path it leaves stated; item 8 is Won't Fix; item 9 keeps option 2 and is re-dated (all by the reviewing session). Item 1's decided design and the shared contract's scope limits are restored.
 
@@ -109,3 +116,5 @@ Corrected 2026-11-18: item 9's watch checks every unreported unfinished run inst
 Corrected 2026-11-21: item 2's steps 1, 4 and 5 accept only our product's flat-fee monthly or annual Price: `usage_type` by the owner on 2026-11-20, the product check by the owner on 2026-11-21, and `billing_scheme`, the two intervals, `transform_quantity` and a single item with quantity 1 under the owner's flat-fee choice, from #1716's reviews.
 
 Corrected 2026-11-22: step 4 names what refusing a change or cancellation of a stored subscription leaves, for its design to settle: its notices must not state the stored terms, and a cancellation is recorded while the terms are still refused and alerted (#1716 review).
+
+Corrected 2026-11-28: the 2026-11-24 note said the owner's purchase was paid by card, not Link, because the portal listed a card as the payment method. The Dashboard's payment page lists Link: the portal showed the card behind it.
