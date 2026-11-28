@@ -103,6 +103,9 @@ All three still hold, but none covers what this record found. No test exercises 
 - [ ] The invoice default payment-method configuration, read in the live Dashboard, has only cards and card wallets enabled, so hosted invoice pages offer nothing else. If it is the same configuration as Checkout's, the record says so. If it still has another method enabled, that method is turned off before this box is ticked.
 - [ ] The code merged with its red-first tests, and the provider contract asserts card-only. On the dev preview, the billing QA's two payment-method steps that the fix adds showed only cards and card wallets, and its paid checkout and portal steps passed.
 - [ ] The code holds on its own. Read the Review preview of a subscription Session that the fixed code created, by its Session ID, in test mode, where the methods stay enabled. It shows only cards, allowing for Link's save box, which test mode still pre-ticks.
+- [ ] Production. The fix is promoted, and two live reads are recorded:
+  - the Review preview of a subscription Session the released code created shows only cards;
+  - after the first paid portal session in live mode, the live Dashboard lists the app's card-only payment-method configuration, with only cards and card wallets on.
 
 ## Related
 
