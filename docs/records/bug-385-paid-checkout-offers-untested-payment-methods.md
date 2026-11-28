@@ -83,7 +83,11 @@ All three still hold, but none covers what this record found. No test exercises 
   - Carry the field through `FakeStripeCheckoutClient` and its contract scenario.
   - Update the register row in `docs/guides/testing/fake-contracts.md`.
 - **Provider proof.** The provider contract, which already retrieves the app's Session (`tests/e2e/helpers/checkout-success-provider-contract.ts`), asserts `payment_method_types` is `['card']`, as `tests/e2e/helpers/checkout-consent.ts` does for the add-card Session. Apple Pay rests on Stripe's docs, since a test browser cannot show it.
-- **Open Sessions.** The reuse match compares price, variant and consent metadata only (`stripe-checkout-sessions.ts:1294-1306`), so an open Session from before the change is handed back for up to 24 hours. Release the code at least 24 hours after the Dashboard change, or compare the Session's payment-method types in the reuse match and expire a mismatch, red first.
+- **Open Sessions.**
+  - The reuse match compares price, variant and consent metadata only (`stripe-checkout-sessions.ts:1294-1306`), so an open Session from before the change is handed back for up to 24 hours.
+  - Timing the release cannot close this. The old code can open a Session just before the release, however long after the Dashboard change.
+  - So every path that reuses or hands back a Session requires its `payment_method_types` to read exactly `['card']`, and expires and replaces one that does not. This is red first.
+  - What stays open: a pre-fix Session that reads only cards, because the Dashboard was already card-only when it was opened, can still be reused for those 24 hours. Its methods follow the Dashboard, which this record keeps card-only. Turning a method back on in the Dashboard within 24 hours of the release is the one case the check may not catch.
 - **Release.**
   - The fix adds two steps to the billing QA procedure (`docs/guides/qa/billing-and-entitlement.md`). Both run in test mode, where the other methods stay enabled, and expect only cards and card wallets:
     - one reads the methods the paid Checkout page offers;
