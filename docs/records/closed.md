@@ -364,6 +364,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-379 · Native CSP Reports Bypass Checkout URL Redaction · Resolved · 2026-11-15 · docs/records/bug-379-native-csp-reports-bypass-checkout-url-redaction.md · #1700 · f376b524e6107c177d6510708f5ff6da8e5a0ec4
 - BUG-381 · Advisory-Watch Unit Tests Call GitHub's API Through `gh` · Resolved · 2026-11-25 · docs/records/bug-381-advisory-watch-unit-tests-call-githubs-api.md · #1747 · 1f8a20d0a55961b99d6985d63f8650634432b5dd
 - BUG-382 · Preview Checkout Cannot Persist Renewal Consent on the Draft 0033 Schema · Resolved · 2026-11-21 · docs/records/bug-382-preview-renewal-consent-schema-drift.md · #1720 · a413e3e02a458de20b1270db88de95ae8f21151b
+- BUG-384 · Stripe's Customer Emails Let a Trial Gain a Card Without the App's Consent · Resolved · 2026-11-28 · docs/records/bug-384-stripe-emails-skip-the-add-card-consent.md · #1755 · e231de8f4497354af173edb3fa778e4f3401c42e
 
 ## Debt
 
@@ -866,6 +867,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-498 · Reviews Grade Items Whose Content Is in Doubt · Resolved · 2026-10-07 · docs/_archive/debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md
 - DEBT-499 · Nothing Pins What We Send to Sentry, and a Green Major Would Change It · Resolved · 2026-10-05 · docs/_archive/debt/debt-499-sentry-major-widens-data-collection.md
 - DEBT-500 · Vitest 5 Needs a Coordinated Migration · Resolved · 2026-10-14 · docs/records/debt-500-vitest-5-coordinated-migration.md · #1515 · 83dee3ee4cbcde06ee57e2947cbad7a4ac6c6da7
+- DEBT-501 · Billing Operations Can Leave Payers Without Access as the Service Grows or Changes · Resolved · 2026-11-28 · docs/records/debt-501-billing-operations-resilience.md · #1755 · ecf1a31eeb500ab09ebd954428a82f3f3b5f8539
 - DEBT-504 · Request Correlation Duplicates the Hosting Platform · Superseded · 2026-11-15 · docs/records/debt-504-duplicate-request-correlation.md · #1704 · f677db6cbf73b2b7d5897e55105d4096b111c979
 - DEBT-505 · Failures That Are Only Logged Alert Nobody · Resolved · 2026-11-23 · docs/records/debt-505-logged-only-failures-alert-nobody.md · #1734 · f035299e93dfd9c50a2ccf969db0e20abcbf5730
 - DEBT-506 · Dependabot Alerts of 2026-10-06 — Six Fixed, Two Without Published Fixes · Resolved · 2026-10-09 · docs/_archive/debt/debt-506-dependabot-alert-triage-2026-10.md
