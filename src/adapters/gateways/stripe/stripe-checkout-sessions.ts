@@ -8,7 +8,7 @@ import {
   isValidStripeSubscriptionStatus,
   type StripeCheckoutSession,
   type StripeCheckoutSessionList,
-  type StripeClient,
+  type StripeCheckoutSessionsClient,
   type StripeListedSubscription,
   type StripeSubscriptionStatus,
 } from '@/src/adapters/shared/stripe-types';
@@ -32,7 +32,9 @@ export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
 // pricing route's 30 s maxDuration. BUG-343's subscription re-check adds one
 // listing to it: a 2026-10-14 test-mode probe measured 104.9 ms median (6
 // samples), 3×104.9 + 300 = 614.7 ms at third-attempt success, so 20.904 s.
-// This is a planning bound, not a timeout.
+// This is a planning bound, not a timeout. It counts neither the exit's
+// reconcile listing nor its expires (BUG-343 option 9); no probe has timed
+// them.
 export const CHECKOUT_SESSION_TAIL_SCAN_PAGE_SIZE = 25;
 export const CHECKOUT_SESSION_TAIL_SCAN_PAGE_LIMIT = 4;
 // WHY 10: after the bounded tail scan, this caps fallback/race recovery creates;
@@ -145,7 +147,7 @@ async function findUniqueNewestMatchingCheckoutSession({
   logger,
   budget,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -258,7 +260,7 @@ export async function createStripeTrialPaymentMethodSetupSession({
   budget,
   stateSecret,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: TrialPaymentMethodSetupSessionInput;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -439,7 +441,7 @@ async function expireCheckoutSession({
   logger,
   budget,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   sessionId: string;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -447,10 +449,14 @@ async function expireCheckoutSession({
   try {
     await callStripeWithRetry({
       operation: 'checkout.sessions.expire',
-      fn: () =>
-        stripe.checkout.sessions.expire(sessionId, undefined, {
-          idempotencyKey: `expire_checkout_session:${sessionId}`,
-        }),
+      // No key of the adapter's own. Stripe replays the answer it saved
+      // under a key, server errors included, so a key fixed per Session would
+      // repeat one failed expire on every later request for as long as Stripe
+      // keeps it. The SDK keys each call afresh and shares that key only with
+      // the call's own transport retry. An expire is safe to repeat: Stripe
+      // refuses a Session that is no longer open, and the read below settles
+      // what it became.
+      fn: () => stripe.checkout.sessions.expire(sessionId),
       logger,
       budget,
     });
@@ -641,7 +647,7 @@ async function expireSupersededCheckoutSession({
   logger,
   budget,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   sessionId: string;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -664,29 +670,31 @@ async function expireSupersededCheckoutSession({
 }
 
 // Two tabs can each create a Session, for different plans, before either sees
-// the other. After every create, list the customer's open Sessions (up to
-// OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT), keep the newest still-active one that
-// carries renewal metadata, the new Session or a listed one, and expire the
-// other active ones, those without that metadata included. Sessions this
-// request already expired or set aside are skipped. No database lock is held
-// across these Stripe calls, on purpose (BUG-245). Stripe documents its
-// Dashboard setting "limit customers to one subscription" as a redirect, when
-// Checkout loads, for a customer who already holds an active subscription; it
-// describes no check at completion, and in TEST mode on 2026-10-14 a second
-// Session loaded and completed for a customer with an active subscription
-// (BUG-343). This repository neither sets nor checks it.
-async function reconcileOpenCheckoutSessionsAfterCreate({
+// the other, and a request that fails after its create leaves its Session
+// open beside an earlier one (BUG-343). So for the Session a request holds,
+// the one it created or the open one it found, list the customer's open
+// Sessions (up to OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT), keep the newest
+// still-active one that carries renewal metadata, the held Session or a listed
+// one, and expire the other active ones, those without that metadata included.
+// Sessions this request already expired or set aside are skipped. No database
+// lock is held across these Stripe calls, on purpose (BUG-245). Stripe
+// documents its Dashboard setting "limit customers to one subscription" as a
+// redirect, when Checkout loads, for a customer who already holds an active
+// subscription; it describes no check at completion, and in TEST mode on
+// 2026-10-14 a second Session loaded and completed for a customer with an
+// active subscription (BUG-343). This repository neither sets nor checks it.
+async function reconcileOpenCheckoutSessions({
   stripe,
   input,
-  createdSession,
+  heldSession,
   logger,
   budget,
   nowMs,
   ignoredSessionIds,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
-  createdSession: StripeCheckoutSession;
+  heldSession: StripeCheckoutSession;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
   nowMs: () => number;
@@ -710,24 +718,36 @@ async function reconcileOpenCheckoutSessionsAfterCreate({
   const listedActiveCandidates = listed.data.filter(
     (session) =>
       !ignoredSessionIds.has(session.id) &&
-      session.id !== createdSession.id &&
+      session.id !== heldSession.id &&
       hasCheckoutRenewalMetadata(session) &&
       !isInactiveAtReconciliation(session),
   );
   const incompatibleListedActiveCandidates = listed.data.filter(
     (session) =>
       !ignoredSessionIds.has(session.id) &&
-      session.id !== createdSession.id &&
+      session.id !== heldSession.id &&
       !hasCheckoutRenewalMetadata(session) &&
       !isInactiveAtReconciliation(session),
   );
+  // The held Session stays a candidate even when this listing omits it: it
+  // may have completed, and then the others must still be expired. If another
+  // request expired it meanwhile, this request expires the Session that one
+  // kept and hands back a link that no longer completes; both buyers start
+  // again, and no two pages stay open (BUG-343).
   const candidates = withoutDuplicateCheckoutSessions(
-    isInactiveAtReconciliation(createdSession)
+    isInactiveAtReconciliation(heldSession)
       ? listedActiveCandidates
-      : [createdSession, ...listedActiveCandidates],
+      : [heldSession, ...listedActiveCandidates],
   );
   const canonicalSession = getCanonicalOpenCheckoutSession(candidates);
-  if (!canonicalSession) return createdSession;
+  if (!canonicalSession) {
+    // The held Session expired by the clock during this request and no other
+    // is open, so there is no live page to hand back. The buyer starts again.
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe Checkout Session is expired or inactive',
+    );
+  }
 
   const supersededSessions = withoutDuplicateCheckoutSessions([
     ...candidates.filter((session) => session.id !== canonicalSession.id),
@@ -773,7 +793,7 @@ async function retrieveLiveCheckoutSessionAfterCreate({
   budget,
   policy,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   session: StripeCheckoutSession;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -845,7 +865,7 @@ async function listBlockingSubscriptions({
   logger,
   budget,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   logger: Logger;
   budget?: StripeCallBudget | undefined;
@@ -885,7 +905,7 @@ async function refuseIfSubscriptionAppeared({
   budget,
   operationalAlerts,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   session: StripeCheckoutSession;
   logger: Logger;
@@ -972,6 +992,63 @@ async function refuseIfSubscriptionAppeared({
   );
 }
 
+// BUG-343 option 9: the one exit for every subscription Checkout Session
+// createStripeCheckoutSession hands back, whether the request created it or
+// found it open. Handing back a found Session without looking for others is
+// how a customer came to hold two completable pages: a request that failed
+// after its create had left its Session open beside an earlier one. So the
+// exit keeps the newest open Session and expires the others, checks the
+// customer's subscriptions again, and returns that Session's URL. A failed
+// listing or expire fails the request. Requests whose listings see the same
+// Sessions keep the same one; were each to keep its own, each would expire
+// the other's.
+async function handBackNewestOpenCheckoutSession({
+  stripe,
+  input,
+  session,
+  logger,
+  budget,
+  operationalAlerts,
+  nowMs,
+  ignoredSessionIds,
+}: {
+  stripe: StripeCheckoutSessionsClient;
+  input: CheckoutSessionInput;
+  session: StripeCheckoutSession;
+  logger: Logger;
+  budget?: StripeCallBudget | undefined;
+  operationalAlerts: Pick<OperationalAlerts, 'raise'>;
+  nowMs: () => number;
+  ignoredSessionIds: ReadonlySet<string>;
+}): Promise<{ url: string }> {
+  const newestSession = await reconcileOpenCheckoutSessions({
+    stripe,
+    input,
+    heldSession: session,
+    logger,
+    budget,
+    nowMs,
+    ignoredSessionIds,
+  });
+  await refuseIfSubscriptionAppeared({
+    stripe,
+    input,
+    session: newestSession,
+    logger,
+    budget,
+    operationalAlerts,
+  });
+
+  if (!newestSession.url) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe Checkout Session URL is missing',
+    );
+  }
+
+  return { url: newestSession.url };
+}
+
 // Stripe returns at most 100 Sessions a page. The sweep reads every page
 // before it expires anything, so the listing's cursor never points at a
 // Session it changed. Ten pages is far past any state this app creates; more
@@ -994,7 +1071,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
   budget,
   operationalAlerts,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: {
     externalCustomerId: string;
     keepSessionId: string;
@@ -1021,9 +1098,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
         'Too many open checkout sessions to sweep',
       );
     }
-    let listed: Awaited<
-      ReturnType<StripeClient['checkout']['sessions']['list']>
-    >;
+    let listed: StripeCheckoutSessionList;
     try {
       listed = await callStripeWithRetry({
         operation: 'checkout.sessions.list',
@@ -1130,7 +1205,7 @@ export async function createStripeCheckoutSession({
   operationalAlerts,
   nowMs = Date.now,
 }: {
-  stripe: StripeClient;
+  stripe: StripeCheckoutSessionsClient;
   input: CheckoutSessionInput;
   priceIds: StripePriceIds;
   logger: Logger;
@@ -1228,15 +1303,16 @@ export async function createStripeCheckoutSession({
         consentEvidenceMatches &&
         (!retrievedSession || !isSessionInactive(retrievedSession, nowMs))
       ) {
-        await refuseIfSubscriptionAppeared({
+        return handBackNewestOpenCheckoutSession({
           stripe,
           input,
           session: existingSession,
           logger,
           budget,
           operationalAlerts,
+          nowMs,
+          ignoredSessionIds: ignoredOpenSessionIdsAfterCreate,
         });
-        return { url: existingUrl };
       }
 
       if (retrievedSession && !isSessionInactive(retrievedSession, nowMs)) {
@@ -1514,31 +1590,14 @@ export async function createStripeCheckoutSession({
     sessionIsInactive = isSessionInactive(session, nowMs);
   }
 
-  const canonicalRecoveredSession =
-    await reconcileOpenCheckoutSessionsAfterCreate({
-      stripe,
-      input,
-      createdSession: session,
-      logger,
-      budget,
-      nowMs,
-      ignoredSessionIds: ignoredOpenSessionIdsAfterCreate,
-    });
-  await refuseIfSubscriptionAppeared({
+  return handBackNewestOpenCheckoutSession({
     stripe,
     input,
-    session: canonicalRecoveredSession,
+    session,
     logger,
     budget,
     operationalAlerts,
+    nowMs,
+    ignoredSessionIds: ignoredOpenSessionIdsAfterCreate,
   });
-
-  if (!canonicalRecoveredSession.url) {
-    throw new ApplicationError(
-      'STRIPE_ERROR',
-      'Stripe Checkout Session URL is missing',
-    );
-  }
-
-  return { url: canonicalRecoveredSession.url };
 }

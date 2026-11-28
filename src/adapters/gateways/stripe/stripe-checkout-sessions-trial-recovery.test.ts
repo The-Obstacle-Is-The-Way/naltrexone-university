@@ -67,10 +67,7 @@ describe('createStripeCheckoutSession trial replacement idempotency', () => {
   }
 
   function expireCall(sessionId: string) {
-    return {
-      sessionId,
-      options: { idempotencyKey: `expire_checkout_session:${sessionId}` },
-    };
+    return { sessionId };
   }
 
   it('uses a trial recovery key when expiring a mismatched trial checkout session', async () => {

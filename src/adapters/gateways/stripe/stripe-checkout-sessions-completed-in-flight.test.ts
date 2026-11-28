@@ -330,6 +330,84 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
     expect(operationalAlerts.raised).toEqual([]);
   });
 
+  it('raises no alert when the completed Session names its only live subscription as an expanded object', async () => {
+    const stripe = createFake();
+    onRecheck(stripe, async () => {
+      const [created] = await openSessionIds(stripe);
+      if (!created) throw new Error('Expected the created Session');
+      completeCheckout(stripe, created, 'active');
+      // The settling read asks for no expansion, so Stripe sends an id. This
+      // pins the branch for an expanded object, which the port's type allows.
+      stripe.setRetrieveOverride((session) =>
+        typeof session.subscription === 'string'
+          ? { ...session, subscription: { id: session.subscription } }
+          : session,
+      );
+    });
+
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(operationalAlerts.raised).toEqual([]);
+  });
+
+  // A Session that ends by expiring created no subscription, so it adds no
+  // duplicate to alert on.
+  it.each([
+    ['was still open', (_stripe: FakeStripeCheckoutClient): void => undefined],
+    [
+      'had already expired',
+      (stripe: FakeStripeCheckoutClient): void => {
+        stripe.setExpireFault((sessionId) => {
+          stripe.markExpired(sessionId);
+        });
+      },
+    ],
+    [
+      'was no longer found',
+      (stripe: FakeStripeCheckoutClient): void => {
+        stripe.setExpireFault((sessionId) => {
+          throw Object.assign(
+            new Error(`No such checkout session: '${sessionId}'`),
+            {
+              type: 'StripeInvalidRequestError',
+              rawType: 'invalid_request_error',
+              code: 'resource_missing',
+              statusCode: 404,
+              param: 'session',
+            },
+          );
+        });
+      },
+    ],
+  ] as const)(
+    'warns and raises no alert when a subscription appeared and the Session it would hand back %s',
+    async (_label, stageExpire) => {
+      const stripe = createFake();
+      onRecheck(stripe, async () => {
+        stripe.seedSubscription({
+          id: 'sub_other',
+          customer,
+          status: 'active',
+        });
+        stageExpire(stripe);
+      });
+
+      await expect(createCheckout(stripe)).rejects.toMatchObject({
+        code: 'ALREADY_SUBSCRIBED',
+      });
+
+      expect(operationalAlerts.raised).toEqual([]);
+      expect(logger.warnCalls).toContainEqual(
+        expect.objectContaining({
+          msg: 'A subscription appeared during checkout; expired the checkout session',
+        }),
+      );
+      expect(logger.errorCalls).toEqual([]);
+    },
+  );
+
   it('still refuses with ALREADY_SUBSCRIBED, and logs an error, when the re-check cannot expire the Session', async () => {
     const stripe = createFake();
     onRecheck(stripe, async () => {

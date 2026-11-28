@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
+import { HTTP_INTERNAL_SERVER_ERROR } from '@/src/adapters/shared/http-status';
 import type {
   CheckoutSessionCreateParams,
   CustomerSearchParams,
@@ -112,6 +113,16 @@ type PaymentMethodDetachCall = {
   options?: StripeRequestOptions | undefined;
 };
 
+// True for an injected fault shaped like a 5xx answer from Stripe.
+function isServerErrorResponse(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  if (!('statusCode' in error)) return false;
+  const { statusCode } = error;
+  return (
+    typeof statusCode === 'number' && statusCode >= HTTP_INTERNAL_SERVER_ERROR
+  );
+}
+
 // Stripe's 400 for a PaymentMethod request its state forbids; the fields and
 // messages are verified against TEST mode by the contract's eighth scenario.
 function invalidPaymentMethodRequest(message: string, param?: string): Error {
@@ -158,8 +169,10 @@ type ExpireCall = {
 
 // An expire fault runs after the call is recorded and before the fake
 // answers. It injects a caller-supplied error by throwing, or changes the
-// Session (completing or expiring it) so the fake's own refusal answers. Like
-// the create fault it models no Stripe fault shape and is not contract-tested.
+// Session (completing or expiring it) so the fake's own refusal answers. It
+// is not contract-tested. One fault shape is modeled: an error whose
+// `statusCode` is 500 or more, thrown for an expire that carries an
+// idempotency key, is saved under that key and replayed (see `expire`).
 type ExpireFault = (
   sessionId: string,
   options?: StripeRequestOptions,
@@ -222,6 +235,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
   private readonly savedExpireResponsesByIdempotencyKey = new Map<
     string,
     StripeCheckoutSession
+  >();
+  private readonly savedExpireFailuresByIdempotencyKey = new Map<
+    string,
+    unknown
   >();
   private readonly savedParamsByIdempotencyKey = new Map<
     string,
@@ -435,10 +452,39 @@ export class FakeStripeCheckoutClient implements StripeClient {
           sessionId,
           ...(options ? { options: { ...options } } : {}),
         });
-        if (this.expireFault) {
-          await this.expireFault(sessionId, options);
-        }
         const idempotencyKey = options?.idempotencyKey;
+        if (this.expireFault) {
+          try {
+            await this.expireFault(sessionId, options);
+          } catch (error) {
+            // Stripe saves the first answer an endpoint gives under an
+            // idempotency key, server errors included, and replays it to
+            // later requests with that key (API reference, "Idempotent
+            // requests"). So a 5xx fault is saved when its key holds no
+            // answer yet. No other fault is saved: one with no status models
+            // a failure Stripe never answered, and whether Stripe saves a
+            // given 4xx is not modeled. TEST mode cannot be made to answer
+            // 500, so this is not in the shared contract.
+            if (
+              idempotencyKey &&
+              isServerErrorResponse(error) &&
+              !this.savedExpireFailuresByIdempotencyKey.has(idempotencyKey) &&
+              !this.savedExpireResponsesByIdempotencyKey.has(idempotencyKey)
+            ) {
+              this.savedExpireFailuresByIdempotencyKey.set(
+                idempotencyKey,
+                error,
+              );
+            }
+            throw error;
+          }
+        }
+        if (
+          idempotencyKey &&
+          this.savedExpireFailuresByIdempotencyKey.has(idempotencyKey)
+        ) {
+          throw this.savedExpireFailuresByIdempotencyKey.get(idempotencyKey);
+        }
         const saved = idempotencyKey
           ? this.savedExpireResponsesByIdempotencyKey.get(idempotencyKey)
           : undefined;

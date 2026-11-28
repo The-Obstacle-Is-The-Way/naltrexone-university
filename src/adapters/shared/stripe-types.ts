@@ -323,3 +323,9 @@ export type StripeClient = {
 
 /** The Subscriptions API alone, for consumers that must not reach customers, Checkout or the portal. */
 export type StripeSubscriptionsClient = Pick<StripeClient, 'subscriptions'>;
+
+/** Checkout Sessions and Subscriptions alone: all the checkout adapter calls. */
+export type StripeCheckoutSessionsClient = Pick<
+  StripeClient,
+  'checkout' | 'subscriptions'
+>;

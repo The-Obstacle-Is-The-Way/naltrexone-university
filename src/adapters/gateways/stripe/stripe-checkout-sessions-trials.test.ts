@@ -82,10 +82,7 @@ describe('createStripeCheckoutSession trial params', () => {
   }
 
   function expireCall(sessionId: string) {
-    return {
-      sessionId,
-      options: { idempotencyKey: `expire_checkout_session:${sessionId}` },
-    };
+    return { sessionId };
   }
 
   it('adds no-card trial params when trialPeriodDays is provided', async () => {

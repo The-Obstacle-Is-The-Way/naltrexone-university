@@ -25,10 +25,7 @@ function sessionUrl(id: string): string {
 }
 
 function expireCall(sessionId: string) {
-  return {
-    sessionId,
-    options: { idempotencyKey: `expire_checkout_session:${sessionId}` },
-  };
+  return { sessionId };
 }
 
 describe('createStripeCheckoutSession', () => {
