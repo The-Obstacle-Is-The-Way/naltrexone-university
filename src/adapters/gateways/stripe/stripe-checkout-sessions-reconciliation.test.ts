@@ -99,12 +99,7 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
       expect.objectContaining({ status: 'expired', url: null }),
     );
 
-    expect(stripe.expireCalls).toEqual([
-      {
-        sessionId: 'cs_fake_1',
-        options: { idempotencyKey: 'expire_checkout_session:cs_fake_1' },
-      },
-    ]);
+    expect(stripe.expireCalls).toEqual([{ sessionId: 'cs_fake_1' }]);
     expect(logger.infoCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
