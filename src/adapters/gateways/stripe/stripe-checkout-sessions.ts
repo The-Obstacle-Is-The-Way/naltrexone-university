@@ -32,7 +32,9 @@ export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
 // pricing route's 30 s maxDuration. BUG-343's subscription re-check adds one
 // listing to it: a 2026-10-14 test-mode probe measured 104.9 ms median (6
 // samples), 3×104.9 + 300 = 614.7 ms at third-attempt success, so 20.904 s.
-// This is a planning bound, not a timeout.
+// This is a planning bound, not a timeout. It counts neither the exit's
+// reconcile listing nor its expires (BUG-343 option 9); no probe has timed
+// them.
 export const CHECKOUT_SESSION_TAIL_SCAN_PAGE_SIZE = 25;
 export const CHECKOUT_SESSION_TAIL_SCAN_PAGE_LIMIT = 4;
 // WHY 10: after the bounded tail scan, this caps fallback/race recovery creates;
@@ -447,10 +449,14 @@ async function expireCheckoutSession({
   try {
     await callStripeWithRetry({
       operation: 'checkout.sessions.expire',
-      fn: () =>
-        stripe.checkout.sessions.expire(sessionId, undefined, {
-          idempotencyKey: `expire_checkout_session:${sessionId}`,
-        }),
+      // No key of the adapter's own. Stripe replays the answer it saved
+      // under a key, server errors included, so a key fixed per Session would
+      // repeat one failed expire on every later request for as long as Stripe
+      // keeps it. The SDK keys each call afresh and shares that key only with
+      // the call's own transport retry. An expire is safe to repeat: Stripe
+      // refuses a Session that is no longer open, and the read below settles
+      // what it became.
+      fn: () => stripe.checkout.sessions.expire(sessionId),
       logger,
       budget,
     });

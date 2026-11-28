@@ -144,7 +144,7 @@ describe('FakeStripeCheckoutClient', () => {
       expand: ['line_items'],
     });
     await stripe.checkout.sessions.expire(created.id, undefined, {
-      idempotencyKey: `expire_checkout_session:${created.id}`,
+      idempotencyKey: `caller_expire_key:${created.id}`,
     });
 
     expect(stripe.retrieveRequests).toEqual([
@@ -153,7 +153,7 @@ describe('FakeStripeCheckoutClient', () => {
     expect(stripe.expireCalls).toEqual([
       {
         sessionId: created.id,
-        options: { idempotencyKey: `expire_checkout_session:${created.id}` },
+        options: { idempotencyKey: `caller_expire_key:${created.id}` },
       },
     ]);
     await expect(
@@ -175,14 +175,14 @@ describe('FakeStripeCheckoutClient', () => {
 
     await expect(
       stripe.checkout.sessions.expire(created.id, undefined, {
-        idempotencyKey: `expire_checkout_session:${created.id}`,
+        idempotencyKey: `caller_expire_key:${created.id}`,
       }),
     ).rejects.toBe(fault);
 
     expect(stripe.expireCalls).toEqual([
       {
         sessionId: created.id,
-        options: { idempotencyKey: `expire_checkout_session:${created.id}` },
+        options: { idempotencyKey: `caller_expire_key:${created.id}` },
       },
     ]);
     await expect(

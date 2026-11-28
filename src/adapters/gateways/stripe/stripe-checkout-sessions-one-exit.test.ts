@@ -5,7 +5,11 @@ import {
   FakeOperationalAlerts,
 } from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
-import { createStripeCheckoutSession } from './stripe-checkout-sessions';
+import { StripeCallBudget } from './stripe-call-budget';
+import {
+  createStripeCheckoutSession,
+  OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT,
+} from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
 const SECOND_MS = 1_000;
@@ -64,6 +68,23 @@ describe('createStripeCheckoutSession hands back one open Session', () => {
     });
   }
 
+  // A buyer's request runs under one caller deadline, which leaves retries to
+  // the transport: each Stripe call is made once.
+  function createInteractiveCheckout(
+    stripe: FakeStripeCheckoutClient,
+    input: CheckoutInput,
+  ): Promise<{ url: string }> {
+    return createStripeCheckoutSession({
+      stripe,
+      input,
+      priceIds,
+      logger,
+      operationalAlerts: new FakeOperationalAlerts(),
+      nowMs: () => fixedNowMs,
+      budget: new StripeCallBudget(),
+    });
+  }
+
   function sessionUrl(id: string): string {
     return `https://checkout.stripe.test/${id}`;
   }
@@ -77,6 +98,15 @@ describe('createStripeCheckoutSession hands back one open Session', () => {
       limit: 100,
     });
     return open.data.map((session) => session.id);
+  }
+
+  // Fails the listing the exit reconciles from, and no other listing.
+  function failTheReconcileListing(stripe: FakeStripeCheckoutClient): void {
+    stripe.setListHook((params) => {
+      if (params.limit === OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT) {
+        throw new Error('reconcile listing failed');
+      }
+    });
   }
 
   function failEveryExpire(stripe: FakeStripeCheckoutClient): void {
@@ -168,6 +198,57 @@ describe('createStripeCheckoutSession hands back one open Session', () => {
     stripe.setExpireFault(null);
 
     await expect(createCheckout(stripe, annual)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
+    });
+
+    expect(await openSessionIds(stripe)).toEqual(['cs_fake_2']);
+  });
+
+  it('refuses to hand back a page it found when the open Sessions cannot be listed', async () => {
+    const stripe = createFake();
+    await createCheckout(stripe, monthly);
+    failTheReconcileListing(stripe);
+
+    await expect(createCheckout(stripe, monthly)).rejects.toThrow();
+
+    expect(stripe.createCalls).toHaveLength(1);
+    expect(stripe.expireCalls).toEqual([]);
+  });
+
+  it('refuses to hand back a page it created when the open Sessions cannot be listed', async () => {
+    const stripe = createFake();
+    failTheReconcileListing(stripe);
+
+    await expect(createCheckout(stripe, monthly)).rejects.toThrow();
+
+    expect(stripe.createCalls).toHaveLength(1);
+    expect(stripe.expireCalls).toEqual([]);
+  });
+
+  // Stripe saves a server error under the request's idempotency key and
+  // replays it to later requests with that key for at least a day. An expire
+  // sent under a key fixed per Session would fail on every later request, so
+  // a buyer switching plans would be refused until the earlier page lapsed.
+  it('serves a buyer switching plans on the next press although Stripe answered the first expire with a server error', async () => {
+    const stripe = createFake();
+    await createInteractiveCheckout(stripe, monthly);
+    stripe.setExpireFault(() => {
+      throw Object.assign(new Error('An unknown error occurred'), {
+        type: 'StripeAPIError',
+        statusCode: 500,
+      });
+    });
+    await expect(
+      createInteractiveCheckout(stripe, annual),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Failed to expire existing checkout session',
+    });
+    expect(stripe.expireCalls).toEqual([{ sessionId: 'cs_fake_1' }]);
+    expect(await openSessionIds(stripe)).toEqual(['cs_fake_1']);
+    stripe.setExpireFault(null);
+
+    await expect(createInteractiveCheckout(stripe, annual)).resolves.toEqual({
       url: sessionUrl('cs_fake_2'),
     });
 

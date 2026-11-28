@@ -663,9 +663,12 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
   },
   {
     name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[11],
-    // BUG-343: the checkout adapter expires a superseded Session under one
-    // key per Session, so a repeat by another request replays the first
-    // answer. Any other expire of a Session that is not open is refused with
+    // BUG-343: an expire sent under an idempotency key replays its first
+    // answer to a repeat with that key. The checkout adapter sent one key
+    // per Session until 2026-11-28 and now sets none of its own, because
+    // Stripe replays a saved server error the same way; this case still pins
+    // the client's keyed replay. Any other expire of a Session that is not
+    // open is refused with
     // no error code; Stripe's message names the status (`complete` is refused
     // the same way, observed in TEST mode on 2026-10-14, but completing a
     // Session needs the hosted page, so this case pins `expired`).
