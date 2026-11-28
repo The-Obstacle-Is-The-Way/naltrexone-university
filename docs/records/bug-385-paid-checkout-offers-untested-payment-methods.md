@@ -84,13 +84,20 @@ All three still hold, but none covers what this record found. No test exercises 
   - Update the register row in `docs/guides/testing/fake-contracts.md`.
 - **Provider proof.** The provider contract, which already retrieves the app's Session (`tests/e2e/helpers/checkout-success-provider-contract.ts`), asserts `payment_method_types` is `['card']`, as `tests/e2e/helpers/checkout-consent.ts` does for the add-card Session. Apple Pay rests on Stripe's docs, since a test browser cannot show it.
 - **Open Sessions.** The reuse match compares price, variant and consent metadata only (`stripe-checkout-sessions.ts:1294-1306`), so an open Session from before the change is handed back for up to 24 hours. Release the code at least 24 hours after the Dashboard change, or compare the Session's payment-method types in the reuse match and expire a mismatch, red first.
-- **Release.** The billing QA procedure's paid checkout (step 12) and portal steps run on the dev preview before promotion. `stripe.md`'s Checkout Rules say that every app-opened Session and the paid portal offer only cards, and why.
+- **Release.**
+  - The fix adds two steps to the billing QA procedure (`docs/guides/qa/billing-and-entitlement.md`). Both run in test mode, where the other methods stay enabled, and expect only cards and card wallets:
+    - one reads the methods the paid Checkout page offers;
+    - one reads the methods the paid portal offers when adding a payment method.
+
+    The portal's opening and cancellation steps (15-17) pass whatever methods it offers, so they cannot show this.
+  - The procedure's paid checkout (step 12), those two steps and the portal steps run on the dev preview before promotion.
+  - `stripe.md`'s Checkout Rules say that every app-opened Session and the paid portal offer only cards, and why.
 
 ## Verification
 
 - [ ] The Dashboard change: the live Review preview of a $29 subscription shows only Card.
 - [ ] The invoice default payment-method configuration, read in the live Dashboard, has only cards and card wallets enabled, so hosted invoice pages offer nothing else. If it is the same configuration as Checkout's, the record says so. If it still has another method enabled, that method is turned off before this box is ticked.
-- [ ] The code merged with its red-first tests, the provider contract asserts card-only, and the billing QA's paid checkout and portal steps passed on the dev preview.
+- [ ] The code merged with its red-first tests, and the provider contract asserts card-only. On the dev preview, the billing QA's two payment-method steps that the fix adds showed only cards and card wallets, and its paid checkout and portal steps passed.
 - [ ] The code holds on its own. Read the Review preview of a subscription Session that the fixed code created, by its Session ID, in test mode, where the methods stay enabled. It shows only cards, allowing for Link's save box, which test mode still pre-ticks.
 
 ## Related
