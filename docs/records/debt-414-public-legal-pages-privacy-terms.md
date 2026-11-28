@@ -75,7 +75,7 @@ For F21, the early failure report:
 - **Price-change machinery.** Owner. Parked on 2026-08-06. Before planning or announcing the first change to an existing subscriber's price or material terms, build it with its notice, consent, claim, reconciliation and audit tests (design in git at `34d9aea0`, § 7). Until then no existing subscriber's price changes (ADR-027). The design must also show changed renewal terms in at least 12-point bold (North Carolina § 75-41(a)(4)).
 
 **Questions for counsel.** Hand over this record, the 2026-09-16 review at `34d9aea0`, the frozen Terms (`TERMS_VERSION` `2026-08-09`), and specimens of checkout, the add-card dialog, the portal and the notices.
-1. **Assent.** Do the separate opt-in, bold terms, acknowledgment and versioned ledger make assent enforceable for physicians buying their own exam preparation (VT § 2454a; CA § 17602(a)(4), (6))? It includes whether Massachusetts applies (F19), and Wisconsin § 134.49's signed disclosure for business contracts (F20). It also covers Link: the add-card consent says "card", but Link can fund renewals from a bank account (DEBT-501 item 7).
+1. **Assent.** Do the separate opt-in, bold terms, acknowledgment and versioned ledger make assent enforceable for physicians buying their own exam preparation (VT § 2454a; CA § 17602(a)(4), (6))? It includes whether Massachusetts applies (F19), and Wisconsin § 134.49's signed disclosure for business contracts (F20). Link is off in live mode since 2026-11-28 (DEBT-501 item 7). If it is turned back on, this also asks whether the add-card consent, which says "card", covers Link funding renewals from a bank account.
 2. **Clinical disclaimer.** Should Terms § 3 delete or qualify "verify anything you rely on clinically"?
 3. **Warranties, cap and refunds.** Should §§ 9–10 preserve the service and refund promises and statutory remedies? What should the cap be for a former payer whose twelve-month paid amount is zero?
 4. **Venue.** Is § 11's New York forum enforceable? Which urgent-relief, limitations and statutory exceptions must its 30-day wait before a claim carry?
@@ -140,3 +140,5 @@ Corrected 2026-11-21: decided at the owner's delegation to build F19a and F19b, 
 Corrected 2026-11-22: the replay constraint covers only a send Resend accepted; the requeue guide requeues promptly only once no send is confirmed (#1716 review).
 
 Corrected 2026-11-22: F19b cites the owner's 2026-11-22 approval to build it, and its pull request still needs the owner's explicit merge instruction; the support address overrides the 2026-08-13 "before scale" and is release-blocking; the mailbox decision states that no one covers it while the owner is away, with § 3's refund as the remedy; § 1 cancels immediately when a request is processed after its period ends (#1722 review).
+
+Corrected 2026-11-28: Link is off in live mode (DEBT-501 item 7), so Q1's Link question applies only if it is turned back on.
