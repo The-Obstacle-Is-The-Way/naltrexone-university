@@ -364,6 +364,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-379 · Native CSP Reports Bypass Checkout URL Redaction · Resolved · 2026-11-15 · docs/records/bug-379-native-csp-reports-bypass-checkout-url-redaction.md · #1700 · f376b524e6107c177d6510708f5ff6da8e5a0ec4
 - BUG-381 · Advisory-Watch Unit Tests Call GitHub's API Through `gh` · Resolved · 2026-11-25 · docs/records/bug-381-advisory-watch-unit-tests-call-githubs-api.md · #1747 · 1f8a20d0a55961b99d6985d63f8650634432b5dd
 - BUG-382 · Preview Checkout Cannot Persist Renewal Consent on the Draft 0033 Schema · Resolved · 2026-11-21 · docs/records/bug-382-preview-renewal-consent-schema-drift.md · #1720 · a413e3e02a458de20b1270db88de95ae8f21151b
+- BUG-384 · Stripe's Customer Emails Let a Trial Gain a Card Without the App's Consent · Resolved · 2026-11-28 · docs/records/bug-384-stripe-emails-skip-the-add-card-consent.md · #1755 · e231de8f4497354af173edb3fa778e4f3401c42e
 
 ## Debt
 
